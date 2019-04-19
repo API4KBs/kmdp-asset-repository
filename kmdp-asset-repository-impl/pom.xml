@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <packaging>war</packaging>
+
+  <parent>
+    <artifactId>kmdp-asset-repository</artifactId>
+    <groupId>edu.mayo.kmdp</groupId>
+    <version>1.0</version>
+  </parent>
+
+  <artifactId>kmdp-asset-repository-impl</artifactId>
+
+  <dependencies>
+
+    <!-- This implementation embeds the Language Service, but delegates to a web-based Repository Service. -->
+
+    <dependency>
+      <groupId>edu.mayo.kmdp</groupId>
+      <artifactId>kmdp-artifact-repository-service-api-client</artifactId>
+      <version>1.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>edu.mayo.kmdp</groupId>
+      <artifactId>kmdp-artifact-repository</artifactId>
+      <version>1.0</version>
+      <classifier>classes</classifier>
+      <exclusions>
+        <exclusion>
+          <groupId>edu.mayo.kmdp</groupId>
+          <artifactId>kmdp-artifact-repository-service-server</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>edu.mayo.kmdp</groupId>
+      <artifactId>kmdp-language-service-api-client</artifactId>
+      <version>1.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>edu.mayo.kmdp</groupId>
+      <artifactId>kmdp-language-service-impl</artifactId>
+      <version>1.0</version>
+      <classifier>classes</classifier>
+      <exclusions>
+        <exclusion>
+          <groupId>edu.mayo.kmdp</groupId>
+          <artifactId>kmdp-language-service-server</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.mapdb</groupId>
+      <artifactId>mapdb</artifactId>
+      <version>3.0.7</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.12</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-all</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>edu.mayo.kmdp</groupId>
+      <artifactId>kmdp-artifact-repository-impl</artifactId>
+      <version>1.0</version>
+    </dependency>
+
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-war-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>
