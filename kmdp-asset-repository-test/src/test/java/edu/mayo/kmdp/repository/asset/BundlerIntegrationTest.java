@@ -1,102 +1,131 @@
+/**
+ * Copyright © 2018 Mayo Clinic (RSTKNOWLEDGEMGMT@mayo.edu)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package edu.mayo.kmdp.repository.asset;
 
-import edu.mayo.kmdp.common.model.KnowledgeAsset;
-import edu.mayo.kmdp.common.model.KnowledgeExpression;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import edu.mayo.kmdp.id.helper.DatatypeHelper;
 import edu.mayo.kmdp.metadata.surrogate.Dependency;
+import edu.mayo.kmdp.metadata.surrogate.KnowledgeExpression;
 import edu.mayo.kmdp.metadata.surrogate.Representation;
-import edu.mayo.kmdp.repository.asset.ApiClient;
-import edu.mayo.kmdp.repository.asset.KnowledgeAssetCatalogApi;
-import edu.mayo.kmdp.repository.asset.SemanticKnowledgeRepositoryApi;
-import edu.mayo.kmdp.terms.kao.rel.dependencyreltype._2018._06.DependencyRelType;
-import edu.mayo.kmdp.terms.krlanguage._2018._08.KRLanguage;
-import org.junit.Assert;
-import org.junit.Test;
+import edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset;
+import edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype._20190801.DependencyType;
+import edu.mayo.ontology.taxonomies.krlanguage._2018._08.KnowledgeRepresentationLanguage;
+import java.util.List;
+import java.util.stream.Collectors;
+import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-import static org.junit.Assert.assertTrue;
-
 public class BundlerIntegrationTest extends IntegrationTestBase {
 
-    private ApiClient apiClient = new ApiClient().setBasePath("http://localhost:11111");
-    private KnowledgeAssetCatalogApi knowledgeAssetCatalogApi =  KnowledgeAssetCatalogApi.newInstance( apiClient );
+  private ApiClient apiClient = new ApiClient().setBasePath("http://localhost:11111");
+  private KnowledgeAssetRepositoryApi repo = KnowledgeAssetRepositoryApi.newInstance(apiClient);
 
-    private SemanticKnowledgeRepositoryApi coreApi = SemanticKnowledgeRepositoryApi.newInstance( apiClient );
 
-    @Test
-    public void testBundleOnlyOne() {
-        knowledgeAssetCatalogApi.initAsset("1", "2", new KnowledgeAsset().
-                withExpression(new KnowledgeExpression().
-                    withRepresentation(new Representation().withLanguage(KRLanguage.ELM_1_2))));
-        coreApi.addKnowledgeAssetCarrier("1", "2", "HI!".getBytes() );
+  @Test
+  public void testBundleOnlyOne() {
+    apiClient.selectHeaderAccept(new String[] {});
 
-        List<KnowledgeCarrier> carriers = coreApi.bundle("1", "2");
+    repo.setVersionedKnowledgeAsset("1", "2", new KnowledgeAsset().
+        withExpression(new KnowledgeExpression().
+            withRepresentation(new Representation().withLanguage(
+                KnowledgeRepresentationLanguage.HL7_ELM))));
+    repo.addKnowledgeAssetCarrier("1", "2", "HI!".getBytes());
 
-        Assert.assertEquals( 1, carriers.size() );
-    }
+    List<KnowledgeCarrier> carriers = repo.getKnowledgeAssetBundle("1", "2",
+        DependencyType.Depends_On.getTag(), -1);
 
-    @Test
-    public void testBundleWithDependency() {
-        edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka = knowledgeAssetCatalogApi.initAsset("a", "b", new KnowledgeAsset().
-                withExpression(new KnowledgeExpression().
-                    withRepresentation(new Representation().withLanguage(KRLanguage.ELM_1_2))).
-                    withResourceId(DatatypeHelper.uri("http:/some/uri/","a", "b")));
+    assertEquals(1, carriers.size());
+  }
 
-        knowledgeAssetCatalogApi.initAsset("1", "2", new KnowledgeAsset().
-                withExpression(new KnowledgeExpression().
-                    withRepresentation(new Representation().withLanguage(KRLanguage.ELM_1_2))).
-                    withResourceId(DatatypeHelper.uri("http:/some/uri/", "1", "2")).
-                    withRelated(new Dependency().withRel(DependencyRelType.Imports).withTgt(ka)));
+  @Test
+  public void testBundleWithDependency() {
+    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka = new KnowledgeAsset().
+        withExpression(new KnowledgeExpression().
+            withRepresentation(
+                new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM))).
+        withResourceId(DatatypeHelper.uri("http:/some/uri/", "a", "b"));
 
-        coreApi.addKnowledgeAssetCarrier("a", "b", "Hi!".getBytes());
-        coreApi.addKnowledgeAssetCarrier("1", "2", "There!".getBytes());
+    repo.setVersionedKnowledgeAsset("a", "b", ka);
 
-	    List<KnowledgeCarrier> carriers = coreApi.bundle("1", "2");
+    repo.setVersionedKnowledgeAsset("1", "2", new KnowledgeAsset().
+        withExpression(new KnowledgeExpression().
+            withRepresentation(
+                new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM))).
+        withResourceId(DatatypeHelper.uri("http:/some/uri/", "1", "2")).
+        withRelated(new Dependency().withRel(DependencyType.Imports).withTgt(ka)));
 
-	    Assert.assertEquals(2, carriers.size());
-	    List<String> strings = carriers.stream().map(BinaryCarrier.class::cast).map(BinaryCarrier::getEncodedExpression).map(String::new).collect(Collectors.toList());
+    repo.addKnowledgeAssetCarrier("a", "b", "Hi!".getBytes());
+    repo.addKnowledgeAssetCarrier("1", "2", "There!".getBytes());
 
-	    assertTrue( strings.contains( "Hi!") );
-	    assertTrue( strings.contains( "There!") );
-    }
+    List<KnowledgeCarrier> carriers = repo
+        .getKnowledgeAssetBundle("1", "2", DependencyType.Imports.getTag(), -1);
 
-    @Test
-    public void testBundleWithDependencyThreeDeep() {
-	    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka1 = knowledgeAssetCatalogApi.initAsset("a", "b", new KnowledgeAsset().
-                withExpression(new KnowledgeExpression().
-                        withRepresentation(new Representation().withLanguage(KRLanguage.ELM_1_2))).
-                withResourceId(DatatypeHelper.uri("http:/some/uri/", "a","b")));
+    assertEquals(2, carriers.size());
+    List<String> strings = carriers.stream().map(BinaryCarrier.class::cast)
+        .map(BinaryCarrier::getEncodedExpression).map(String::new).collect(Collectors.toList());
 
-	    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka2 = knowledgeAssetCatalogApi.initAsset("q", "r", new KnowledgeAsset().
-                withExpression(new KnowledgeExpression().
-                        withRepresentation(new Representation().withLanguage(KRLanguage.ELM_1_2))).
-                withResourceId(DatatypeHelper.uri("http:/some/uri/","q", "r")).
-                withRelated(
-                        new Dependency().withRel(DependencyRelType.Imports).withTgt(ka1)));
+    assertTrue(strings.contains("Hi!"));
+    assertTrue(strings.contains("There!"));
+  }
 
-        knowledgeAssetCatalogApi.initAsset("1", "2", new KnowledgeAsset().
-                withExpression(new KnowledgeExpression().
-                        withRepresentation(new Representation().withLanguage(KRLanguage.ELM_1_2))).
-                withResourceId(DatatypeHelper.uri("http:/some/uri/","1", "2")).
-                withRelated(
-                        new Dependency().withRel(DependencyRelType.Imports).withTgt(ka2)));
+  @Test
+  public void testBundleWithDependencyThreeDeep() {
+    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka1 = new KnowledgeAsset().
+        withExpression(new KnowledgeExpression().
+            withRepresentation(
+                new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM))).
+        withResourceId(DatatypeHelper.uri("http:/some/uri/", "a", "b"));
 
-        coreApi.addKnowledgeAssetCarrier("a", "b", "Hi!".getBytes());
-        coreApi.addKnowledgeAssetCarrier("1", "2", "There!".getBytes());
-        coreApi.addKnowledgeAssetCarrier("q", "r", "Zebra!".getBytes());
+    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka2 = new KnowledgeAsset().
+        withExpression(new KnowledgeExpression().
+            withRepresentation(
+                new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM))).
+        withResourceId(DatatypeHelper.uri("http:/some/uri/", "q", "r"))
+        .withRelated(new Dependency().withRel(DependencyType.Imports).withTgt(ka1));
 
-	    List<KnowledgeCarrier> carriers = coreApi.bundle("1", "2");
+    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka3 = new KnowledgeAsset().
+        withExpression(new KnowledgeExpression().
+            withRepresentation(
+                new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM))).
+        withResourceId(DatatypeHelper.uri("http:/some/uri/", "1", "2")).
+        withRelated(
+            new Dependency().withRel(DependencyType.Imports).withTgt(ka2));
 
-        Assert.assertEquals( 3, carriers.size());
-        List<String> strings = carriers.stream().map(BinaryCarrier.class::cast).map( BinaryCarrier::getEncodedExpression).map( String::new ).collect(Collectors.toList());
+    repo.setVersionedKnowledgeAsset("a", "b", ka1);
+    repo.setVersionedKnowledgeAsset("q", "r", ka2);
+    repo.setVersionedKnowledgeAsset("1", "2", ka3);
 
-        assertTrue( strings.contains( "Hi!") );
-        assertTrue( strings.contains( "There!") );
-        assertTrue( strings.contains( "Zebra!") );
-    }
+    repo.addKnowledgeAssetCarrier("a", "b", "Hi!".getBytes());
+    repo.addKnowledgeAssetCarrier("1", "2", "There!".getBytes());
+    repo.addKnowledgeAssetCarrier("q", "r", "Zebra!".getBytes());
+
+    List<KnowledgeCarrier> carriers = repo
+        .getKnowledgeAssetBundle("1", "2", DependencyType.Imports.getTag(), -1);
+
+    assertEquals(3, carriers.size());
+    List<String> strings = carriers.stream().map(BinaryCarrier.class::cast)
+        .map(BinaryCarrier::getEncodedExpression).map(String::new).collect(Collectors.toList());
+
+    assertTrue(strings.contains("Hi!"));
+    assertTrue(strings.contains("There!"));
+    assertTrue(strings.contains("Zebra!"));
+  }
 
 }

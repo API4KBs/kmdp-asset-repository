@@ -1,101 +1,101 @@
+/**
+ * Copyright © 2018 Mayo Clinic (RSTKNOWLEDGEMGMT@mayo.edu)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package edu.mayo.kmdp.repository.asset;
 
-import edu.mayo.kmdp.common.model.KnowledgeAsset;
-import edu.mayo.kmdp.repository.asset.ApiClient;
-import edu.mayo.kmdp.repository.asset.KnowledgeAssetCatalogApi;
-import edu.mayo.kmdp.terms.kao.knowledgeassettype._1_0.KnowledgeAssetType;
-import org.junit.Test;
-import org.omg.spec.api4kp._1_0.identifiers.Pointer;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset;
+import edu.mayo.ontology.taxonomies.kao.knowledgeassettype._1_0.KnowledgeAssetType;
 import java.util.List;
-
-import static junit.framework.TestCase.assertNotNull;
-import static org.junit.Assert.assertEquals;
+import java.util.stream.Collectors;
+import org.junit.jupiter.api.Test;
+import org.omg.spec.api4kp._1_0.identifiers.Pointer;
 
 public class SemanticRepositoryIntegrationTest extends IntegrationTestBase {
 
-    @Test
-    public void testListKnowledgeAssetsType() {
-        KnowledgeAssetCatalogApi client = KnowledgeAssetCatalogApi.newInstance(new ApiClient().setBasePath("http://localhost:11111"));
+  private ApiClient webClient = new ApiClient()
+      .setBasePath("http://localhost:11111");
 
-        client.addAsset(new KnowledgeAsset().withType(KnowledgeAssetType.Care_Process_Model));
+  protected KnowledgeAssetRepositoryApi client = KnowledgeAssetRepositoryApi.newInstance(webClient);
+  protected KnowledgeAssetCatalogApi ckac = KnowledgeAssetCatalogApi.newInstance(webClient);
 
-        List<Pointer> pointers = client.listKnowledgeAssets(KnowledgeAssetType.Care_Process_Model.getTag(), null);
 
-        assertEquals(1, pointers.size());
-    }
+  @Test
+  public void testListKnowledgeAssetsType() {
+    client.addKnowledgeAsset(new KnowledgeAsset().withType(KnowledgeAssetType.Decision_Model));
 
-    @Test
-    public void testListKnowledgeAssetsBadType() {
-        KnowledgeAssetCatalogApi client = KnowledgeAssetCatalogApi.newInstance(new ApiClient().setBasePath("http://localhost:11111"));
+    List<Pointer> pointers = ckac
+        .listKnowledgeAssets(KnowledgeAssetType.Decision_Model.getTag(),
+            null, -1, -1);
 
-        client.addAsset(new KnowledgeAsset().withType(KnowledgeAssetType.Care_Process_Model));
+    assertEquals(1, pointers.size());
+  }
 
-        List<Pointer> pointers = client.listKnowledgeAssets("ClinicalRule", null);
+  @Test
+  public void testListKnowledgeAssetsBadType() {
 
-        assertEquals(0, pointers.size());
-    }
+    client.addKnowledgeAsset(new KnowledgeAsset().withType(KnowledgeAssetType.Care_Process_Model));
 
-    @Test
-    public void testListKnowledgeAssetsNoType() {
-        KnowledgeAssetCatalogApi client = KnowledgeAssetCatalogApi.newInstance(new ApiClient().setBasePath("http://localhost:11111"));
+    List<Pointer> pointers = ckac.listKnowledgeAssets(KnowledgeAssetType.Predictive_Model.getTag(),
+        null, -1, -1);
 
-        client.addAsset(new KnowledgeAsset().withType(KnowledgeAssetType.Care_Process_Model));
-        client.addAsset(new KnowledgeAsset().withType(KnowledgeAssetType.Clinical_Rule));
+    assertEquals(0, pointers.size());
+  }
 
-        List<Pointer> pointers = client.listKnowledgeAssets(null, null);
+  @Test
+  public void testListKnowledgeAssetsNoType() {
 
-        assertEquals(2, pointers.size());
-    }
+    client.addKnowledgeAsset(new KnowledgeAsset().withType(KnowledgeAssetType.Care_Process_Model));
+    client.addKnowledgeAsset(new KnowledgeAsset().withType(KnowledgeAssetType.Clinical_Rule));
 
-    @Test
-    public void testListKnowledgeAssetsNoTypeWithNone() {
-        KnowledgeAssetCatalogApi client = KnowledgeAssetCatalogApi.newInstance(new ApiClient().setBasePath("http://localhost:11111"));
+    List<Pointer> pointers = ckac.listKnowledgeAssets(null,
+        null, -1, -1);
 
-        List<Pointer> pointers = client.listKnowledgeAssets(null, null);
+    assertEquals(2, pointers.size());
+  }
 
-        assertEquals(0, pointers.size());
-    }
+  @Test
+  public void testGeKnowledgeAssetsVersions() {
 
-    @Test
-    public void testGeKnowledgeAssetsVersions() {
-        KnowledgeAssetCatalogApi client = KnowledgeAssetCatalogApi.newInstance(new ApiClient().setBasePath("http://localhost:11111"));
+    client.setVersionedKnowledgeAsset("4", "1", new KnowledgeAsset());
+    client.setVersionedKnowledgeAsset("4", "2", new KnowledgeAsset());
 
-        client.initAsset("1", "1", new KnowledgeAsset());
-        client.initAsset("1", "2", new KnowledgeAsset());
+    List<Pointer> pointers = ckac.listKnowledgeAssets(null,
+        null, -1, -1).stream()
+        .filter((p)->p.getHref().toString().contains("assets/4"))
+        .collect(Collectors.toList());
 
-        List<Pointer> pointers = client.listKnowledgeAssets(null, null);
+    assertEquals(1, pointers.size());
+  }
 
-        assertEquals(1, pointers.size());
-    }
+  @Test
+  public void testGetLatestKnowledgeAsset() {
+    client.setVersionedKnowledgeAsset("3", "1", new KnowledgeAsset());
+    client.setVersionedKnowledgeAsset("3", "2", new KnowledgeAsset());
 
-    @Test
-    public void testGetLatestKnowledgeAsset() {
-        KnowledgeAssetCatalogApi client = KnowledgeAssetCatalogApi.newInstance(new ApiClient().setBasePath("http://localhost:11111"));
+    assertNotNull(ckac.getKnowledgeAsset("3"));
+  }
 
-        client.initAsset("1", "1", new KnowledgeAsset());
-        client.initAsset("1", "2", new KnowledgeAsset());
+  @Test
+  public void testGetLatestKnowledgeAssetHasCorrectId() {
+    client.setVersionedKnowledgeAsset("1", "1", new KnowledgeAsset());
+    client.setVersionedKnowledgeAsset("1", "2", new KnowledgeAsset());
 
-        assertNotNull( client.getKnowledgeAsset("1") );
-    }
-
-    @Test
-    public void testGetLatestKnowledgeAssetHasCorrectId() {
-        KnowledgeAssetCatalogApi client = KnowledgeAssetCatalogApi.newInstance(new ApiClient().setBasePath("http://localhost:11111"));
-
-        client.initAsset("1", "1", new KnowledgeAsset());
-        client.initAsset("1", "2", new KnowledgeAsset());
-
-        assertEquals( "1", client.getKnowledgeAsset("1").getResourceId().getTag() );
-    }
-
-    @Test
-    public void testInitAsset() {
-        KnowledgeAssetCatalogApi client = KnowledgeAssetCatalogApi.newInstance(new ApiClient().setBasePath("http://localhost:11111"));
-
-        edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset pointer = client.initAsset("1", "1", new KnowledgeAsset());
-
-        assertNotNull( pointer );
-    }
+    assertEquals("1", ckac.getKnowledgeAsset("1").getResourceId().getTag());
+  }
 
 }

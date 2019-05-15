@@ -21,19 +21,19 @@
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-asset-repository-service-api-client</artifactId>
-      <version>1.0</version>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-asset-repository-impl</artifactId>
-      <version>1.0</version>
+      <version>${project.version}</version>
       <classifier>classes</classifier>
     </dependency>
 
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
-      <artifactId>kmdp-repository-impl</artifactId>
-      <version>1.0</version>
+      <artifactId>kmdp-artifact-repository-impl</artifactId>
+      <version>${project.version}</version>
       <classifier>classes</classifier>
     </dependency>
 
@@ -41,24 +41,15 @@
       <groupId>org.mockito</groupId>
       <artifactId>mockito-all</artifactId>
     </dependency>
-
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.12</version>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>edu.mayo.kmdp</groupId>
-      <artifactId>kmdp-asset-repository-service-server</artifactId>
-      <version>1.0</version>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
     </dependency>
 
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-asset-repository-service-client</artifactId>
-      <version>1.0</version>
+      <version>${project.version}</version>
     </dependency>
 
   </dependencies>

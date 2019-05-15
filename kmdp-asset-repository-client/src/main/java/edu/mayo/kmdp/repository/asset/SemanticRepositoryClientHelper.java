@@ -16,7 +16,6 @@
 package edu.mayo.kmdp.repository.asset;
 
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
-import edu.mayo.kmdp.util.Util;
 import edu.mayo.kmdp.utils.JsonRestWSUtils;
 import org.omg.spec.api4kp._1_0.identifiers.URIIdentifier;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
@@ -24,51 +23,53 @@ import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 
 public class SemanticRepositoryClientHelper {
 
-    private KnowledgeAssetCatalogApi knowledgeAssetCatalogApi;
+  private KnowledgeAssetCatalogApi knowledgeAssetCatalogApi;
 
-    private SemanticKnowledgeRepositoryApi semanticKnowledgeRepositoryApi;
+  private KnowledgeAssetRepositoryApi assetRepositoryApi;
 
-    public SemanticRepositoryClientHelper( KnowledgeAssetCatalogApi knowledgeAssetCatalogApi,
-                                           SemanticKnowledgeRepositoryApi semanticKnowledgeRepositoryApi ) {
-        this.knowledgeAssetCatalogApi = knowledgeAssetCatalogApi;
-        this.semanticKnowledgeRepositoryApi = semanticKnowledgeRepositoryApi;
+  public SemanticRepositoryClientHelper(KnowledgeAssetCatalogApi knowledgeAssetCatalogApi,
+      KnowledgeAssetRepositoryApi semanticKnowledgeRepositoryApi) {
+    this.knowledgeAssetCatalogApi = knowledgeAssetCatalogApi;
+    this.assetRepositoryApi = semanticKnowledgeRepositoryApi;
+  }
+
+
+  public SemanticRepositoryClientHelper(String repoUrl) {
+    ApiClient webClient = JsonRestWSUtils
+        .configuredClient(ApiClient.class, JsonRestWSUtils.WithFHIR.DSTU2).setBasePath(repoUrl);
+    this.knowledgeAssetCatalogApi = KnowledgeAssetCatalogApi.newInstance(webClient);
+    this.assetRepositoryApi = KnowledgeAssetRepositoryApi.newInstance(webClient);
+  }
+
+  public void saveToRepo(KnowledgeAsset surrogate, KnowledgeCarrier artifact,
+      URIIdentifier associateArtifactTo) {
+
+    URIIdentifier surrogateId = surrogate.getResourceId();
+
+    assetRepositoryApi.addKnowledgeAsset(surrogate);
+
+    if (artifact != null) {
+      URIIdentifier artifactId = artifact.getAssetId();
+
+      String assetId;
+      String assetVersion;
+
+      if (associateArtifactTo != null) {
+        assetId = associateArtifactTo.getTag();
+        assetVersion = associateArtifactTo.getVersion();
+      } else {
+        assetId = surrogateId.getTag();
+        assetVersion = surrogateId.getVersion();
+      }
+
+      assetRepositoryApi.setKnowledgeAssetCarrierVersion(
+          assetId,
+          assetVersion,
+          artifactId.getTag(),
+          artifactId.getVersion(),
+          ((BinaryCarrier) artifact).getEncodedExpression());
     }
-
-
-	public SemanticRepositoryClientHelper( String repoUrl ) {
-		ApiClient webClient = JsonRestWSUtils.configuredClient( ApiClient.class, JsonRestWSUtils.WithFHIR.DSTU2).setBasePath(repoUrl);
-		this.knowledgeAssetCatalogApi = KnowledgeAssetCatalogApi.newInstance( webClient );
-		this.semanticKnowledgeRepositoryApi = SemanticKnowledgeRepositoryApi.newInstance( webClient );
-	}
-
-	public void saveToRepo( KnowledgeAsset surrogate, KnowledgeCarrier artifact, URIIdentifier associateArtifactTo ) {
-
-        URIIdentifier surrogateId = surrogate.getResourceId();
-
-        knowledgeAssetCatalogApi.addKnowledgeAsset(surrogate);
-
-        if( artifact != null ) {
-            URIIdentifier artifactId = artifact.getAssetId();
-
-            String assetId;
-            String assetVersion;
-
-            if(associateArtifactTo != null) {
-                assetId = associateArtifactTo.getTag();
-                assetVersion = associateArtifactTo.getVersion();
-            } else {
-                assetId = surrogateId.getTag();
-                assetVersion = surrogateId.getVersion();
-            }
-
-            semanticKnowledgeRepositoryApi.setKnowledgeAssetCarrierVersion(
-                    assetId,
-                    assetVersion,
-                    artifactId.getTag(),
-                    artifactId.getVersion(),
-                    ((BinaryCarrier) artifact).getEncodedExpression());
-        }
-    }
+  }
 
 
 }
