@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import edu.mayo.kmdp.id.helper.DatatypeHelper;
 import edu.mayo.kmdp.metadata.surrogate.Dependency;
-import edu.mayo.kmdp.metadata.surrogate.KnowledgeExpression;
+import edu.mayo.kmdp.metadata.surrogate.KnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.Representation;
 import edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset;
 import edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype._20190801.DependencyType;
@@ -43,7 +43,7 @@ public class BundlerIntegrationTest extends IntegrationTestBase {
     apiClient.selectHeaderAccept(new String[] {});
 
     repo.setVersionedKnowledgeAsset("1", "2", new KnowledgeAsset().
-        withExpression(new KnowledgeExpression().
+        withCarriers(new KnowledgeArtifact().
             withRepresentation(new Representation().withLanguage(
                 KnowledgeRepresentationLanguage.HL7_ELM))));
     repo.addKnowledgeAssetCarrier("1", "2", "HI!".getBytes());
@@ -57,7 +57,7 @@ public class BundlerIntegrationTest extends IntegrationTestBase {
   @Test
   public void testBundleWithDependency() {
     edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka = new KnowledgeAsset().
-        withExpression(new KnowledgeExpression().
+        withCarriers(new KnowledgeArtifact().
             withRepresentation(
                 new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM))).
         withResourceId(DatatypeHelper.uri("http:/some/uri/", "a", "b"));
@@ -65,7 +65,7 @@ public class BundlerIntegrationTest extends IntegrationTestBase {
     repo.setVersionedKnowledgeAsset("a", "b", ka);
 
     repo.setVersionedKnowledgeAsset("1", "2", new KnowledgeAsset().
-        withExpression(new KnowledgeExpression().
+        withCarriers(new KnowledgeArtifact().
             withRepresentation(
                 new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM))).
         withResourceId(DatatypeHelper.uri("http:/some/uri/", "1", "2")).
@@ -88,20 +88,20 @@ public class BundlerIntegrationTest extends IntegrationTestBase {
   @Test
   public void testBundleWithDependencyThreeDeep() {
     edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka1 = new KnowledgeAsset().
-        withExpression(new KnowledgeExpression().
+        withCarriers(new KnowledgeArtifact().
             withRepresentation(
                 new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM))).
         withResourceId(DatatypeHelper.uri("http:/some/uri/", "a", "b"));
 
     edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka2 = new KnowledgeAsset().
-        withExpression(new KnowledgeExpression().
+        withCarriers(new KnowledgeArtifact().
             withRepresentation(
                 new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM))).
         withResourceId(DatatypeHelper.uri("http:/some/uri/", "q", "r"))
         .withRelated(new Dependency().withRel(DependencyType.Imports).withTgt(ka1));
 
     edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka3 = new KnowledgeAsset().
-        withExpression(new KnowledgeExpression().
+        withCarriers(new KnowledgeArtifact().
             withRepresentation(
                 new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM))).
         withResourceId(DatatypeHelper.uri("http:/some/uri/", "1", "2")).

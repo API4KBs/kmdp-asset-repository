@@ -16,6 +16,7 @@
 package edu.mayo.kmdp.repository.asset;
 
 import static edu.mayo.kmdp.SurrogateBuilder.id;
+import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -29,6 +30,7 @@ import edu.mayo.kmdp.language.ValidateApi;
 import edu.mayo.kmdp.metadata.surrogate.Association;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
+import edu.mayo.kmdp.metadata.surrogate.KnowledgeManifestation;
 import edu.mayo.kmdp.registry.Registry;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactApi;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryApi;
@@ -55,7 +57,6 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import javax.inject.Inject;
 import org.apache.commons.lang3.StringUtils;
 import org.omg.spec.api4kp._1_0.identifiers.Pointer;
 import org.omg.spec.api4kp._1_0.identifiers.URIIdentifier;
@@ -187,9 +188,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     if (isCarrierNativelyAvailable(surrogate, xAccept)) {
       BinaryCarrier carrier = new BinaryCarrier();
-      Optional<IndexPointer> artifactPtr = lookupDefaultCarrier(assetId, versionTag);
-      getRepresentationLanguage(surrogate).ifPresent((lang) ->
-          carrier.withRepresentation(new SyntacticRepresentation().withLanguage(lang)));
+      Optional<IndexPointer> artifactPtr = lookupDefaultCarriers(assetId, versionTag);
+
+      artifactPtr
+          .flatMap((ptr) -> getRepresentationLanguage(surrogate, ptr))
+          .ifPresent((lang) -> carrier.withRepresentation(rep(lang)));
+
       carrier.withAssetId(surrogate.getResourceId());
 
       if (artifactPtr.isPresent()) {
@@ -197,13 +201,17 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         resolve(artifactPtr.get()).ifPresent(carrier::withEncodedExpression);
         return this.wrap(carrier);
 
-      } else if (surrogate.getExpression().getInlined() != null && !Util
-          .isEmpty(surrogate.getExpression().getInlined().getExpr())) {
-        carrier.withEncodedExpression(surrogate.getExpression().getInlined().getExpr().getBytes());
-        return this.wrap(carrier);
       } else {
-        System.err.println(" ASSET NOT FOUND");
-        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        Optional<KnowledgeManifestation> inlinedArtifact = surrogate.getCarriers().stream()
+            .filter((c) -> c.getInlined() != null && !Util.isEmpty(c.getInlined().getExpr()))
+            .findFirst();
+        if (inlinedArtifact.isPresent()) {
+          carrier.withEncodedExpression(inlinedArtifact.get().getInlined().getExpr().getBytes());
+          return wrap(carrier);
+        } else {
+          System.err.println(" ASSET NOT FOUND");
+          return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
       }
     } else {
 
@@ -320,23 +328,20 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         assetSurrogate.getDescription());
 
     this.index.registerLocation(surrogatePointer,
-        hrefBuilder.getArtifactRef(REPOSITORY_ID,surrogateId,surrogateVersion).toString());
+        hrefBuilder.getArtifactRef(REPOSITORY_ID, surrogateId, surrogateVersion).toString());
 
-    if (assetSurrogate.getExpression() != null
-        && assetSurrogate.getExpression().getCarrier() != null) {
-      assetSurrogate.getExpression().getCarrier().stream().map(c -> (KnowledgeArtifact) c)
-          .forEach(carrier -> {
-            URI masterLocation = carrier.getMasterLocation();
-            if (masterLocation != null) {
-              // TODO FIXME 'masterLocation' can be set with or without actually embedding the artifact.
-              // Reserving 'EMBEDDED' also seems brittle
-              IndexPointer carrierPointer = new IndexPointer(masterLocation.toString(), "EMBEDDED");
-              this.index
-                  .registerArtifactToAsset(new IndexPointer(assetId, versionTag), carrierPointer);
-              this.index.registerLocation(carrierPointer, masterLocation.toString());
-            }
-          });
-    }
+    assetSurrogate.getCarriers().stream().map(c -> (KnowledgeArtifact) c)
+        .forEach(carrier -> {
+          URI masterLocation = carrier.getMasterLocation();
+          if (masterLocation != null) {
+            // TODO FIXME 'masterLocation' can be set with or without actually embedding the artifact.
+            // Reserving 'EMBEDDED' also seems brittle
+            IndexPointer carrierPointer = new IndexPointer(masterLocation.toString(), "EMBEDDED");
+            this.index
+                .registerArtifactToAsset(new IndexPointer(assetId, versionTag), carrierPointer);
+            this.index.registerLocation(carrierPointer, masterLocation.toString());
+          }
+        });
 
     // recurse to register dependencies
     assetSurrogate.getRelated().stream().
@@ -407,12 +412,13 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     // TODO FIXME href from artifact in repository
     this.index.registerLocation(new IndexPointer(artifactId, artifactVersion),
-        hrefBuilder.getArtifactRef(REPOSITORY_ID,artifactId,artifactVersion).toString());
+        hrefBuilder.getArtifactRef(REPOSITORY_ID, artifactId, artifactVersion).toString());
 
     this.index.registerArtifactToAsset(new IndexPointer(assetId, versionTag),
         new IndexPointer(artifactId, artifactVersion));
 
-    KnowledgeAsset surrogate = retrieveAssetSurrogate(assetId, versionTag).orElseGet(KnowledgeAsset::new);
+    KnowledgeAsset surrogate = retrieveAssetSurrogate(assetId, versionTag)
+        .orElseGet(KnowledgeAsset::new);
 
     return ResponseEntity.ok().build();
   }
@@ -445,21 +451,30 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
 
   private Optional<KnowledgeRepresentationLanguage> getRepresentationLanguage(
-      KnowledgeAsset surrogate) {
-    if (surrogate.getExpression() != null
-        && surrogate.getExpression().getRepresentation() != null) {
-      return Optional.of(surrogate.getExpression().getRepresentation().getLanguage());
-    } else {
-      return Optional.empty();
+      KnowledgeAsset surrogate, IndexPointer artifactId) {
+    return surrogate.getCarriers().stream()
+        .filter((c) -> same(c.getResourceId(), artifactId))
+        .filter((c) -> c.getRepresentation() != null)
+        .map((c) -> c.getRepresentation().getLanguage())
+        .findFirst();
+  }
+
+  private boolean same(URIIdentifier resourceId, IndexPointer artifactId) {
+    //TODO Just use VID?
+    if (resourceId == null) {
+      return false;
     }
+    VersionedIdentifier vid = DatatypeHelper.toVersionIdentifier(resourceId);
+    return vid.getTag().equals(artifactId.getId()) && vid.getVersion()
+        .equals(artifactId.getVersion());
   }
 
-  private Optional<IndexPointer> lookupDefaultCarrier(String assetId, String versionTag) {
+  private Optional<IndexPointer> lookupDefaultCarriers(String assetId, String versionTag) {
     IndexPointer assetPointer = new IndexPointer(assetId, versionTag);
-    return lookupDefaultCarrier(assetPointer);
+    return lookupDefaultCarriers(assetPointer);
   }
 
-  private Optional<IndexPointer> lookupDefaultCarrier(IndexPointer assetPointer) {
+  private Optional<IndexPointer> lookupDefaultCarriers(IndexPointer assetPointer) {
     Set<IndexPointer> artifacts = this.index.getArtifactsForAsset(assetPointer);
     IndexPointer artifact;
     if (artifacts.size() == 0) {

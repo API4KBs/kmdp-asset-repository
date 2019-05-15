@@ -15,6 +15,8 @@
  */
 package edu.mayo.kmdp.repository.asset.bundler;
 
+import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
+
 import com.google.common.collect.Lists;
 import edu.mayo.kmdp.SurrogateHelper;
 import edu.mayo.kmdp.id.helper.DatatypeHelper;
@@ -23,9 +25,7 @@ import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.repository.asset.Bundler;
 import edu.mayo.kmdp.repository.asset.SemanticKnowledgeAssetRepository;
 import edu.mayo.kmdp.util.FileUtil;
-import edu.mayo.kmdp.util.JSonUtil;
 import edu.mayo.ontology.taxonomies.krlanguage._2018._08.KnowledgeRepresentationLanguage;
-import java.io.ByteArrayOutputStream;
 import java.net.URI;
 import java.util.List;
 import java.util.Set;
@@ -33,71 +33,76 @@ import org.omg.spec.api4kp._1_0.identifiers.URIIdentifier;
 import org.omg.spec.api4kp._1_0.identifiers.VersionIdentifier;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
-import org.omg.spec.api4kp._1_0.services.SyntacticRepresentation;
 
 public class DefaultBundler implements Bundler {
 
-    private SemanticKnowledgeAssetRepository coreApi;
+  private SemanticKnowledgeAssetRepository coreApi;
 
-    public DefaultBundler(SemanticKnowledgeAssetRepository coreApi) {
-        super();
-        this.coreApi = coreApi;
+  public DefaultBundler(SemanticKnowledgeAssetRepository coreApi) {
+    super();
+    this.coreApi = coreApi;
+  }
+
+  @Override
+  public List<KnowledgeCarrier> bundle(String assetId, String version) {
+    KnowledgeAsset asset = this.coreApi.getVersionedKnowledgeAsset(assetId, version).getBody();
+
+    KnowledgeCarrier carrier = this.coreApi
+        .getCanonicalKnowledgeAssetCarrier(assetId, version, null).getBody();
+
+    List<KnowledgeCarrier> returnList = Lists.newArrayList();
+
+    if (carrier != null) {
+      returnList.add(carrier);
     }
 
-    @Override
-    public List<KnowledgeCarrier> bundle(String assetId, String version) {
-        KnowledgeAsset asset = this.coreApi.getVersionedKnowledgeAsset(assetId, version).getBody();
+    Set<edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset> dependencies = SurrogateHelper
+        .closure(asset, false);
 
-        KnowledgeCarrier carrier = this.coreApi.getCanonicalKnowledgeAssetCarrier(assetId, version, null).getBody();
+    dependencies.forEach(x -> {
+      retrieveCarriers(x, returnList);
+    });
 
-        List<KnowledgeCarrier> returnList = Lists.newArrayList();
+    return returnList;
+  }
 
-        if( carrier != null ) {
-            returnList.add(carrier);
-        }
+  private void retrieveCarriers(KnowledgeAsset x, List<KnowledgeCarrier> returnList) {
+    URIIdentifier uriIdentifier = x.getResourceId();
 
-        Set<edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset> dependencies = SurrogateHelper.closure( asset, false );
+    if (uriIdentifier != null) {
+      VersionIdentifier id = DatatypeHelper.toVersionIdentifier(uriIdentifier);
+      returnList.add(
+          this.coreApi.getCanonicalKnowledgeAssetCarrier(id.getTag(), id.getVersion(), null)
+              .getBody());
+    } else {
+      returnList.addAll(this.getAnonymousArtifacts(x));
+    }
+  }
 
-        dependencies.forEach( x -> {
-            retrieveCarriers( x, returnList );
-        });
+  private List<KnowledgeCarrier> getAnonymousArtifacts(KnowledgeAsset assetSurrogate) {
+    List<KnowledgeCarrier> carriers = Lists.newArrayList();
 
-        return returnList;
+    if (assetSurrogate.getCarriers() != null) {
+      assetSurrogate.getCarriers().stream()
+          .filter(KnowledgeArtifact.class::isInstance)
+          .map(KnowledgeArtifact.class::cast)
+          .forEach(carrier -> {
+            URI masterLocation = carrier.getMasterLocation();
+            if (masterLocation != null) {
+              BinaryCarrier newCarrier = new BinaryCarrier();
+              if (carrier.getRepresentation() != null && carrier.getRepresentation().getLanguage() != null) {
+                KnowledgeRepresentationLanguage language = carrier.getRepresentation().getLanguage();
+                newCarrier.setRepresentation(rep(language));
+              }
+              newCarrier
+                  .withAssetId(assetSurrogate.getResourceId())
+                  .withEncodedExpression(FileUtil.readBytes(masterLocation).orElse(new byte[0]));
+              carriers.add(newCarrier);
+            }
+          });
     }
 
-    private void retrieveCarriers( KnowledgeAsset x, List<KnowledgeCarrier> returnList ) {
-        URIIdentifier uriIdentifier = x.getResourceId();
-
-        if ( uriIdentifier != null ) {
-            VersionIdentifier id = DatatypeHelper.toVersionIdentifier(uriIdentifier);
-            returnList.add( this.coreApi.getCanonicalKnowledgeAssetCarrier( id.getTag(), id.getVersion(), null ).getBody() );
-        } else {
-            returnList.addAll(this.getAnnonymousArtifacts(x));
-        }
-    }
-
-    private List<KnowledgeCarrier> getAnnonymousArtifacts(KnowledgeAsset assetSurrogate) {
-        List<KnowledgeCarrier> carriers = Lists.newArrayList();
-        if(assetSurrogate.getExpression() != null && assetSurrogate.getExpression().getCarrier() != null) {
-            assetSurrogate.getExpression().getCarrier().stream().map(c -> (KnowledgeArtifact) c).forEach(carrier -> {
-                URI masterLocation = carrier.getMasterLocation();
-                if(masterLocation != null) {
-                    BinaryCarrier newCarrier = new BinaryCarrier();
-                    if(assetSurrogate.getExpression() != null &&
-                            assetSurrogate.getExpression().getRepresentation() != null &&
-                            assetSurrogate.getExpression().getRepresentation().getLanguage() != null) {
-                        KnowledgeRepresentationLanguage language = assetSurrogate.getExpression().getRepresentation().getLanguage();
-                        newCarrier.setRepresentation( new SyntacticRepresentation().withLanguage( language ) );
-                    }
-
-                    newCarrier.setAssetId(assetSurrogate.getResourceId());
-                    newCarrier.setEncodedExpression(FileUtil.readBytes(masterLocation).orElse(new byte[0]));
-                    carriers.add(newCarrier);
-                }
-            });
-        }
-
-        return carriers;
-    }
+    return carriers;
+  }
 
 }
