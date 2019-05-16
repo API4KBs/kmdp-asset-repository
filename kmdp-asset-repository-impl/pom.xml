@@ -8,7 +8,7 @@
   <parent>
     <artifactId>kmdp-asset-repository</artifactId>
     <groupId>edu.mayo.kmdp</groupId>
-    <version>1.0</version>
+    <version>1.0.1</version>
   </parent>
 
   <artifactId>kmdp-asset-repository-impl</artifactId>
@@ -20,13 +20,13 @@
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-artifact-repository-service-api-client</artifactId>
-      <version>1.0</version>
+      <version>${kmdp.version}</version>
     </dependency>
 
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-artifact-repository-impl</artifactId>
-      <version>1.0</version>
+      <version>${kmdp.version}</version>
       <classifier>classes</classifier>
       <exclusions>
         <exclusion>
@@ -39,13 +39,13 @@
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-language-service-api-client</artifactId>
-      <version>1.0</version>
+      <version>${kmdp.version}</version>
     </dependency>
 
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-language-impl</artifactId>
-      <version>1.0</version>
+      <version>${kmdp.version}</version>
       <classifier>classes</classifier>
       <exclusions>
         <exclusion>

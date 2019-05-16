@@ -7,7 +7,7 @@
   <parent>
     <artifactId>kmdp-asset-repository</artifactId>
     <groupId>edu.mayo.kmdp</groupId>
-    <version>1.0</version>
+    <version>1.0.1</version>
   </parent>
 
   <artifactId>kmdp-asset-repository-test</artifactId>
@@ -33,7 +33,7 @@
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-artifact-repository-impl</artifactId>
-      <version>${project.version}</version>
+      <version>${kmdp.version}</version>
       <classifier>classes</classifier>
     </dependency>
 
