@@ -20,6 +20,7 @@ import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 import com.google.common.collect.Lists;
 import edu.mayo.kmdp.SurrogateHelper;
 import edu.mayo.kmdp.id.helper.DatatypeHelper;
+import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.repository.asset.Bundler;
@@ -67,7 +68,7 @@ public class DefaultBundler implements Bundler {
   }
 
   private void retrieveCarriers(KnowledgeAsset x, List<KnowledgeCarrier> returnList) {
-    URIIdentifier uriIdentifier = x.getResourceId();
+    URIIdentifier uriIdentifier = x.getAssetId();
 
     if (uriIdentifier != null) {
       VersionIdentifier id = DatatypeHelper.toVersionIdentifier(uriIdentifier);
@@ -84,10 +85,10 @@ public class DefaultBundler implements Bundler {
 
     if (assetSurrogate.getCarriers() != null) {
       assetSurrogate.getCarriers().stream()
-          .filter(KnowledgeArtifact.class::isInstance)
-          .map(KnowledgeArtifact.class::cast)
+          .filter(ComputableKnowledgeArtifact.class::isInstance)
+          .map(ComputableKnowledgeArtifact.class::cast)
           .forEach(carrier -> {
-            URI masterLocation = carrier.getMasterLocation();
+            URI masterLocation = carrier.getLocator();
             if (masterLocation != null) {
               BinaryCarrier newCarrier = new BinaryCarrier();
               if (carrier.getRepresentation() != null && carrier.getRepresentation().getLanguage() != null) {
@@ -95,7 +96,7 @@ public class DefaultBundler implements Bundler {
                 newCarrier.setRepresentation(rep(language));
               }
               newCarrier
-                  .withAssetId(assetSurrogate.getResourceId())
+                  .withAssetId(assetSurrogate.getAssetId())
                   .withEncodedExpression(FileUtil.readBytes(masterLocation).orElse(new byte[0]));
               carriers.add(newCarrier);
             }

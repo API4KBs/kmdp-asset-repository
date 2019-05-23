@@ -36,7 +36,7 @@ public class SemanticRepositoryIntegrationTest extends IntegrationTestBase {
 
   @Test
   public void testListKnowledgeAssetsType() {
-    client.addKnowledgeAsset(new KnowledgeAsset().withType(KnowledgeAssetType.Decision_Model));
+    client.initKnowledgeAsset(new KnowledgeAsset().withFormalType(KnowledgeAssetType.Decision_Model));
 
     List<Pointer> pointers = ckac
         .listKnowledgeAssets(KnowledgeAssetType.Decision_Model.getTag(),
@@ -48,7 +48,7 @@ public class SemanticRepositoryIntegrationTest extends IntegrationTestBase {
   @Test
   public void testListKnowledgeAssetsBadType() {
 
-    client.addKnowledgeAsset(new KnowledgeAsset().withType(KnowledgeAssetType.Care_Process_Model));
+    client.initKnowledgeAsset(new KnowledgeAsset().withFormalType(KnowledgeAssetType.Care_Process_Model));
 
     List<Pointer> pointers = ckac.listKnowledgeAssets(KnowledgeAssetType.Predictive_Model.getTag(),
         null, -1, -1);
@@ -59,8 +59,8 @@ public class SemanticRepositoryIntegrationTest extends IntegrationTestBase {
   @Test
   public void testListKnowledgeAssetsNoType() {
 
-    client.addKnowledgeAsset(new KnowledgeAsset().withType(KnowledgeAssetType.Care_Process_Model));
-    client.addKnowledgeAsset(new KnowledgeAsset().withType(KnowledgeAssetType.Clinical_Rule));
+    client.initKnowledgeAsset(new KnowledgeAsset().withFormalType(KnowledgeAssetType.Care_Process_Model));
+    client.initKnowledgeAsset(new KnowledgeAsset().withFormalType(KnowledgeAssetType.Clinical_Rule));
 
     List<Pointer> pointers = ckac.listKnowledgeAssets(null,
         null, -1, -1);
@@ -95,7 +95,7 @@ public class SemanticRepositoryIntegrationTest extends IntegrationTestBase {
     client.setVersionedKnowledgeAsset("1", "1", new KnowledgeAsset());
     client.setVersionedKnowledgeAsset("1", "2", new KnowledgeAsset());
 
-    assertEquals("1", ckac.getKnowledgeAsset("1").getResourceId().getTag());
+    assertEquals("1", ckac.getKnowledgeAsset("1").getAssetId().getTag());
   }
 
 }

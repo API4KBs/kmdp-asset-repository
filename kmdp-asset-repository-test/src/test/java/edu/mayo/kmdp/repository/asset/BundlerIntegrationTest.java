@@ -20,8 +20,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import edu.mayo.kmdp.id.helper.DatatypeHelper;
+import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.Dependency;
-import edu.mayo.kmdp.metadata.surrogate.KnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.Representation;
 import edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset;
 import edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype._20190801.DependencyType;
@@ -43,7 +43,7 @@ public class BundlerIntegrationTest extends IntegrationTestBase {
     apiClient.selectHeaderAccept(new String[] {});
 
     repo.setVersionedKnowledgeAsset("1", "2", new KnowledgeAsset().
-        withCarriers(new KnowledgeArtifact().
+        withCarriers(new ComputableKnowledgeArtifact().
             withRepresentation(new Representation().withLanguage(
                 KnowledgeRepresentationLanguage.HL7_ELM))));
     repo.addKnowledgeAssetCarrier("1", "2", "HI!".getBytes());
@@ -57,18 +57,18 @@ public class BundlerIntegrationTest extends IntegrationTestBase {
   @Test
   public void testBundleWithDependency() {
     edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka = new KnowledgeAsset().
-        withCarriers(new KnowledgeArtifact().
+        withCarriers(new ComputableKnowledgeArtifact().
             withRepresentation(
                 new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM))).
-        withResourceId(DatatypeHelper.uri("http:/some/uri/", "a", "b"));
+        withAssetId(DatatypeHelper.uri("http:/some/uri/", "a", "b"));
 
     repo.setVersionedKnowledgeAsset("a", "b", ka);
 
     repo.setVersionedKnowledgeAsset("1", "2", new KnowledgeAsset().
-        withCarriers(new KnowledgeArtifact().
+        withCarriers(new ComputableKnowledgeArtifact().
             withRepresentation(
                 new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM))).
-        withResourceId(DatatypeHelper.uri("http:/some/uri/", "1", "2")).
+        withAssetId(DatatypeHelper.uri("http:/some/uri/", "1", "2")).
         withRelated(new Dependency().withRel(DependencyType.Imports).withTgt(ka)));
 
     repo.addKnowledgeAssetCarrier("a", "b", "Hi!".getBytes());
@@ -88,24 +88,24 @@ public class BundlerIntegrationTest extends IntegrationTestBase {
   @Test
   public void testBundleWithDependencyThreeDeep() {
     edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka1 = new KnowledgeAsset().
-        withCarriers(new KnowledgeArtifact().
+        withCarriers(new ComputableKnowledgeArtifact().
             withRepresentation(
-                new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM))).
-        withResourceId(DatatypeHelper.uri("http:/some/uri/", "a", "b"));
+                new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM)))
+        .withAssetId(DatatypeHelper.uri("http:/some/uri/", "a", "b"));
 
     edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka2 = new KnowledgeAsset().
-        withCarriers(new KnowledgeArtifact().
+        withCarriers(new ComputableKnowledgeArtifact().
             withRepresentation(
-                new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM))).
-        withResourceId(DatatypeHelper.uri("http:/some/uri/", "q", "r"))
+                new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM)))
+        .withAssetId(DatatypeHelper.uri("http:/some/uri/", "q", "r"))
         .withRelated(new Dependency().withRel(DependencyType.Imports).withTgt(ka1));
 
     edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka3 = new KnowledgeAsset().
-        withCarriers(new KnowledgeArtifact().
+        withCarriers(new ComputableKnowledgeArtifact().
             withRepresentation(
-                new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM))).
-        withResourceId(DatatypeHelper.uri("http:/some/uri/", "1", "2")).
-        withRelated(
+                new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM)))
+        .withAssetId(DatatypeHelper.uri("http:/some/uri/", "1", "2"))
+        .withRelated(
             new Dependency().withRel(DependencyType.Imports).withTgt(ka2));
 
     repo.setVersionedKnowledgeAsset("a", "b", ka1);

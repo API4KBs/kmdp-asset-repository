@@ -15,6 +15,7 @@
  */
 package edu.mayo.mea3.repository.semantic;
 
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassetrole._1_0.KnowledgeAssetRole.Operational_Concept_Defintion;
 import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype._1_0.KnowledgeAssetType.Care_Process_Model;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -30,8 +31,7 @@ import edu.mayo.kmdp.repository.artifact.jcr.JcrKnowledgeArtifactRepository;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig;
 import edu.mayo.kmdp.repository.asset.SemanticKnowledgeAssetRepository;
 import edu.mayo.kmdp.repository.asset.index.MapDbIndex;
-import edu.mayo.kmdp.terms.AssetVocabulary;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassettype._1_0.KnowledgeAssetType;
+import edu.mayo.ontology.taxonomies.kmdo.annotationreltype._20180601.AnnotationRelType;
 import java.net.URI;
 import java.util.List;
 import org.apache.jackrabbit.oak.Oak;
@@ -76,7 +76,7 @@ public class SemanticRepositoryTest {
   @Test
   void testPointersHaveType() {
     assertNotNull(semanticRepository
-        .setVersionedKnowledgeAsset("foo", "1", new KnowledgeAsset().withType(Care_Process_Model)));
+        .setVersionedKnowledgeAsset("foo", "1", new KnowledgeAsset().withFormalType(Care_Process_Model)));
     List<Pointer> assets = semanticRepository.listKnowledgeAssets(Care_Process_Model.getTag(), null, -1, -1)
         .getBody();
 
@@ -89,7 +89,7 @@ public class SemanticRepositoryTest {
   @Test
   void initAndGetAssetByType() {
     assertNotNull(semanticRepository
-        .setVersionedKnowledgeAsset("foo", "1", new KnowledgeAsset().withType(Care_Process_Model)));
+        .setVersionedKnowledgeAsset("foo", "1", new KnowledgeAsset().withFormalType(Care_Process_Model)));
     List<Pointer> assets = semanticRepository.listKnowledgeAssets(Care_Process_Model.getTag(), null, -1, - 1)
         .getBody();
 
@@ -100,9 +100,9 @@ public class SemanticRepositoryTest {
   @Test
   void getVersions() {
     assertNotNull(semanticRepository
-        .setVersionedKnowledgeAsset("foo", "1", new KnowledgeAsset().withType(Care_Process_Model)));
+        .setVersionedKnowledgeAsset("foo", "1", new KnowledgeAsset().withFormalType(Care_Process_Model)));
     assertNotNull(semanticRepository
-        .setVersionedKnowledgeAsset("foo", "2", new KnowledgeAsset().withType(Care_Process_Model)));
+        .setVersionedKnowledgeAsset("foo", "2", new KnowledgeAsset().withFormalType(Care_Process_Model)));
 
     List<Pointer> versions = semanticRepository.getKnowledgeAssetVersions("foo",-1, - 1, null, null, null).getBody();
 
@@ -113,7 +113,7 @@ public class SemanticRepositoryTest {
   @Test
   void addAndGetAssetByType() {
     assertNotNull(
-        semanticRepository.addKnowledgeAsset(new KnowledgeAsset().withType(Care_Process_Model)));
+        semanticRepository.initKnowledgeAsset(new KnowledgeAsset().withFormalType(Care_Process_Model)));
     List<Pointer> assets = semanticRepository.listKnowledgeAssets(Care_Process_Model.getTag(), null, -1, -1)
         .getBody();
 
@@ -124,9 +124,9 @@ public class SemanticRepositoryTest {
   @Test
   void listKnowledgeAssetsMultipleVersions() {
     assertNotNull(semanticRepository
-        .setVersionedKnowledgeAsset("foo", "1", new KnowledgeAsset().withType(Care_Process_Model)));
+        .setVersionedKnowledgeAsset("foo", "1", new KnowledgeAsset().withFormalType(Care_Process_Model)));
     assertNotNull(semanticRepository
-        .setVersionedKnowledgeAsset("foo", "2", new KnowledgeAsset().withType(Care_Process_Model)));
+        .setVersionedKnowledgeAsset("foo", "2", new KnowledgeAsset().withFormalType(Care_Process_Model)));
 
     List<Pointer> versions = semanticRepository
         .listKnowledgeAssets(Care_Process_Model.getTag(), null, -1, -1).getBody();
@@ -138,9 +138,9 @@ public class SemanticRepositoryTest {
   @Test
   void listKnowledgeAssetsMultipleVersionsCorrectHrefAndId() {
     assertNotNull(semanticRepository
-        .setVersionedKnowledgeAsset("foo", "1", new KnowledgeAsset().withType(Care_Process_Model)));
+        .setVersionedKnowledgeAsset("foo", "1", new KnowledgeAsset().withFormalType(Care_Process_Model)));
     assertNotNull(semanticRepository
-        .setVersionedKnowledgeAsset("foo", "2", new KnowledgeAsset().withType(Care_Process_Model)));
+        .setVersionedKnowledgeAsset("foo", "2", new KnowledgeAsset().withFormalType(Care_Process_Model)));
 
     List<Pointer> versions = semanticRepository
         .listKnowledgeAssets(Care_Process_Model.getTag(), null, -1, -1).getBody();
@@ -167,7 +167,7 @@ public class SemanticRepositoryTest {
   @Test
   void addAndGetAssetByNoType() {
     assertNotNull(
-        semanticRepository.addKnowledgeAsset(new KnowledgeAsset().withType(Care_Process_Model)));
+        semanticRepository.initKnowledgeAsset(new KnowledgeAsset().withFormalType(Care_Process_Model)));
     List<Pointer> assets = semanticRepository.listKnowledgeAssets(null, null, -1, -1).getBody();
 
     assertNotNull(assets);
@@ -207,7 +207,7 @@ public class SemanticRepositoryTest {
   @Test
   void addKnowledgeAssetCarrier() {
     assertNotNull(semanticRepository
-        .setVersionedKnowledgeAsset("foo", "1", new KnowledgeAsset().withType(Care_Process_Model)));
+        .setVersionedKnowledgeAsset("foo", "1", new KnowledgeAsset().withFormalType(Care_Process_Model)));
 
     semanticRepository.setKnowledgeAssetCarrierVersion("foo", "1", "q", "z", "there".getBytes());
     ResponseEntity<KnowledgeCarrier> artifact = semanticRepository
@@ -220,7 +220,7 @@ public class SemanticRepositoryTest {
   @Test
   void addKnowledgeAssetCarriers() {
     assertNotNull(semanticRepository
-        .setVersionedKnowledgeAsset("foo", "1", new KnowledgeAsset().withType(Care_Process_Model)));
+        .setVersionedKnowledgeAsset("foo", "1", new KnowledgeAsset().withFormalType(Care_Process_Model)));
 
     semanticRepository.setKnowledgeAssetCarrierVersion("foo", "1", "q", "z", "there".getBytes());
     ResponseEntity<List<Pointer>> artifacts = semanticRepository
@@ -246,7 +246,7 @@ public class SemanticRepositoryTest {
   @Test
   void addKnowledgeAssetCarriersMultiple() {
     assertNotNull(semanticRepository
-        .setVersionedKnowledgeAsset("foo", "1", new KnowledgeAsset().withType(Care_Process_Model)));
+        .setVersionedKnowledgeAsset("foo", "1", new KnowledgeAsset().withFormalType(Care_Process_Model)));
 
     semanticRepository.setKnowledgeAssetCarrierVersion("foo", "1", "q", "z", "there".getBytes());
     semanticRepository.setKnowledgeAssetCarrierVersion("foo", "1", "q", "x", "there".getBytes());
@@ -260,13 +260,13 @@ public class SemanticRepositoryTest {
   @Test
   void initAndGetAllDefinitions() {
     assertNotNull(semanticRepository.setVersionedKnowledgeAsset("1", "1",
-        new KnowledgeAsset().withType(KnowledgeAssetType.Operational_Concept_Defintion)
+        new KnowledgeAsset().withRole(Operational_Concept_Defintion)
             .withSubject(new SimpleAnnotation()
-                .withRel(AssetVocabulary.DEFINES.asConcept())
+                .withRel(AnnotationRelType.Defines.asConcept())
                 .withExpr(dizziness))));
 
     List<Pointer> pointers = semanticRepository
-        .listKnowledgeAssets(KnowledgeAssetType.Operational_Concept_Defintion.getTag(), null, -1, -1)
+        .listKnowledgeAssets(Operational_Concept_Defintion.getTag(), null, -1, -1)
         .getBody();
     assertNotNull(pointers);
     assertEquals(1, pointers.size());
@@ -275,19 +275,19 @@ public class SemanticRepositoryTest {
   @Test
   void initAndGetAllDefinitionsWithMultiple() {
     assertNotNull(semanticRepository.setVersionedKnowledgeAsset("1", "1",
-        new KnowledgeAsset().withType(KnowledgeAssetType.Operational_Concept_Defintion)
+        new KnowledgeAsset().withRole(Operational_Concept_Defintion)
             .withSubject(new SimpleAnnotation()
-                .withRel(AssetVocabulary.DEFINES.asConcept())
+                .withRel(AnnotationRelType.Defines.asConcept())
                 .withExpr(dizziness))));
 
     assertNotNull(semanticRepository.setVersionedKnowledgeAsset("2", "1",
-        new KnowledgeAsset().withType(KnowledgeAssetType.Operational_Concept_Defintion)
+        new KnowledgeAsset().withRole(Operational_Concept_Defintion)
             .withSubject(new SimpleAnnotation()
-                .withRel(AssetVocabulary.DEFINES.asConcept())
+                .withRel(AnnotationRelType.Defines.asConcept())
                 .withExpr(sleep_apnea))));
 
     List<Pointer> pointers = semanticRepository
-        .listKnowledgeAssets(KnowledgeAssetType.Operational_Concept_Defintion.getTag(), null, -1, -1)
+        .listKnowledgeAssets(Operational_Concept_Defintion.getTag(), null, -1, -1)
         .getBody();
     assertNotNull(pointers);
     assertEquals(2, pointers.size());
@@ -296,19 +296,19 @@ public class SemanticRepositoryTest {
   @Test
   void initAndGetAllDefinitionsWithMultipleVersions() {
     assertNotNull(semanticRepository.setVersionedKnowledgeAsset("1", "1",
-        new KnowledgeAsset().withType(KnowledgeAssetType.Operational_Concept_Defintion)
+        new KnowledgeAsset().withRole(Operational_Concept_Defintion)
             .withSubject(new SimpleAnnotation()
-                .withRel(AssetVocabulary.DEFINES.asConcept())
+                .withRel(AnnotationRelType.Defines.asConcept())
                 .withExpr(dizziness))));
 
     assertNotNull(semanticRepository.setVersionedKnowledgeAsset("1", "2",
-        new KnowledgeAsset().withType(KnowledgeAssetType.Operational_Concept_Defintion)
+        new KnowledgeAsset().withRole(Operational_Concept_Defintion)
             .withSubject(new SimpleAnnotation()
-                .withRel(AssetVocabulary.DEFINES.asConcept())
+                .withRel(AnnotationRelType.Defines.asConcept())
                 .withExpr(dizziness))));
 
     List<Pointer> pointers = semanticRepository
-        .listKnowledgeAssets(KnowledgeAssetType.Operational_Concept_Defintion.getTag(), null, -1, -1)
+        .listKnowledgeAssets(Operational_Concept_Defintion.getTag(), null, -1, -1)
         .getBody();
     assertNotNull(pointers);
     assertEquals(1, pointers.size());

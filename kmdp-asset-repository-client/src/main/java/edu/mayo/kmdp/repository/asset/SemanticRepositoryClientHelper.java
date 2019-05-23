@@ -44,9 +44,9 @@ public class SemanticRepositoryClientHelper {
   public void saveToRepo(KnowledgeAsset surrogate, KnowledgeCarrier artifact,
       URIIdentifier associateArtifactTo) {
 
-    URIIdentifier surrogateId = surrogate.getResourceId();
+    URIIdentifier surrogateId = surrogate.getAssetId();
 
-    assetRepositoryApi.addKnowledgeAsset(surrogate);
+    assetRepositoryApi.initKnowledgeAsset(surrogate);
 
     if (artifact != null) {
       URIIdentifier artifactId = artifact.getAssetId();
