@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package edu.mayo.mea3.repository.semantic;
+package edu.mayo.kmdp.repository.asset;
 
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

@@ -27,6 +27,7 @@ import edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset;
 import edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype._20190801.DependencyType;
 import edu.mayo.ontology.taxonomies.krlanguage._2018._08.KnowledgeRepresentationLanguage;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
@@ -34,48 +35,54 @@ import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 
 public class BundlerIntegrationTest extends IntegrationTestBase {
 
-  private ApiClient apiClient = new ApiClient().setBasePath("http://localhost:11111");
+  private ApiClient apiClient = new ResponsiveApiClient().setBasePath("http://localhost:11111");
   private KnowledgeAssetRepositoryApi repo = KnowledgeAssetRepositoryApi.newInstance(apiClient);
+  private KnowledgeAssetCatalogApi catalog = KnowledgeAssetCatalogApi.newInstance(apiClient);
+  private KnowledgeAssetRetrievalApi lib = KnowledgeAssetRetrievalApi.newInstance(apiClient);
 
 
   @Test
   public void testBundleOnlyOne() {
-    apiClient.selectHeaderAccept(new String[] {});
+    apiClient.selectHeaderAccept(new String[]{});
+    UUID u1 = UUID.nameUUIDFromBytes("1".getBytes());
 
-    repo.setVersionedKnowledgeAsset("1", "2", new KnowledgeAsset().
+    catalog.setVersionedKnowledgeAsset(u1, "2", new KnowledgeAsset().
         withCarriers(new ComputableKnowledgeArtifact().
             withRepresentation(new Representation().withLanguage(
                 KnowledgeRepresentationLanguage.HL7_ELM))));
-    repo.addKnowledgeAssetCarrier("1", "2", "HI!".getBytes());
+    repo.addKnowledgeAssetCarrier(u1, "2", "HI!".getBytes());
 
-    List<KnowledgeCarrier> carriers = repo.getKnowledgeAssetBundle("1", "2",
-        DependencyType.Depends_On.getTag(), -1);
+    List<KnowledgeCarrier> carriers = lib.getKnowledgeArtifactBundle(u1, "2",
+        DependencyType.Depends_On.getTag(), -1, null).getOptionalValue().get();
 
     assertEquals(1, carriers.size());
   }
 
   @Test
   public void testBundleWithDependency() {
+    UUID ua = UUID.nameUUIDFromBytes("a".getBytes());
+    UUID u1 = UUID.nameUUIDFromBytes("1".getBytes());
     edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka = new KnowledgeAsset().
         withCarriers(new ComputableKnowledgeArtifact().
             withRepresentation(
                 new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM))).
-        withAssetId(DatatypeHelper.uri("http:/some/uri/", "a", "b"));
+        withAssetId(DatatypeHelper.uri("http:/some/uri/", ua.toString(), "b"));
 
-    repo.setVersionedKnowledgeAsset("a", "b", ka);
+    catalog.setVersionedKnowledgeAsset(ua, "b", ka);
 
-    repo.setVersionedKnowledgeAsset("1", "2", new KnowledgeAsset().
+    catalog.setVersionedKnowledgeAsset(u1, "2", new KnowledgeAsset().
         withCarriers(new ComputableKnowledgeArtifact().
             withRepresentation(
                 new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM))).
-        withAssetId(DatatypeHelper.uri("http:/some/uri/", "1", "2")).
+        withAssetId(DatatypeHelper.uri("http:/some/uri/", u1.toString(), "2")).
         withRelated(new Dependency().withRel(DependencyType.Imports).withTgt(ka)));
 
-    repo.addKnowledgeAssetCarrier("a", "b", "Hi!".getBytes());
-    repo.addKnowledgeAssetCarrier("1", "2", "There!".getBytes());
+    repo.addKnowledgeAssetCarrier(ua, "b", "Hi!".getBytes());
+    repo.addKnowledgeAssetCarrier(u1, "2", "There!".getBytes());
 
-    List<KnowledgeCarrier> carriers = repo
-        .getKnowledgeAssetBundle("1", "2", DependencyType.Imports.getTag(), -1);
+    List<KnowledgeCarrier> carriers = lib
+        .getKnowledgeArtifactBundle(u1, "2", DependencyType.Imports.getTag(), -1, "")
+        .getOptionalValue().get();
 
     assertEquals(2, carriers.size());
     List<String> strings = carriers.stream().map(BinaryCarrier.class::cast)
@@ -87,37 +94,42 @@ public class BundlerIntegrationTest extends IntegrationTestBase {
 
   @Test
   public void testBundleWithDependencyThreeDeep() {
+    UUID ua = UUID.nameUUIDFromBytes("a".getBytes());
+    UUID u1 = UUID.nameUUIDFromBytes("1".getBytes());
+    UUID uq = UUID.nameUUIDFromBytes("q".getBytes());
+
     edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka1 = new KnowledgeAsset().
         withCarriers(new ComputableKnowledgeArtifact().
             withRepresentation(
                 new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM)))
-        .withAssetId(DatatypeHelper.uri("http:/some/uri/", "a", "b"));
+        .withAssetId(DatatypeHelper.uri("http:/some/uri/", ua.toString(), "b"));
 
     edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka2 = new KnowledgeAsset().
         withCarriers(new ComputableKnowledgeArtifact().
             withRepresentation(
                 new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM)))
-        .withAssetId(DatatypeHelper.uri("http:/some/uri/", "q", "r"))
+        .withAssetId(DatatypeHelper.uri("http:/some/uri/", uq.toString(), "r"))
         .withRelated(new Dependency().withRel(DependencyType.Imports).withTgt(ka1));
 
     edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka3 = new KnowledgeAsset().
         withCarriers(new ComputableKnowledgeArtifact().
             withRepresentation(
                 new Representation().withLanguage(KnowledgeRepresentationLanguage.HL7_ELM)))
-        .withAssetId(DatatypeHelper.uri("http:/some/uri/", "1", "2"))
+        .withAssetId(DatatypeHelper.uri("http:/some/uri/", u1.toString(), "2"))
         .withRelated(
             new Dependency().withRel(DependencyType.Imports).withTgt(ka2));
 
-    repo.setVersionedKnowledgeAsset("a", "b", ka1);
-    repo.setVersionedKnowledgeAsset("q", "r", ka2);
-    repo.setVersionedKnowledgeAsset("1", "2", ka3);
+    catalog.setVersionedKnowledgeAsset(ua, "b", ka1);
+    catalog.setVersionedKnowledgeAsset(uq, "r", ka2);
+    catalog.setVersionedKnowledgeAsset(u1, "2", ka3);
 
-    repo.addKnowledgeAssetCarrier("a", "b", "Hi!".getBytes());
-    repo.addKnowledgeAssetCarrier("1", "2", "There!".getBytes());
-    repo.addKnowledgeAssetCarrier("q", "r", "Zebra!".getBytes());
+    repo.addKnowledgeAssetCarrier(ua, "b", "Hi!".getBytes());
+    repo.addKnowledgeAssetCarrier(u1, "2", "There!".getBytes());
+    repo.addKnowledgeAssetCarrier(uq, "r", "Zebra!".getBytes());
 
-    List<KnowledgeCarrier> carriers = repo
-        .getKnowledgeAssetBundle("1", "2", DependencyType.Imports.getTag(), -1);
+    List<KnowledgeCarrier> carriers = lib
+        .getKnowledgeArtifactBundle(u1, "2", DependencyType.Imports.getTag(), -1, "")
+        .getOptionalValue().get();
 
     assertEquals(3, carriers.size());
     List<String> strings = carriers.stream().map(BinaryCarrier.class::cast)

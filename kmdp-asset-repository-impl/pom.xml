@@ -8,7 +8,7 @@
   <parent>
     <artifactId>kmdp-asset-repository</artifactId>
     <groupId>edu.mayo.kmdp</groupId>
-    <version>1.0.2</version>
+    <version>2.0.0</version>
   </parent>
 
   <artifactId>kmdp-asset-repository-impl</artifactId>
@@ -19,14 +19,21 @@
 
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
-      <artifactId>kmdp-artifact-repository-service-api-client</artifactId>
-      <version>${kmdp.version}</version>
+      <artifactId>kmdp-artifact-repository-service-client</artifactId>
+      <version>${kmdp.impl.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>edu.mayo.kmdp</groupId>
+      <artifactId>kmdp-asset-repository-service-client</artifactId>
+      <version>${kmdp.impl.version}</version>
+      <scope>test</scope>
     </dependency>
 
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-artifact-repository-impl</artifactId>
-      <version>${kmdp.version}</version>
+      <version>${kmdp.artifact.repo.version}</version>
       <classifier>classes</classifier>
       <exclusions>
         <exclusion>
@@ -38,14 +45,8 @@
 
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
-      <artifactId>kmdp-language-service-api-client</artifactId>
-      <version>${kmdp.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>edu.mayo.kmdp</groupId>
-      <artifactId>kmdp-language-impl</artifactId>
-      <version>${kmdp.version}</version>
+      <artifactId>kmdp-knowledge-transrepresentation-impl</artifactId>
+      <version>${kmdp.impl.version}</version>
       <classifier>classes</classifier>
       <exclusions>
         <exclusion>
@@ -54,6 +55,7 @@
         </exclusion>
       </exclusions>
     </dependency>
+
 
     <dependency>
       <groupId>org.mapdb</groupId>
@@ -74,6 +76,12 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.fasterxml.jackson.dataformat</groupId>
+      <artifactId>jackson-dataformat-xml</artifactId>
+      <scope>test</scope>
     </dependency>
 
   </dependencies>

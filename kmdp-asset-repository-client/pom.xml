@@ -24,7 +24,7 @@
   <parent>
     <artifactId>kmdp-asset-repository</artifactId>
     <groupId>edu.mayo.kmdp</groupId>
-    <version>1.0.2</version>
+    <version>2.0.0</version>
   </parent>
 
   <artifactId>kmdp-asset-repository-client</artifactId>
@@ -37,13 +37,13 @@
   <dependencies>
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
-      <artifactId>kmdp-asset-repository-service-api-client</artifactId>
-      <version>${project.version}</version>
+      <artifactId>kmdp-asset-repository-service-client</artifactId>
+      <version>${kmdp.impl.version}</version>
     </dependency>
 
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
-      <artifactId>kmdp-ws-utils</artifactId>
+      <artifactId>kmdp-utils</artifactId>
     </dependency>
   </dependencies>
 

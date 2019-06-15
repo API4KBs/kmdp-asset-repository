@@ -15,8 +15,10 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
+import edu.mayo.kmdp.id.VersionedIdentifier;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
-import edu.mayo.kmdp.utils.JsonRestWSUtils;
+import edu.mayo.kmdp.util.Util;
+import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
 import org.omg.spec.api4kp._1_0.identifiers.URIIdentifier;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
@@ -35,8 +37,7 @@ public class SemanticRepositoryClientHelper {
 
 
   public SemanticRepositoryClientHelper(String repoUrl) {
-    ApiClient webClient = JsonRestWSUtils
-        .configuredClient(ApiClient.class, JsonRestWSUtils.WithFHIR.DSTU2).setBasePath(repoUrl);
+    ApiClient webClient = ResponsiveApiClient.newInstance(WithFHIR.DSTU2).setBasePath(repoUrl);
     this.knowledgeAssetCatalogApi = KnowledgeAssetCatalogApi.newInstance(webClient);
     this.assetRepositoryApi = KnowledgeAssetRepositoryApi.newInstance(webClient);
   }
@@ -44,9 +45,11 @@ public class SemanticRepositoryClientHelper {
   public void saveToRepo(KnowledgeAsset surrogate, KnowledgeCarrier artifact,
       URIIdentifier associateArtifactTo) {
 
-    URIIdentifier surrogateId = surrogate.getAssetId();
+    VersionedIdentifier surrogateId = surrogate.getAssetId();
 
-    assetRepositoryApi.initKnowledgeAsset(surrogate);
+    knowledgeAssetCatalogApi
+        .setVersionedKnowledgeAsset(Util.ensureUUID(surrogateId.getTag()).get(),
+            surrogateId.getVersion(), surrogate);
 
     if (artifact != null) {
       URIIdentifier artifactId = artifact.getAssetId();
@@ -63,9 +66,9 @@ public class SemanticRepositoryClientHelper {
       }
 
       assetRepositoryApi.setKnowledgeAssetCarrierVersion(
-          assetId,
+          Util.ensureUUID(assetId).get(),
           assetVersion,
-          artifactId.getTag(),
+          Util.ensureUUID(artifactId.getTag()).get(),
           artifactId.getVersion(),
           ((BinaryCarrier) artifact).getEncodedExpression());
     }

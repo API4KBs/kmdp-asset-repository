@@ -18,11 +18,12 @@ package edu.mayo.kmdp.repository.asset;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.mayo.kmdp.repository.asset.server.KnowledgeAssetCatalogApiDelegate;
 import edu.mayo.kmdp.repository.asset.server.KnowledgeAssetRepositoryApiDelegate;
+import edu.mayo.kmdp.repository.asset.server.KnowledgeAssetRetrievalApiDelegate;
 import java.util.Optional;
 import javax.servlet.http.HttpServletRequest;
 
 public interface KnowledgeAssetRepository extends KnowledgeAssetCatalogApiDelegate,
-    KnowledgeAssetRepositoryApiDelegate {
+    KnowledgeAssetRepositoryApiDelegate, KnowledgeAssetRetrievalApiDelegate {
 
   @Override
   default Optional<String> getAcceptHeader() {

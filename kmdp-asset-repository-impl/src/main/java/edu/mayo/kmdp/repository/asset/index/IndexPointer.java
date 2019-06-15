@@ -17,6 +17,7 @@ package edu.mayo.kmdp.repository.asset.index;
 
 import java.io.Serializable;
 import java.util.Objects;
+import java.util.UUID;
 
 public class IndexPointer implements Serializable {
     private String id;
@@ -24,6 +25,11 @@ public class IndexPointer implements Serializable {
 
     public IndexPointer(String id, String version) {
         this.id = id;
+        this.version = version;
+    }
+
+    public IndexPointer(UUID id, String version) {
+        this.id = id.toString();
         this.version = version;
     }
 
