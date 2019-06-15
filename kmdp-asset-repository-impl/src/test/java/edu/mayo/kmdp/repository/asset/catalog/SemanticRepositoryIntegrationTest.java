@@ -13,25 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package edu.mayo.kmdp.repository.asset;
+package edu.mayo.kmdp.repository.asset.catalog;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset;
+import edu.mayo.kmdp.repository.asset.ApiClient;
+import edu.mayo.kmdp.repository.asset.IntegrationTestBase;
+import edu.mayo.kmdp.repository.asset.KnowledgeAssetCatalogApi;
+import edu.mayo.kmdp.repository.asset.ResponsiveApiClient;
 import edu.mayo.ontology.taxonomies.kao.knowledgeassettype._1_0.KnowledgeAssetType;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.Answer;
 import org.omg.spec.api4kp._1_0.identifiers.Pointer;
 
 public class SemanticRepositoryIntegrationTest extends IntegrationTestBase {
 
-  private ApiClient webClient = new ResponsiveApiClient()
+  private ApiClient webClient = ResponsiveApiClient.newInstance()
       .setBasePath("http://localhost:11111");
 
   protected KnowledgeAssetCatalogApi ckac = KnowledgeAssetCatalogApi.newInstance(webClient);
@@ -63,6 +66,9 @@ public class SemanticRepositoryIntegrationTest extends IntegrationTestBase {
 
   @Test
   public void testListKnowledgeAssetsNoType() {
+    Answer<List<Pointer>> zero = ckac.listKnowledgeAssets(null,null,-1,-1);
+    assertTrue(zero.isSuccess());
+    assertTrue(zero.getOptionalValue().get().isEmpty());
 
     ckac.setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("98".getBytes()), "1",
         new KnowledgeAsset().withFormalType(KnowledgeAssetType.Care_Process_Model));
