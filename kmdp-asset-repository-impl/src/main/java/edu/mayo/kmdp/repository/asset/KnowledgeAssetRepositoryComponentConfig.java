@@ -24,9 +24,18 @@ import edu.mayo.kmdp.repository.artifact.jcr.JcrKnowledgeArtifactRepository;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.repository.asset.index.Index;
 import edu.mayo.kmdp.repository.asset.index.MapDbIndex;
+import edu.mayo.kmdp.tranx.DeserializeApi;
+import edu.mayo.kmdp.tranx.DetectApi;
+import edu.mayo.kmdp.tranx.TransxionApi;
+import edu.mayo.kmdp.tranx.server.DeserializeApiDelegate;
+import edu.mayo.kmdp.tranx.server.DetectApiDelegate;
+import edu.mayo.kmdp.tranx.server.TransxionApiDelegate;
 import java.io.File;
+import javax.inject.Inject;
 import org.apache.jackrabbit.oak.Oak;
 import org.apache.jackrabbit.oak.jcr.Jcr;
+import org.omg.spec.api4kp._1_0.services.KPComponent;
+import org.omg.spec.api4kp._1_0.services.KPServer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -117,5 +126,39 @@ public class KnowledgeAssetRepositoryComponentConfig {
     client.setBasePath(cfg.getTyped(KnowledgeAssetRepositoryOptions.SERVER_HOST).toString());
     return client;
   }
+
+
+  @Inject
+  @KPServer
+  DetectApiDelegate detector;
+
+  @Bean
+  @KPComponent
+  public DetectApi detectApi() {
+    return DetectApi.newInstance(detector);
+  }
+
+
+  @Inject
+  @KPServer
+  TransxionApiDelegate txor;
+
+  @Bean
+  @KPComponent
+  public TransxionApi executionApi() {
+    return TransxionApi.newInstance(txor);
+  }
+
+
+  @Inject
+  @KPServer
+  DeserializeApiDelegate deser;
+
+  @Bean
+  @KPComponent
+  public DeserializeApi deserializeApi() {
+    return DeserializeApi.newInstance(deser);
+  }
+
 
 }
