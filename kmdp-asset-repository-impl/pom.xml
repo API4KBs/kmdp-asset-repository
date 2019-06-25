@@ -20,7 +20,7 @@
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-artifact-repository-service-client</artifactId>
-      <version>${kmdp.artifact.repo.version}</version>
+      <version>${kmdp.impl.version}</version>
     </dependency>
 
     <dependency>
@@ -46,7 +46,7 @@
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-knowledge-transrepresentation-impl</artifactId>
-      <version>${kmdp.impl.version}</version>
+      <version>${kmdp.language.version}</version>
       <classifier>classes</classifier>
       <exclusions>
         <exclusion>

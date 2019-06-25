@@ -17,6 +17,8 @@
 
   <properties>
     <kmdp.artifact.repo.version>(2.0.2-b20190608000000,2.0.3)</kmdp.artifact.repo.version>
+    <kmdp.impl.version>(2.0.2-b20190608000000,2.0.3)</kmdp.impl.version>
+    <kmdp.language.version>(2.0.2-b20190608000000,2.0.3)</kmdp.language.version>
   </properties>
 
   <modules>
