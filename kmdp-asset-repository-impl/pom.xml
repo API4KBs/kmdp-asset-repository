@@ -20,7 +20,7 @@
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-artifact-repository-service-client</artifactId>
-      <version>${kmdp.impl.version}</version>
+      <version>${kmdp.artifact.repo.version}</version>
     </dependency>
 
     <dependency>
