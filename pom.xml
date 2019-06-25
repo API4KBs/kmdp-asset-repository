@@ -23,7 +23,6 @@
 
   <modules>
     <module>kmdp-asset-repository-impl</module>
-    <module>kmdp-asset-repository-client</module>
 <!--    <module>kmdp-asset-repository-ui</module>-->
   </modules>
 
