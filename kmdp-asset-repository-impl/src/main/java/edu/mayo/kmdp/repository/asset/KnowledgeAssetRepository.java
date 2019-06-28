@@ -25,18 +25,5 @@ import javax.servlet.http.HttpServletRequest;
 public interface KnowledgeAssetRepository extends KnowledgeAssetCatalogApiDelegate,
     KnowledgeAssetRepositoryApiDelegate, KnowledgeAssetRetrievalApiDelegate {
 
-  @Override
-  default Optional<String> getAcceptHeader() {
-    return KnowledgeAssetCatalogApiDelegate.super.getAcceptHeader();
-  }
 
-  @Override
-  default Optional<ObjectMapper> getObjectMapper() {
-    return KnowledgeAssetCatalogApiDelegate.super.getObjectMapper();
-  }
-
-  @Override
-  default Optional<HttpServletRequest> getRequest() {
-    return KnowledgeAssetCatalogApiDelegate.super.getRequest();
-  }
 }

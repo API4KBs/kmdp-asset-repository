@@ -19,10 +19,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset;
-import edu.mayo.kmdp.repository.asset.ApiClient;
 import edu.mayo.kmdp.repository.asset.IntegrationTestBase;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetCatalogApi;
-import edu.mayo.kmdp.repository.asset.ResponsiveApiClient;
+import edu.mayo.kmdp.repository.asset.client.ApiClientFactory;
+import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
 import edu.mayo.ontology.taxonomies.kao.knowledgeassettype._1_0.KnowledgeAssetType;
 import java.util.List;
 import java.util.UUID;
@@ -34,10 +34,9 @@ import org.omg.spec.api4kp._1_0.identifiers.Pointer;
 
 public class SemanticRepositoryIntegrationTest extends IntegrationTestBase {
 
-  private ApiClient webClient = ResponsiveApiClient.newInstance()
-      .setBasePath("http://localhost:11111");
+  private ApiClientFactory webClientFactory = new ApiClientFactory("http://localhost:11111", WithFHIR.NONE);
 
-  protected KnowledgeAssetCatalogApi ckac = KnowledgeAssetCatalogApi.newInstance(webClient);
+  protected KnowledgeAssetCatalogApi ckac = KnowledgeAssetCatalogApi.newInstance(webClientFactory);
 
 
   @Test

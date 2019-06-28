@@ -26,7 +26,6 @@ import static org.omg.spec.api4kp._1_0.contrastors.SyntacticRepresentationContra
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import edu.mayo.kmdp.SurrogateHelper;
 import edu.mayo.kmdp.id.VersionedIdentifier;
 import edu.mayo.kmdp.id.helper.DatatypeHelper;
 import edu.mayo.kmdp.metadata.surrogate.Association;
@@ -49,13 +48,12 @@ import edu.mayo.kmdp.tranx.ValidateApi;
 import edu.mayo.kmdp.util.FileUtil;
 import edu.mayo.kmdp.util.JSonUtil;
 import edu.mayo.kmdp.util.Util;
+import edu.mayo.kmdp.util.ws.ResponseHelper;
 import edu.mayo.ontology.taxonomies.kao.knowledgeassetrole._1_0.KnowledgeAssetRole;
 import edu.mayo.ontology.taxonomies.kao.knowledgeassettype._1_0.KnowledgeAssetType;
-import edu.mayo.ontology.taxonomies.krformat._2018._08.SerializationFormat;
 import edu.mayo.ontology.taxonomies.krlanguage._2018._08.KnowledgeRepresentationLanguage;
 import java.io.ByteArrayOutputStream;
 import java.net.URI;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -69,7 +67,6 @@ import org.omg.spec.api4kp._1_0.AbstractCarrier;
 import org.omg.spec.api4kp._1_0.identifiers.Pointer;
 import org.omg.spec.api4kp._1_0.identifiers.URIIdentifier;
 import org.omg.spec.api4kp._1_0.identifiers.VersionIdentifier;
-import org.omg.spec.api4kp._1_0.services.ASTCarrier;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
 import org.omg.spec.api4kp._1_0.services.KPComponent;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
@@ -77,7 +74,6 @@ import org.omg.spec.api4kp._1_0.services.KnowledgeProcessingOperator;
 import org.omg.spec.api4kp._1_0.services.SyntacticRepresentation;
 import org.omg.spec.api4kp._1_0.services.repository.KnowledgeAssetCatalog;
 import org.omg.spec.api4kp._1_0.services.tranx.ModelMIMECoder;
-import org.omg.spec.api4kp._1_0.services.tranx.TransrepresentationOperator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.CollectionUtils;
@@ -154,7 +150,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public ResponseEntity<List<KnowledgeAsset>> getKnowledgeAssetBundle(UUID assetId,
       String versionTag, String assetRelationship, Integer depth) {
-    return null;
+    return ResponseHelper.notSupported();
+  }
+
+  @Override
+  public ResponseEntity<Void> queryKnowledgeAssets(String query) {
+    return ResponseHelper.notSupported();
   }
 
   @Override

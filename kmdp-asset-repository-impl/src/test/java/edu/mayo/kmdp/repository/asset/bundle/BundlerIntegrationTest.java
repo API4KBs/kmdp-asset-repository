@@ -24,12 +24,12 @@ import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.Dependency;
 import edu.mayo.kmdp.metadata.surrogate.Representation;
 import edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset;
-import edu.mayo.kmdp.repository.asset.ApiClient;
 import edu.mayo.kmdp.repository.asset.IntegrationTestBase;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetCatalogApi;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryApi;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRetrievalApi;
-import edu.mayo.kmdp.repository.asset.ResponsiveApiClient;
+import edu.mayo.kmdp.repository.asset.client.ApiClientFactory;
+import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
 import edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype._20190801.DependencyType;
 import edu.mayo.ontology.taxonomies.krlanguage._2018._08.KnowledgeRepresentationLanguage;
 import java.util.List;
@@ -41,15 +41,14 @@ import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 
 public class BundlerIntegrationTest extends IntegrationTestBase {
 
-  private ApiClient apiClient = ResponsiveApiClient.newInstance().setBasePath("http://localhost:11111");
-  private KnowledgeAssetRepositoryApi repo = KnowledgeAssetRepositoryApi.newInstance(apiClient);
-  private KnowledgeAssetCatalogApi catalog = KnowledgeAssetCatalogApi.newInstance(apiClient);
-  private KnowledgeAssetRetrievalApi lib = KnowledgeAssetRetrievalApi.newInstance(apiClient);
+  private ApiClientFactory apiClientFactory = new ApiClientFactory("http://localhost:11111", WithFHIR.NONE);
+  private KnowledgeAssetRepositoryApi repo = KnowledgeAssetRepositoryApi.newInstance(apiClientFactory);
+  private KnowledgeAssetCatalogApi catalog = KnowledgeAssetCatalogApi.newInstance(apiClientFactory);
+  private KnowledgeAssetRetrievalApi lib = KnowledgeAssetRetrievalApi.newInstance(apiClientFactory);
 
 
   @Test
   public void testBundleOnlyOne() {
-    apiClient.selectHeaderAccept(new String[]{});
     UUID u1 = UUID.nameUUIDFromBytes("1".getBytes());
 
     catalog.setVersionedKnowledgeAsset(u1, "2", new KnowledgeAsset().

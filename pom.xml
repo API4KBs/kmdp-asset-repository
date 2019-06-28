@@ -7,18 +7,17 @@
   <parent>
     <groupId>edu.mayo.kmdp</groupId>
     <artifactId>kmdp-asset-repository-service-base</artifactId>
-    <version>(2.0.2-b20190608000000,2.0.3)</version>
+    <version>(2.4.0,2.5.1)</version>
   </parent>
 
   <artifactId>kmdp-asset-repository</artifactId>
-  <version>2.0.0</version>
+  <version>2.0.5</version>
 
   <packaging>pom</packaging>
 
   <properties>
-    <kmdp.artifact.repo.version>(1.9.0,2.0.3)</kmdp.artifact.repo.version>
-    <kmdp.impl.version>(2.0.2-b20190608000000,2.0.3)</kmdp.impl.version>
-    <kmdp.language.version>(2.0.2-b20190608000000,2.0.3)</kmdp.language.version>
+    <kmdp.artifact.repo.version>(2.0.4,2.0.6]</kmdp.artifact.repo.version>
+    <kmdp.language.version>(2.0.4,2.0.6]</kmdp.language.version>
   </properties>
 
   <modules>

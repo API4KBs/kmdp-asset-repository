@@ -19,7 +19,6 @@ import static edu.mayo.kmdp.SurrogateBuilder.id;
 import static edu.mayo.ontology.taxonomies.krformat._2018._08.SerializationFormat.XML_1_1;
 import static edu.mayo.ontology.taxonomies.krlanguage._2018._08.KnowledgeRepresentationLanguage.HTML;
 import static edu.mayo.ontology.taxonomies.krlanguage._2018._08.KnowledgeRepresentationLanguage.KNART_1_3;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
@@ -28,14 +27,13 @@ import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.InlinedRepresentation;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.metadata.surrogate.Representation;
-import edu.mayo.kmdp.repository.asset.ApiClient;
 import edu.mayo.kmdp.repository.asset.IntegrationTestBase;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetCatalogApi;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryApi;
-import edu.mayo.kmdp.repository.asset.ResponsiveApiClient;
-import edu.mayo.kmdp.util.JSonUtil;
+import edu.mayo.kmdp.repository.asset.client.ApiClientFactory;
 import edu.mayo.kmdp.util.JaxbUtil;
 import edu.mayo.kmdp.util.Util;
+import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
 import edu.mayo.ontology.taxonomies.iso639_1_languagecodes._20170801.Language;
 import edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory._1_0.KnowledgeAssetCategory;
 import edu.mayo.ontology.taxonomies.kao.knowledgeassettype._1_0.KnowledgeAssetType;
@@ -60,11 +58,14 @@ import org.omg.spec.api4kp._1_0.services.tranx.ModelMIMECoder;
 
 public class ContentNegotiationTest extends IntegrationTestBase {
 
-  private ApiClient webClient = ResponsiveApiClient.newInstance()
-      .setBasePath("http://localhost:11111");
 
-  protected KnowledgeAssetCatalogApi ckac = KnowledgeAssetCatalogApi.newInstance(webClient);
-  protected KnowledgeAssetRepositoryApi repo = KnowledgeAssetRepositoryApi.newInstance(webClient);
+  private ApiClientFactory webClientFactory = new ApiClientFactory("http://localhost:11111",
+      WithFHIR.NONE);
+
+  protected KnowledgeAssetCatalogApi ckac = KnowledgeAssetCatalogApi
+      .newInstance(webClientFactory);
+  protected KnowledgeAssetRepositoryApi repo = KnowledgeAssetRepositoryApi
+      .newInstance(webClientFactory);
 
 
   @Test

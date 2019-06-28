@@ -24,6 +24,7 @@ import static edu.mayo.ontology.taxonomies.krlanguage._2018._08.KnowledgeReprese
 
 import edu.mayo.kmdp.tranx.server.TransxionApiDelegate;
 import edu.mayo.kmdp.util.ws.ResponseHelper;
+import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
 import javax.inject.Named;
@@ -66,6 +67,12 @@ public class MockTranslator implements TransxionApiDelegate {
   @Override
   public ResponseEntity<SyntacticRepresentation> getTransrepresentationOutput(String txId) {
     return ResponseHelper.succeed(getTo());
+  }
+
+  @Override
+  public ResponseEntity<List<TransrepresentationOperator>> listOperators(
+      SyntacticRepresentation from, SyntacticRepresentation into, String method) {
+    return ResponseHelper.notSupported();
   }
 
   protected static SyntacticRepresentation getFrom() {
