@@ -15,12 +15,12 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
-import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
-
 import java.util.List;
+import java.util.UUID;
+import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 
 public interface Bundler {
 
-    List<KnowledgeCarrier> bundle(String assetId, String version);
+    List<KnowledgeCarrier> bundle(UUID assetId, String version);
 
 }

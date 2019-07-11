@@ -46,7 +46,7 @@ public class HrefBuilder {
         return URI.create(String.format("%s/cat/assets/%s/versions/%s/carriers/%s/versions/%s", this.host, assetId, assetVersion, carrierId, carrierVersion));
     }
 
-    public URI getArtifactRef(String repository_id, String artifactId,String version) {
+    public URI getArtifactRef(String repository_id, String artifactId, String version) {
         return URI.create(URIPathHelper.knowledgeArtifactLocation(host,repository_id,artifactId,version));
     }
 }

@@ -18,9 +18,7 @@ package edu.mayo.kmdp.repository.asset;
 import edu.mayo.kmdp.repository.asset.config.IntegrationTestConfig;
 import edu.mayo.kmdp.repository.asset.server.Swagger2SpringBoot;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.ExitCodeGenerator;
 import org.springframework.boot.SpringApplication;
@@ -31,7 +29,6 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = IntegrationTestConfig.class)
-@DirtiesContext(classMode= DirtiesContext.ClassMode.AFTER_CLASS)
 public abstract class IntegrationTestBase {
 
   private static ConfigurableApplicationContext ctx;
