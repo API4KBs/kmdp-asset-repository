@@ -20,15 +20,17 @@ import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 import com.google.common.collect.Lists;
 import edu.mayo.kmdp.SurrogateHelper;
 import edu.mayo.kmdp.id.helper.DatatypeHelper;
-import edu.mayo.kmdp.metadata.surrogate.KnowledgeArtifact;
+import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.repository.asset.Bundler;
 import edu.mayo.kmdp.repository.asset.SemanticKnowledgeAssetRepository;
 import edu.mayo.kmdp.util.FileUtil;
+import edu.mayo.kmdp.util.Util;
 import edu.mayo.ontology.taxonomies.krlanguage._2018._08.KnowledgeRepresentationLanguage;
 import java.net.URI;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import org.omg.spec.api4kp._1_0.identifiers.URIIdentifier;
 import org.omg.spec.api4kp._1_0.identifiers.VersionIdentifier;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
@@ -44,7 +46,7 @@ public class DefaultBundler implements Bundler {
   }
 
   @Override
-  public List<KnowledgeCarrier> bundle(String assetId, String version) {
+  public List<KnowledgeCarrier> bundle(UUID assetId, String version) {
     KnowledgeAsset asset = this.coreApi.getVersionedKnowledgeAsset(assetId, version).getBody();
 
     KnowledgeCarrier carrier = this.coreApi
@@ -67,12 +69,12 @@ public class DefaultBundler implements Bundler {
   }
 
   private void retrieveCarriers(KnowledgeAsset x, List<KnowledgeCarrier> returnList) {
-    URIIdentifier uriIdentifier = x.getResourceId();
+    URIIdentifier uriIdentifier = x.getAssetId();
 
     if (uriIdentifier != null) {
       VersionIdentifier id = DatatypeHelper.toVersionIdentifier(uriIdentifier);
       returnList.add(
-          this.coreApi.getCanonicalKnowledgeAssetCarrier(id.getTag(), id.getVersion(), null)
+          this.coreApi.getCanonicalKnowledgeAssetCarrier(Util.ensureUUID(id.getTag()).get(), id.getVersion(), null)
               .getBody());
     } else {
       returnList.addAll(this.getAnonymousArtifacts(x));
@@ -84,10 +86,10 @@ public class DefaultBundler implements Bundler {
 
     if (assetSurrogate.getCarriers() != null) {
       assetSurrogate.getCarriers().stream()
-          .filter(KnowledgeArtifact.class::isInstance)
-          .map(KnowledgeArtifact.class::cast)
+          .filter(ComputableKnowledgeArtifact.class::isInstance)
+          .map(ComputableKnowledgeArtifact.class::cast)
           .forEach(carrier -> {
-            URI masterLocation = carrier.getMasterLocation();
+            URI masterLocation = carrier.getLocator();
             if (masterLocation != null) {
               BinaryCarrier newCarrier = new BinaryCarrier();
               if (carrier.getRepresentation() != null && carrier.getRepresentation().getLanguage() != null) {
@@ -95,7 +97,7 @@ public class DefaultBundler implements Bundler {
                 newCarrier.setRepresentation(rep(language));
               }
               newCarrier
-                  .withAssetId(assetSurrogate.getResourceId())
+                  .withAssetId(assetSurrogate.getAssetId())
                   .withEncodedExpression(FileUtil.readBytes(masterLocation).orElse(new byte[0]));
               carriers.add(newCarrier);
             }
