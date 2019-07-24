@@ -15,8 +15,8 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassetrole._1_0.KnowledgeAssetRole.Operational_Concept_Definition;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype._1_0.KnowledgeAssetType.Care_Process_Model;
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassetrole._20190801.KnowledgeAssetRole.Operational_Concept_Definition;
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype._20190801.KnowledgeAssetType.Care_Process_Model;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -29,7 +29,7 @@ import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactSeriesApi;
 import edu.mayo.kmdp.repository.artifact.jcr.JcrKnowledgeArtifactRepository;
 import edu.mayo.kmdp.repository.asset.index.MapDbIndex;
-import edu.mayo.ontology.taxonomies.kmdo.annotationreltype._20180601.AnnotationRelType;
+import edu.mayo.ontology.taxonomies.kmdo.annotationreltype._20190801.AnnotationRelType;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;

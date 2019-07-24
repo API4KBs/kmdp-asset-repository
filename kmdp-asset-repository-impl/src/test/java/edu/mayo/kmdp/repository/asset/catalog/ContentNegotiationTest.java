@@ -16,9 +16,9 @@
 package edu.mayo.kmdp.repository.asset.catalog;
 
 import static edu.mayo.kmdp.SurrogateBuilder.id;
-import static edu.mayo.ontology.taxonomies.krformat._2018._08.SerializationFormat.XML_1_1;
-import static edu.mayo.ontology.taxonomies.krlanguage._2018._08.KnowledgeRepresentationLanguage.HTML;
-import static edu.mayo.ontology.taxonomies.krlanguage._2018._08.KnowledgeRepresentationLanguage.KNART_1_3;
+import static edu.mayo.ontology.taxonomies.krformat._20190801.SerializationFormat.XML_1_1;
+import static edu.mayo.ontology.taxonomies.krlanguage._20190801.KnowledgeRepresentationLanguage.HTML;
+import static edu.mayo.ontology.taxonomies.krlanguage._20190801.KnowledgeRepresentationLanguage.KNART_1_3;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
@@ -35,8 +35,8 @@ import edu.mayo.kmdp.util.JaxbUtil;
 import edu.mayo.kmdp.util.Util;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
 import edu.mayo.ontology.taxonomies.iso639_2_languagecodes._20190201.Language;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory._1_0.KnowledgeAssetCategory;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassettype._1_0.KnowledgeAssetType;
+import edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory._20190801.KnowledgeAssetCategory;
+import edu.mayo.ontology.taxonomies.kao.knowledgeassettype._20190801.KnowledgeAssetType;
 import java.util.Collections;
 import java.util.UUID;
 import org.hl7.cdsdt.r2.ST;

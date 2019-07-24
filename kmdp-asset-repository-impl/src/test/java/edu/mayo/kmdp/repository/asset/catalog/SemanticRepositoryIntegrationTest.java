@@ -23,7 +23,7 @@ import edu.mayo.kmdp.repository.asset.IntegrationTestBase;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetCatalogApi;
 import edu.mayo.kmdp.repository.asset.client.ApiClientFactory;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassettype._1_0.KnowledgeAssetType;
+import edu.mayo.ontology.taxonomies.kao.knowledgeassettype._20190801.KnowledgeAssetType;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
