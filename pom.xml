@@ -16,8 +16,8 @@
   <packaging>pom</packaging>
 
   <properties>
-    <kmdp.artifact.repo.version>2.3.1</kmdp.artifact.repo.version>
-    <kmdp.language.version>2.3.1</kmdp.language.version>
+    <kmdp.artifact.repo.version>[2.3.0,)</kmdp.artifact.repo.version>
+    <kmdp.language.version>[2.3.0,)</kmdp.language.version>
   </properties>
 
   <modules>
