@@ -16,11 +16,11 @@
 package edu.mayo.kmdp.language.test;
 
 
-import static edu.mayo.ontology.taxonomies.api4kp.knowledgeoperations._2018._06.KnowledgeProcessingOperation.Translation_Task;
-import static edu.mayo.ontology.taxonomies.krformat._2018._08.SerializationFormat.TXT;
-import static edu.mayo.ontology.taxonomies.krformat._2018._08.SerializationFormat.XML_1_1;
-import static edu.mayo.ontology.taxonomies.krlanguage._2018._08.KnowledgeRepresentationLanguage.HTML;
-import static edu.mayo.ontology.taxonomies.krlanguage._2018._08.KnowledgeRepresentationLanguage.KNART_1_3;
+import static edu.mayo.ontology.taxonomies.api4kp.knowledgeoperations._20190801.KnowledgeProcessingOperation.Translation_Task;
+import static edu.mayo.ontology.taxonomies.krformat._20190801.SerializationFormat.TXT;
+import static edu.mayo.ontology.taxonomies.krformat._20190801.SerializationFormat.XML_1_1;
+import static edu.mayo.ontology.taxonomies.krlanguage._20190801.KnowledgeRepresentationLanguage.HTML;
+import static edu.mayo.ontology.taxonomies.krlanguage._20190801.KnowledgeRepresentationLanguage.KNART_1_3;
 
 import edu.mayo.kmdp.tranx.server.TransxionApiDelegate;
 import edu.mayo.kmdp.util.ws.ResponseHelper;
