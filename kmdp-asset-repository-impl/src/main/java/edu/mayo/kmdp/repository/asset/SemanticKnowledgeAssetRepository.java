@@ -238,6 +238,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
             .orElse(null);
       }
 
+      if (translator == null) {
+        return attempt(Optional.empty());
+      }
       return attempt( translator.listOperators(from,preferred.orElse(null),null)
           .map((l)->l.get(0))
           .map(KnowledgeProcessingOperator::getOperatorId)
@@ -640,5 +643,35 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     return UUID.randomUUID();
   }
 
+  public DeserializeApi getParser() {
+    return parser;
+  }
 
+  public void setParser(DeserializeApi parser) {
+    this.parser = parser;
+  }
+
+  public DetectApi getDetector() {
+    return detector;
+  }
+
+  public void setDetector(DetectApi detector) {
+    this.detector = detector;
+  }
+
+  public ValidateApi getValidator() {
+    return validator;
+  }
+
+  public void setValidator(ValidateApi validator) {
+    this.validator = validator;
+  }
+
+  public TransxionApi getTranslator() {
+    return translator;
+  }
+
+  public void setTranslator(TransxionApi translator) {
+    this.translator = translator;
+  }
 }

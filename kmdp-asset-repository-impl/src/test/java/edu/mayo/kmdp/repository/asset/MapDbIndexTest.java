@@ -34,7 +34,7 @@ public class MapDbIndexTest {
 
     index.registerAnnotations(new IndexPointer("1", "1"),
         Sets.newHashSet(new SimpleAnnotation().withExpr(
-            new ConceptIdentifier().withRef(
+            new ConceptIdentifier().withConceptId(
                 URI.create("http://something")))));
 
     assertEquals(1, index.getAssetIdsByAnnotation("http://something").size());

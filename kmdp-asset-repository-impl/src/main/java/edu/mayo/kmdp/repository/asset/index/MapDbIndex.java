@@ -207,7 +207,7 @@ public class MapDbIndex implements DisposableBean, Index {
 
     if (!CollectionUtils.isEmpty(annotations)) {
       annotations.stream().forEach(annotation -> {
-        String value = annotation.getExpr().getRef().toString();
+        String value = annotation.getExpr().getConceptId().toString();
 
         map.computeIfAbsent(value, (x) -> map.put(x, new HashSet<>()));
         Set<IndexPointer> pointers = map.get(value);
