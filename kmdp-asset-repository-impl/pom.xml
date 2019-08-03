@@ -49,9 +49,8 @@
 
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
-      <artifactId>kmdp-knowledge-artifact-repository-impl</artifactId>
+      <artifactId>kmdp-knowledge-artifact-repository-core</artifactId>
       <version>${kmdp.artifact.repo.version}</version>
-      <classifier>classes</classifier>
       <exclusions>
         <exclusion>
           <groupId>edu.mayo.kmdp</groupId>
@@ -62,9 +61,8 @@
 
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
-      <artifactId>kmdp-knowledge-transrepresentation-impl</artifactId>
+      <artifactId>kmdp-knowledge-transrepresentation-core</artifactId>
       <version>${kmdp.language.version}</version>
-      <classifier>classes</classifier>
       <exclusions>
         <exclusion>
           <groupId>edu.mayo.kmdp</groupId>
