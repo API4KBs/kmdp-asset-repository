@@ -21,6 +21,7 @@
   </properties>
 
   <modules>
+    <module>kmdp-asset-repository-core</module>
     <module>kmdp-asset-repository-impl</module>
 <!--    <module>kmdp-asset-repository-ui</module>-->
   </modules>
