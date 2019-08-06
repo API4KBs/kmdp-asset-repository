@@ -208,9 +208,9 @@ public class SemanticRepositoryTest {
   void initAndGetAssetByAnnotation() {
     assertNotNull(semanticRepository.setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("1".getBytes()), "1",
         new KnowledgeAsset().withSubject(
-            new SimpleAnnotation().withExpr(
-                new ConceptIdentifier().withRef(
-                    URI.create("http://something"))))));
+            new SimpleAnnotation()
+                .withExpr(new ConceptIdentifier()
+                    .withConceptId(URI.create("http://something"))))));
 
     List<Pointer> pointers = semanticRepository
         .listKnowledgeAssets(null, "http://something", -1, -1).getBody();
@@ -222,10 +222,9 @@ public class SemanticRepositoryTest {
   void initAndGetAssetByAnnotationAndRel() {
     assertNotNull(semanticRepository.setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("1".getBytes()), "1",
         new KnowledgeAsset().withSubject(
-            new SimpleAnnotation().withExpr(
-                new ConceptIdentifier().withRef(
-                    URI.create("http://something"))).withRel(new ConceptIdentifier()
-                .withRef(URI.create("http://somerel"))))
+            new SimpleAnnotation()
+                .withExpr(new ConceptIdentifier().withConceptId(URI.create("http://something")))
+                .withRel(new ConceptIdentifier().withRef(URI.create("http://somerel"))))
         )
     );
 

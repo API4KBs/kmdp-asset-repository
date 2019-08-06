@@ -15,30 +15,11 @@
 
   <dependencies>
 
-    <!-- This implementation embeds the Language Service, but delegates to a web-based Repository Service. -->
-
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
-      <artifactId>kmdp-rest-ws-utils</artifactId>
+      <artifactId>kmdp-asset-repository-core</artifactId>
+      <version>${project.version}</version>
     </dependency>
-
-    <dependency>
-      <groupId>edu.mayo.kmdp</groupId>
-      <artifactId>kmdp-artifact-repository-service-client</artifactId>
-      <version>${kmdp.impl.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>edu.mayo.kmdp</groupId>
-      <artifactId>kmdp-artifact-transrepresentation-service-client</artifactId>
-      <version>${kmdp.impl.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>edu.mayo.kmdp</groupId>
-      <artifactId>kmdp-artifact-transrepresentation-service-interfaces</artifactId>
-      <version>${kmdp.impl.version}</version>
-    </dependency>
-
 
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
@@ -49,62 +30,14 @@
 
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
-      <artifactId>kmdp-knowledge-artifact-repository-impl</artifactId>
-      <version>${kmdp.artifact.repo.version}</version>
-      <classifier>classes</classifier>
-      <exclusions>
-        <exclusion>
-          <groupId>edu.mayo.kmdp</groupId>
-          <artifactId>kmdp-artifact-repository-service-server</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-
-    <dependency>
-      <groupId>edu.mayo.kmdp</groupId>
-      <artifactId>kmdp-knowledge-transrepresentation-impl</artifactId>
-      <version>${kmdp.language.version}</version>
-      <classifier>classes</classifier>
-      <exclusions>
-        <exclusion>
-          <groupId>edu.mayo.kmdp</groupId>
-          <artifactId>kmdp-language-service-server</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-
-
-    <dependency>
-      <groupId>org.mapdb</groupId>
-      <artifactId>mapdb</artifactId>
-      <version>3.0.7</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.google.guava</groupId>
-          <artifactId>guava</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-engine</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>com.fasterxml.jackson.dataformat</groupId>
-      <artifactId>jackson-dataformat-xml</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>edu.mayo.kmdp</groupId>
       <artifactId>hl7-knart-13</artifactId>
       <version>${kmdp.standards.version}</version>
       <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
     </dependency>
 
   </dependencies>
@@ -114,13 +47,6 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
-      </plugin>
-
-      <plugin>
-        <artifactId>maven-war-plugin</artifactId>
-        <configuration>
-          <attachClasses>true</attachClasses>
-        </configuration>
       </plugin>
     </plugins>
   </build>
