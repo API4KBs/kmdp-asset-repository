@@ -17,36 +17,36 @@ package edu.mayo.kmdp.repository.asset;
 
 import java.net.URI;
 import org.apache.commons.lang3.StringUtils;
-import org.omg.spec.api4kp._1_0.identifiers.Pointer;
 import org.omg.spec.api4kp._1_0.services.URIPathHelper;
 
 public class HrefBuilder {
 
-    private String host;
-    private KnowledgeAssetRepositoryServerConfig cfg;
+  private String host;
 
-    public HrefBuilder(KnowledgeAssetRepositoryServerConfig cfg) {
-        this.cfg = cfg;
-        this.host = StringUtils
-            .removeEnd(cfg.getTyped(
-                KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions.SERVER_HOST).toString(), "/");
-    }
+  public HrefBuilder(KnowledgeAssetRepositoryServerConfig cfg) {
+    this.host = StringUtils
+        .removeEnd(cfg.getTyped(
+            KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions.SERVER_HOST)
+            .toString(), "/");
+  }
 
-    public URI getAssetHref(String id) {
-        // /cat/assets/{assetId}
-        return URI.create(String.format("%s/cat/assets/%s", this.host, id));
-    }
+  public URI getAssetHref(String id) {
+    return URI.create(String.format("%s/cat/assets/%s", this.host, id));
+  }
 
-    public URI getAssetVersionHref(String id, String version) {
-        // /cat/assets/{assetId}/versions/{versionTag}
-        return URI.create(String.format("%s/cat/assets/%s/versions/%s", this.host, id, version));
-    }
+  public URI getAssetVersionHref(String id, String version) {
+    return URI.create(String.format("%s/cat/assets/%s/versions/%s", this.host, id, version));
+  }
 
-    public URI getAssetCarrierVersionHref(String assetId, String assetVersion, String carrierId, String carrierVersion) {
-        return URI.create(String.format("%s/cat/assets/%s/versions/%s/carriers/%s/versions/%s", this.host, assetId, assetVersion, carrierId, carrierVersion));
-    }
+  public URI getAssetCarrierVersionHref(String assetId, String assetVersion, String carrierId,
+      String carrierVersion) {
+    return URI.create(String
+        .format("%s/cat/assets/%s/versions/%s/carriers/%s/versions/%s", this.host, assetId,
+            assetVersion, carrierId, carrierVersion));
+  }
 
-    public URI getArtifactRef(String repository_id, String artifactId, String version) {
-        return URI.create(URIPathHelper.knowledgeArtifactLocation(host,repository_id,artifactId,version));
-    }
+  public URI getArtifactRef(String repositoryId, String artifactId, String version) {
+    return URI
+        .create(URIPathHelper.knowledgeArtifactLocation(host, repositoryId, artifactId, version));
+  }
 }
