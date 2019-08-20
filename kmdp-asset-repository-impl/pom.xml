@@ -30,6 +30,11 @@
 
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
+      <artifactId>kmdp-asset-repository-service-server</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>edu.mayo.kmdp</groupId>
       <artifactId>hl7-knart-13</artifactId>
       <version>${kmdp.standards.version}</version>
       <scope>test</scope>

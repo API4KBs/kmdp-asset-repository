@@ -29,10 +29,10 @@ import java.util.Properties;
 public class KnowledgeAssetRepositoryServerConfig extends
     ConfigProperties<KnowledgeAssetRepositoryServerConfig, KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions> {
 
-  private static final Properties defaults = defaulted(KnowledgeAssetRepositoryOptions.class);
+  private static final Properties DEFAULTS = defaulted(KnowledgeAssetRepositoryOptions.class);
 
   public KnowledgeAssetRepositoryServerConfig() {
-    super(defaults);
+    super(DEFAULTS);
   }
 
   @Override

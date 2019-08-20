@@ -48,6 +48,21 @@ public class KnowledgeAssetRepositoryComponentConfig {
 
   private KnowledgeAssetRepositoryServerConfig cfg = new KnowledgeAssetRepositoryServerConfig();
 
+  final DetectApiDelegate detector;
+
+  final TransxionApiDelegate txor;
+
+  final DeserializeApiDelegate deser;
+
+  @Inject
+  public KnowledgeAssetRepositoryComponentConfig(@KPServer DetectApiDelegate detector,
+      @KPServer TransxionApiDelegate txor,
+      @KPServer DeserializeApiDelegate deser) {
+    this.detector = detector;
+    this.txor = txor;
+    this.deser = deser;
+  }
+
   @Bean
   @Profile({"integration"})
   public SemanticKnowledgeAssetRepository selfContainedRepository() {
@@ -73,7 +88,7 @@ public class KnowledgeAssetRepositoryComponentConfig {
 
   @Bean
   @Profile({"default", "inmemory"})
-  public SemanticKnowledgeAssetRepository semanticRepository(Index index) throws Exception {
+  public SemanticKnowledgeAssetRepository semanticRepository(Index index) {
     return new SemanticKnowledgeAssetRepository(
         knowledgeArtifactRepositoryApi(),
         knowledgeArtifactApi(),
@@ -86,10 +101,8 @@ public class KnowledgeAssetRepositoryComponentConfig {
   @Profile({"default"})
   public Index fileSystemIndex() {
     File dataDir = cfg.getTyped(KnowledgeAssetRepositoryOptions.BASE_DIR);
-    if (dataDir != null && !dataDir.exists()) {
-      if (!dataDir.mkdirs()) {
-        return null;
-      }
+    if (dataDir != null && !dataDir.exists() && !dataDir.mkdirs()) {
+      return null;
     }
 
     File indexFile = new File(dataDir, "index");
@@ -128,10 +141,6 @@ public class KnowledgeAssetRepositoryComponentConfig {
   }
 
 
-  @Inject
-  @KPServer
-  DetectApiDelegate detector;
-
   @Bean
   @KPComponent
   public DetectApi detectApi() {
@@ -139,20 +148,12 @@ public class KnowledgeAssetRepositoryComponentConfig {
   }
 
 
-  @Inject
-  @KPServer
-  TransxionApiDelegate txor;
-
   @Bean
   @KPComponent
   public TransxionApi executionApi() {
     return TransxionApi.newInstance(txor);
   }
 
-
-  @Inject
-  @KPServer
-  DeserializeApiDelegate deser;
 
   @Bean
   @KPComponent
