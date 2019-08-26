@@ -21,6 +21,7 @@ import static edu.mayo.kmdp.comparator.Contrastor.Comparison.EQUIVALENT;
 import static edu.mayo.kmdp.util.Util.ensureUUID;
 import static edu.mayo.kmdp.util.ws.ResponseHelper.attempt;
 import static edu.mayo.kmdp.util.ws.ResponseHelper.succeed;
+import static edu.mayo.ontology.taxonomies.krlanguage._20190801.KnowledgeRepresentationLanguage.Knowledge_Asset_Surrogate;
 import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 import static org.omg.spec.api4kp._1_0.contrastors.SyntacticRepresentationContrastor.theRepContrastor;
 
@@ -49,9 +50,10 @@ import edu.mayo.kmdp.util.FileUtil;
 import edu.mayo.kmdp.util.JSonUtil;
 import edu.mayo.kmdp.util.Util;
 import edu.mayo.kmdp.util.ws.ResponseHelper;
+import edu.mayo.ontology.taxonomies.api4kp.parsinglevel._20190801.ParsingLevel;
 import edu.mayo.ontology.taxonomies.kao.knowledgeassetrole._20190801.KnowledgeAssetRole;
 import edu.mayo.ontology.taxonomies.kao.knowledgeassettype._20190801.KnowledgeAssetType;
-import edu.mayo.ontology.taxonomies.krlanguage._20190801.KnowledgeRepresentationLanguage;
+import edu.mayo.ontology.taxonomies.krformat._20190801.SerializationFormat;
 import java.io.ByteArrayOutputStream;
 import java.net.URI;
 import java.util.Collections;
@@ -133,6 +135,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       KnowledgeArtifactRepositoryApi knowledgeArtifactRepositoryApi,
       KnowledgeArtifactApi knowledgeArtifactApi,
       KnowledgeArtifactSeriesApi knowledgeArtifactSeriesApi,
+      DeserializeApi parserApi,
       Index index,
       KnowledgeAssetRepositoryServerConfig cfg) {
     super();
@@ -140,6 +143,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     this.knowledgeArtifactRepositoryApi = knowledgeArtifactRepositoryApi;
     this.knowledgeArtifactApi = knowledgeArtifactApi;
     this.knowledgeArtifactSeriesApi = knowledgeArtifactSeriesApi;
+
+    this.parser = parserApi;
 
     this.index = index;
     this.hrefBuilder = new HrefBuilder(cfg);
@@ -221,12 +226,13 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
       //Should not be always binary?
       BinaryCarrier carrier = new org.omg.spec.api4kp._1_0.services.resources.BinaryCarrier()
+          .withLevel(ParsingLevel.Encoded_Knowledge_Expression)
           .withAssetId(surrogate.getAssetId());
 
       Optional<IndexPointer> artifactPtr = lookupDefaultCarriers(assetId, versionTag);
 
       artifactPtr
-          .flatMap(ptr -> getRepresentationLanguage(surrogate, ptr))
+          .flatMap(ptr -> getRepresentation(surrogate, ptr))
           .ifPresent(lang -> carrier.withRepresentation(rep(lang)));
 
       return attempt(
@@ -471,13 +477,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     IndexPointer surrogatePointer = this.index
         .getSurrogateForAsset(new IndexPointer(assetId, versionTag));
     return this.resolve(surrogatePointer)
-        .flatMap(sr -> JSonUtil.readJson(sr, KnowledgeAsset.class));
-  }
-
-  private Optional<KnowledgeRepresentationLanguage> getRepresentationLanguage(
-      KnowledgeAsset surrogate, IndexPointer artifactId) {
-    return getRepresentation(surrogate, artifactId)
-        .map(Representation::getLanguage);
+        .map(sr -> AbstractCarrier.of(sr)
+            .withRepresentation(rep(Knowledge_Asset_Surrogate, SerializationFormat.JSON)))
+        .flatMap(kc -> parser.lift(kc, ParsingLevel.Abstract_Knowledge_Expression).getOptionalValue())
+        .flatMap(kc -> kc.as(KnowledgeAsset.class));
   }
 
   private Optional<Representation> getRepresentation(

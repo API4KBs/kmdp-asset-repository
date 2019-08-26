@@ -31,6 +31,7 @@
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-asset-repository-service-server</artifactId>
+      <version>${kmdp.impl.version}</version>
     </dependency>
 
     <dependency>
