@@ -55,7 +55,8 @@ public class KnowledgeAssetRepositoryComponentConfig {
   final DeserializeApiDelegate deser;
 
   @Inject
-  public KnowledgeAssetRepositoryComponentConfig(@KPServer DetectApiDelegate detector,
+  public KnowledgeAssetRepositoryComponentConfig(
+      @KPServer DetectApiDelegate detector,
       @KPServer TransxionApiDelegate txor,
       @KPServer DeserializeApiDelegate deser) {
     this.detector = detector;
@@ -78,10 +79,13 @@ public class KnowledgeAssetRepositoryComponentConfig {
     KnowledgeArtifactSeriesApi knowledgeArtifactSeriesApi = KnowledgeArtifactSeriesApi
         .newInstance(repos);
 
+    DeserializeApi parser = DeserializeApi.newInstance(deser);
+
     return new SemanticKnowledgeAssetRepository(
         knowledgeArtifactRepositoryApi,
         knowledgeArtifactApi,
         knowledgeArtifactSeriesApi,
+        parser,
         index,
         cfg);
   }
@@ -93,6 +97,7 @@ public class KnowledgeAssetRepositoryComponentConfig {
         knowledgeArtifactRepositoryApi(),
         knowledgeArtifactApi(),
         knowledgeArtifactSeriesApi(),
+        deserializeApi(),
         index,
         cfg);
   }

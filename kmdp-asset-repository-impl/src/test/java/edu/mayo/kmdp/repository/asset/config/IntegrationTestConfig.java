@@ -15,6 +15,8 @@
  */
 package edu.mayo.kmdp.repository.asset.config;
 
+import edu.mayo.kmdp.language.LanguageDeSerializer;
+import edu.mayo.kmdp.language.parsers.SurrogateParser;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactApi;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryApi;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig;
@@ -24,21 +26,22 @@ import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.repository.asset.SemanticKnowledgeAssetRepository;
 import edu.mayo.kmdp.repository.asset.index.MapDbIndex;
+import edu.mayo.kmdp.tranx.DeserializeApi;
+import java.util.Collections;
 import org.apache.jackrabbit.oak.Oak;
 import org.apache.jackrabbit.oak.jcr.Jcr;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.PropertySource;
 
 @Configuration
 @ComponentScan(basePackages = {"edu.mayo.kmdp.repository.asset"})
-@PropertySource(value={"classpath:application.test.properties"})
+@PropertySource(value = {"classpath:application.test.properties"})
 public class IntegrationTestConfig {
 
   private KnowledgeAssetRepositoryServerConfig cfg = new KnowledgeAssetRepositoryServerConfig()
-      .with(KnowledgeAssetRepositoryOptions.SERVER_HOST,"http://localhost:11111");
+      .with(KnowledgeAssetRepositoryOptions.SERVER_HOST, "http://localhost:11111");
 
   @Bean
   public SemanticKnowledgeAssetRepository testRepository() {
@@ -54,10 +57,14 @@ public class IntegrationTestConfig {
     KnowledgeArtifactSeriesApi knowledgeArtifactSeriesApi = KnowledgeArtifactSeriesApi
         .newInstance(repos);
 
+    DeserializeApi parser = DeserializeApi
+        .newInstance(new LanguageDeSerializer(Collections.singletonList(new SurrogateParser())));
+
     return new SemanticKnowledgeAssetRepository(
         knowledgeArtifactRepositoryApi,
         knowledgeArtifactApi,
         knowledgeArtifactSeriesApi,
+        parser,
         index,
         cfg);
   }
