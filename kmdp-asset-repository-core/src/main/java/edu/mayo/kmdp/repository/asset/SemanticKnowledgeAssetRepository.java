@@ -67,8 +67,8 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 import org.omg.spec.api4kp._1_0.AbstractCarrier;
 import org.omg.spec.api4kp._1_0.identifiers.Pointer;
 import org.omg.spec.api4kp._1_0.identifiers.URIIdentifier;
@@ -87,7 +87,7 @@ import org.springframework.util.CollectionUtils;
 
 public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepository {
 
-  private static final Logger logger = LogManager.getLogger(SemanticKnowledgeAssetRepository.class);
+  private static final Logger logger = LoggerFactory.getLogger(SemanticKnowledgeAssetRepository.class);
 
 
   private static final String URI_BASE = Registry.MAYO_ASSETS_BASE_URI;
