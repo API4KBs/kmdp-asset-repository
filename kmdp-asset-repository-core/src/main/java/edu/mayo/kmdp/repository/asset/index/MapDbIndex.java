@@ -23,9 +23,11 @@ import edu.mayo.ontology.taxonomies.kao.knowledgeassettype._20190801.KnowledgeAs
 import java.io.File;
 import java.net.URI;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -52,15 +54,23 @@ public class MapDbIndex implements DisposableBean, Index {
   private DB db;
 
   public MapDbIndex() {
-    this.db = DBMaker.memoryDB().make();
+    this.db = DBMaker
+        .memoryDB()
+        .transactionEnable()
+        .closeOnJvmShutdown()
+        .make();
   }
 
   public MapDbIndex(File storageDir) {
-    this.db = DBMaker.fileDB(storageDir).make();
+    this.db = DBMaker
+        .fileDB(storageDir)
+        .transactionEnable()
+        .closeOnJvmShutdown()
+        .make();
   }
 
   @Override
-  public void destroy() throws Exception {
+  public void destroy() {
     this.db.close();
   }
 
@@ -82,54 +92,48 @@ public class MapDbIndex implements DisposableBean, Index {
       List<KnowledgeAssetType> types, List<KnowledgeAssetRole> roles, List<Annotation> annotations,
       String name,
       String description) {
-    types.stream().forEach(type -> {
-      HTreeMap<String, Set<IndexPointer>> map = (HTreeMap<String, Set<IndexPointer>>) this.db
-          .hashMap(BY_TYPE_MAP).createOrOpen();
 
-      map.computeIfAbsent(type.getTag(), (x) -> map.put(x, new HashSet()));
-      Set<IndexPointer> entryList = map.get(type.getTag());
-      entryList.add(asset);
+    HTreeMap<String, Set<IndexPointer>> map =
+        (HTreeMap<String, Set<IndexPointer>>) getMap(BY_TYPE_MAP);
 
-      map.put(type.getTag(), entryList);
-    });
+    types.forEach(type -> registerAssetType(map, asset, type.getTag()));
 
-    roles.stream().forEach(type -> {
-      HTreeMap<String, Set<IndexPointer>> map = (HTreeMap<String, Set<IndexPointer>>) this.db
-          .hashMap(BY_TYPE_MAP).createOrOpen();
-
-      map.computeIfAbsent(type.getTag(), (x) -> map.put(x, new HashSet()));
-      Set<IndexPointer> entryList = map.get(type.getTag());
-      entryList.add(asset);
-
-      map.put(type.getTag(), entryList);
-    });
+    roles.forEach(role -> registerAssetType(map, asset, role.getTag()));
 
     Set<IndexPointer> set = (Set<IndexPointer>) this.db.hashSet(ASSETS_SET).createOrOpen();
 
     set.add(asset);
     this.registerLatestAsset(asset);
     this.registerSurrogateToAsset(asset, surrogate);
+
     this.registerAnnotations(asset,
         annotations.stream().map(annotation -> (SimpleAnnotation) annotation)
             .collect(Collectors.toSet()));
     this.registerDescriptiveMetadata(asset, name, description,
-        types.stream().map((type) -> type.getRef()).collect(Collectors.toSet()));
+        types.stream().map(KnowledgeAssetType::getRef)
+            .collect(Collectors.toSet()));
+  }
+
+  private void registerAssetType(HTreeMap<String, Set<IndexPointer>> map, IndexPointer asset,
+      String typeTag) {
+    Set<IndexPointer> entryList = map.computeIfAbsent(typeTag, x -> new HashSet<>());
+    entryList.add(asset);
+    map.put(typeTag, entryList);
   }
 
   private void registerLatestAsset(IndexPointer assetPointer) {
-    HTreeMap<String, IndexPointer> map = (HTreeMap<String, IndexPointer>) this.db
-        .hashMap(LATEST_ASSET_MAP).createOrOpen();
+    HTreeMap<String, IndexPointer> map =
+        (HTreeMap<String, IndexPointer>) getMap(LATEST_ASSET_MAP);
 
     map.put(assetPointer.getId(), assetPointer);
   }
 
   @Override
   public void registerArtifactToAsset(IndexPointer assetPointer, IndexPointer artifact) {
-    HTreeMap<IndexPointer, Set<IndexPointer>> map = (HTreeMap<IndexPointer, Set<IndexPointer>>) this.db
-        .hashMap(ASSET_TO_ARTIFACT_MAP).createOrOpen();
+    HTreeMap<IndexPointer, Set<IndexPointer>> map =
+        (HTreeMap<IndexPointer, Set<IndexPointer>>) getMap(ASSET_TO_ARTIFACT_MAP);
 
-    map.computeIfAbsent(assetPointer, (x) -> map.put(x, new HashSet()));
-    Set<IndexPointer> set = map.get(assetPointer);
+    Set<IndexPointer> set = map.computeIfAbsent(assetPointer, x -> new HashSet<>());
     set.add(artifact);
 
     map.put(assetPointer, set);
@@ -137,96 +141,97 @@ public class MapDbIndex implements DisposableBean, Index {
 
   @Override
   public void registerSurrogateToAsset(IndexPointer assetPointer, IndexPointer surrogate) {
-    HTreeMap<IndexPointer, IndexPointer> map = (HTreeMap<IndexPointer, IndexPointer>) this.db
-        .hashMap(ASSET_TO_SURROGATE_MAP).createOrOpen();
+    HTreeMap<IndexPointer, IndexPointer> map =
+        (HTreeMap<IndexPointer, IndexPointer>) getMap(ASSET_TO_SURROGATE_MAP);
 
     map.put(assetPointer, surrogate);
   }
 
   @Override
   public IndexPointer getSurrogateForAsset(IndexPointer assetPointer) {
-    HTreeMap<IndexPointer, IndexPointer> map = (HTreeMap<IndexPointer, IndexPointer>) this.db
-        .hashMap(ASSET_TO_SURROGATE_MAP).createOrOpen();
+    HTreeMap<IndexPointer, IndexPointer> map =
+        (HTreeMap<IndexPointer, IndexPointer>) getMap(ASSET_TO_SURROGATE_MAP);
 
     return map.get(assetPointer);
   }
 
   @Override
   public void registerLocation(IndexPointer pointer, String href) {
-    HTreeMap<IndexPointer, String> map = (HTreeMap<IndexPointer, String>) this.db
-        .hashMap(ID_TO_LOCATION_MAP).createOrOpen();
+    HTreeMap<IndexPointer, String> map =
+        (HTreeMap<IndexPointer, String>) getMap(ID_TO_LOCATION_MAP);
 
     map.put(pointer, href);
   }
 
   @Override
   public IndexPointer getLatestAssetForId(String assetId) {
-    HTreeMap<String, IndexPointer> map = (HTreeMap<String, IndexPointer>) this.db
-        .hashMap(LATEST_ASSET_MAP).createOrOpen();
+    HTreeMap<String, IndexPointer> map =
+        (HTreeMap<String, IndexPointer>) getMap(LATEST_ASSET_MAP);
 
     return map.get(assetId);
   }
 
   @Override
   public String getLocation(IndexPointer pointer) {
-    HTreeMap<IndexPointer, String> map = (HTreeMap<IndexPointer, String>) this.db
-        .hashMap(ID_TO_LOCATION_MAP).createOrOpen();
+    HTreeMap<IndexPointer, String> map =
+        (HTreeMap<IndexPointer, String>) getMap(ID_TO_LOCATION_MAP);
 
     if (map.containsKey(pointer)) {
       return map.get(pointer);
     } else {
-      throw new RuntimeException(
+      throw new IllegalStateException(
           "Location of: " + pointer.getId() + ", " + pointer.getVersion() + " not found.");
     }
   }
 
   @Override
   public Set<IndexPointer> getAssetIdsByType(String assetType) {
-    HTreeMap<String, Set<IndexPointer>> map = (HTreeMap<String, Set<IndexPointer>>) this.db
-        .hashMap(BY_TYPE_MAP).createOrOpen();
 
     if (StringUtils.isNotBlank(assetType)) {
+      HTreeMap<String, Set<IndexPointer>> map =
+          (HTreeMap<String, Set<IndexPointer>>) getMap(BY_TYPE_MAP);
+
       if (map.containsKey(assetType)) {
-        return map.get(assetType).stream().collect(Collectors.toSet());
+        return new HashSet<>(Objects.requireNonNull(map.get(assetType)));
       } else {
-        return Sets.newHashSet();
+        return Collections.emptySet();
       }
     } else {
-      return this.db.hashSet(ASSETS_SET).createOrOpen().stream().map(p -> (IndexPointer) p)
+      return this.db.hashSet(ASSETS_SET).createOrOpen().stream()
+          .map(p -> (IndexPointer) p)
           .collect(Collectors.toSet());
     }
   }
 
   @Override
   public void registerAnnotations(IndexPointer pointer, Set<SimpleAnnotation> annotations) {
-    HTreeMap<String, Set<IndexPointer>> map = (HTreeMap<String, Set<IndexPointer>>) this.db
-        .hashMap(BY_ANNOTATION_MAP).createOrOpen();
+    HTreeMap<String, Set<IndexPointer>> map =
+        (HTreeMap<String, Set<IndexPointer>>) getMap(BY_ANNOTATION_MAP);
 
-    HTreeMap<String, Set<String>> typeMap = (HTreeMap<String, Set<String>>) this.db
-        .hashMap(BY_ANNOTATION_TYPE_MAP).createOrOpen();
+    HTreeMap<String, Set<String>> typeMap =
+        (HTreeMap<String, Set<String>>) getMap(BY_ANNOTATION_TYPE_MAP);
 
     if (!CollectionUtils.isEmpty(annotations)) {
-      annotations.stream().forEach(annotation -> {
-        String value = annotation.getExpr().getRef().toString();
+      annotations.forEach(annotation -> {
+        String value = annotation.getExpr().getConceptId().toString();
 
-        map.computeIfAbsent(value, (x) -> map.put(x, new HashSet<>()));
-        Set<IndexPointer> pointers = map.get(value);
+        Set<IndexPointer> pointers = map.computeIfAbsent(value, x -> new HashSet<>());
         pointers.add(pointer);
         map.put(value, pointers);
 
         if (annotation.getRel() != null) {
           String rel = annotation.getRel().getRef().toString();
 
-          typeMap.computeIfAbsent(rel, (x) -> typeMap.put(x, new HashSet<>()));
-          Set<String> values = typeMap.get(rel);
+
+          Set<String> values = typeMap.computeIfAbsent(rel, x -> new HashSet<>());
           values.add(value);
 
           typeMap.put(rel, values);
 
           value = rel + ":" + value;
-          map.computeIfAbsent(value, (x) -> map.put(x, new HashSet<>()));
-          pointers = map.get(value);
+          pointers = map.computeIfAbsent(value, x -> new HashSet<>());
           pointers.add(pointer);
+
           map.put(value, pointers);
         }
       });
@@ -236,8 +241,8 @@ public class MapDbIndex implements DisposableBean, Index {
   @Override
   public void registerDescriptiveMetadata(IndexPointer pointer, String name, String description,
       Set<URI> types) {
-    HTreeMap<IndexPointer, DescriptiveMetadata> map = (HTreeMap<IndexPointer, DescriptiveMetadata>) this.db
-        .hashMap(DESCRIPTIVE_METADATA_MAP).createOrOpen();
+    HTreeMap<IndexPointer, DescriptiveMetadata> map =
+        (HTreeMap<IndexPointer, DescriptiveMetadata>) getMap(DESCRIPTIVE_METADATA_MAP);
 
     String type = null;
     if (types != null) {
@@ -251,20 +256,20 @@ public class MapDbIndex implements DisposableBean, Index {
 
   @Override
   public DescriptiveMetadata getDescriptiveMetadataForAsset(IndexPointer pointer) {
-    HTreeMap<IndexPointer, DescriptiveMetadata> map = (HTreeMap<IndexPointer, DescriptiveMetadata>) this.db
-        .hashMap(DESCRIPTIVE_METADATA_MAP).createOrOpen();
+    HTreeMap<IndexPointer, DescriptiveMetadata> map =
+        (HTreeMap<IndexPointer, DescriptiveMetadata>) getMap(DESCRIPTIVE_METADATA_MAP);
 
     return map.get(pointer);
   }
 
   @Override
   public Set<IndexPointer> getAssetIdsByAnnotation(String annotation) {
-    HTreeMap<String, Set<IndexPointer>> map = (HTreeMap<String, Set<IndexPointer>>) this.db
-        .hashMap(BY_ANNOTATION_MAP).createOrOpen();
 
     if (StringUtils.isNotBlank(annotation)) {
+      HTreeMap<String, Set<IndexPointer>> map =
+          (HTreeMap<String, Set<IndexPointer>>) getMap(BY_ANNOTATION_MAP);
       if (map.containsKey(annotation)) {
-        return map.get(annotation).stream().collect(Collectors.toSet());
+        return new HashSet<>(Objects.requireNonNull(map.get(annotation)));
       } else {
         return Sets.newHashSet();
       }
@@ -276,18 +281,22 @@ public class MapDbIndex implements DisposableBean, Index {
 
   @Override
   public Set<String> getAnnotationsOfType(String annotationPredicate) {
-    HTreeMap<String, Set<String>> typeMap = (HTreeMap<String, Set<String>>) this.db
-        .hashMap(BY_ANNOTATION_TYPE_MAP).createOrOpen();
+    HTreeMap<String, Set<String>> typeMap =
+        (HTreeMap<String, Set<String>>) getMap(BY_ANNOTATION_TYPE_MAP);
 
     return new HashSet<>(typeMap.getOrDefault(annotationPredicate, new HashSet<>()));
   }
 
   @Override
   public Set<IndexPointer> getArtifactsForAsset(IndexPointer artifact) {
-    HTreeMap<IndexPointer, Set<IndexPointer>> map = (HTreeMap<IndexPointer, Set<IndexPointer>>) this.db
-        .hashMap(ASSET_TO_ARTIFACT_MAP).createOrOpen();
+    HTreeMap<IndexPointer, Set<IndexPointer>> map =
+        (HTreeMap<IndexPointer, Set<IndexPointer>>) getMap(ASSET_TO_ARTIFACT_MAP);
 
     return map.getOrDefault(artifact, new HashSet<>());
+  }
+
+  private HTreeMap<?,?> getMap(String key) {
+    return this.db.hashMap(key).createOrOpen();
   }
 
 

@@ -61,9 +61,7 @@ public class DefaultBundler implements Bundler {
     Set<edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset> dependencies = SurrogateHelper
         .closure(asset, false);
 
-    dependencies.forEach(x -> {
-      retrieveCarriers(x, returnList);
-    });
+    dependencies.forEach(x -> retrieveCarriers(x, returnList));
 
     return returnList;
   }
@@ -74,7 +72,11 @@ public class DefaultBundler implements Bundler {
     if (uriIdentifier != null) {
       VersionIdentifier id = DatatypeHelper.toVersionIdentifier(uriIdentifier);
       returnList.add(
-          this.coreApi.getCanonicalKnowledgeAssetCarrier(Util.ensureUUID(id.getTag()).get(), id.getVersion(), null)
+          this.coreApi.getCanonicalKnowledgeAssetCarrier(
+              Util.ensureUUID(id.getTag())
+                  .orElseThrow(IllegalStateException::new),
+              id.getVersion(),
+              null)
               .getBody());
     } else {
       returnList.addAll(this.getAnonymousArtifacts(x));
@@ -92,8 +94,10 @@ public class DefaultBundler implements Bundler {
             URI masterLocation = carrier.getLocator();
             if (masterLocation != null) {
               BinaryCarrier newCarrier = new BinaryCarrier();
-              if (carrier.getRepresentation() != null && carrier.getRepresentation().getLanguage() != null) {
-                KnowledgeRepresentationLanguage language = carrier.getRepresentation().getLanguage();
+              if (carrier.getRepresentation() != null
+                  && carrier.getRepresentation().getLanguage() != null) {
+                KnowledgeRepresentationLanguage language = carrier.getRepresentation()
+                    .getLanguage();
                 newCarrier.setRepresentation(rep(language));
               }
               newCarrier

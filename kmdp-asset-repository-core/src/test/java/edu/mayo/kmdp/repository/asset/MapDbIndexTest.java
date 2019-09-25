@@ -17,13 +17,19 @@ package edu.mayo.kmdp.repository.asset;
 
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.collect.Sets;
 import edu.mayo.kmdp.metadata.annotations.resources.SimpleAnnotation;
 import edu.mayo.kmdp.repository.asset.index.IndexPointer;
 import edu.mayo.kmdp.repository.asset.index.MapDbIndex;
 import java.net.URI;
+import java.util.HashMap;
 import org.junit.jupiter.api.Test;
+import org.mapdb.DB;
+import org.mapdb.DBMaker;
+import org.mapdb.HTreeMap;
 import org.omg.spec.api4kp._1_0.identifiers.ConceptIdentifier;
 
 public class MapDbIndexTest {
@@ -34,7 +40,7 @@ public class MapDbIndexTest {
 
     index.registerAnnotations(new IndexPointer("1", "1"),
         Sets.newHashSet(new SimpleAnnotation().withExpr(
-            new ConceptIdentifier().withRef(
+            new ConceptIdentifier().withConceptId(
                 URI.create("http://something")))));
 
     assertEquals(1, index.getAssetIdsByAnnotation("http://something").size());
