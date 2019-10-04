@@ -3,11 +3,22 @@ jdk:
 - oraclejdk8
 dist: trusty
 install: true
-script: mvn clean install -Ppublic -q
+
+script:
+  - mvn clean org.jacoco:jacoco-maven-plugin:prepare-agent install sonar:sonar -Dsonar.projectKey=API4KBs_kmdp-asset-repository -Ppublic -q
+
 deploy:
   provider: script
   script: mvn deploy -DskipTests -Ppublic -s .travis.settings.xml -q
   skip_cleanup: true
+
+
+addons:
+  sonarcloud:
+    organization: "api4kbs"
+    token:
+      secure: "VJ5WWSWoqcd9VvdhisPJG3jHJ864OyJv5QyNYv8WS5Bz9mm9xLu7vfMPmdTj9EBBCVzbXbj/nzO3MJhTpNu80lF04Bd3nF/exBeiIwfUW+rqLcrsrpJZCHh8OgDAijM48HYy92sEPNPiuZQujl3zgzCF70pJG4u7jKNA/5DxlDt6nIsG1+J/xmqPBbenU5IcPr7rSjikKcN4dbl9ugtM9dxBD9CgNlbdAB2rKPYY2D7idjFe6gwxTWhWgQGhl6ckyz452+Pv4k1TBHHojVJrPz4p5yNnsh47wNkl8K/DLwfJMzLb6L7H4b3MFZWOCFTQStPxsGoE88Rwmff4uUbz5CMIGeQmoOW2ru3TRhhKBSx20rc4slTxqtoJGTcTc3XcZs6rkAF4QM+AsIHlvK1jeMyn6X1/E9e2jgiXQcr7aAzI77A2o29pI3ZG/7V4FJi8/x22XOb8mYl2gAWUD9c4uyis+M5Yh6ljNzY9saERX6ZZL95Sx9SCJlsmCeScEAoFqU+HFB5Mc/gYc1LhyWSKFGCST9pgLi7qYmdixmX/UlrJYq7dY48kiewWngsg2p8+IAsrnATjSw9OI0fQvU6mgYdZXPLd8C5CcaA19LqhbdEWHf1teKa2JkCAXLD/F2yVuKM7odb8Tht0aBGneuroXKltcTKcF26lRMT/uz1ey0k="
+
 env:
   global:
   - secure: jwKWYi6ddtpPRuQ3/8SnQEJ84bXagvk7i1fNrH2GVSZ8qZ0yf/cKO2tw/w9n0KJsny2wlQaHB/N8rV9s4sqEeN0GGQC4lUjX71avDmhOj40idgQqd/lY+COAkMOw4CKI4Rb2zDfmy96OIAWUGfC//JkxvzW/8ENU4Vwm0KP58Q2GNNrQM9t0WjGTfFH+zuyV5bSo8FQaUn12GDb6FFYro9StWlGkhxB5KJYVdMe88Vq7zeeTf7sl8OeAykvOXScPUYlTdp29F7XLJKI2vpEtzjsagyqiB6P+pOsbXHYSTrWZMP8M+ldHZPOYwwJMyII617s97PDxC/K7uT/9Oe29dEd4axBSuVjSr51Vp2cqTXToYcENP7PQv6UOMNa+gwO7V3Wdr38PPjutbj9X/p8TQAWEaMN7oLaQJwJ03LnlymkyP36o1EHfYZvKpBSMCv6L39dOk2Q3o1oijT/2dRNkB7Y7kbeW3PEOqU+Q3dEGz4QFT8any4sYAga+XDFkBqiJ/CnHsW7cExooUj8YZ4z8Vb/Cc46bZ+RYC2sZzxucZ/5iiWzNU2uKLNjFB+AJpnH6RmviCwmnMyMk9sqeQsqlUxbS+gRb1PACCqt435RpW/aCyWx3JHMEdgioSfZ+GMvsSS3kViUpXIYOKkzMKLqaV9ScN2ciVYDTM+AkADmkpKE=
