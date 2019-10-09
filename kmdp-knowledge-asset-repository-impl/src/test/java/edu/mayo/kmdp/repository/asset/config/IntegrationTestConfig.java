@@ -33,6 +33,7 @@ import org.apache.jackrabbit.oak.jcr.Jcr;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.PropertySource;
 
 @Configuration
@@ -44,6 +45,7 @@ public class IntegrationTestConfig {
       .with(KnowledgeAssetRepositoryOptions.SERVER_HOST, "http://localhost:11111");
 
   @Bean
+  @Profile("test")
   public SemanticKnowledgeAssetRepository testRepository() {
     JcrKnowledgeArtifactRepository repos = new JcrKnowledgeArtifactRepository(
         new Jcr(new Oak()).createRepository(),
