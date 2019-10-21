@@ -24,29 +24,14 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import edu.mayo.kmdp.language.LanguageDeSerializer;
-import edu.mayo.kmdp.language.parsers.SurrogateParser;
 import edu.mayo.kmdp.metadata.annotations.resources.SimpleAnnotation;
 import edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset;
 import edu.mayo.kmdp.registry.Registry;
-import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactApi;
-import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryApi;
-import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig;
-import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactSeriesApi;
 import edu.mayo.kmdp.repository.artifact.ResourceNotFoundException;
-import edu.mayo.kmdp.repository.artifact.jcr.JcrKnowledgeArtifactRepository;
-import edu.mayo.kmdp.repository.asset.index.MapDbIndex;
-import edu.mayo.kmdp.tranx.DeserializeApi;
 import edu.mayo.ontology.taxonomies.kmdo.annotationreltype._20190801.AnnotationRelType;
 import java.net.URI;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import javax.inject.Inject;
-import org.apache.jackrabbit.oak.Oak;
-import org.apache.jackrabbit.oak.jcr.Jcr;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.identifiers.ConceptIdentifier;
 import org.omg.spec.api4kp._1_0.identifiers.Pointer;
@@ -57,45 +42,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 
-public class SemanticRepositoryTest {
+class SemanticRepositoryTest extends RepositoryTestBase {
 
-  @Inject
-  private SemanticKnowledgeAssetRepository semanticRepository;
-
-  private JcrKnowledgeArtifactRepository repos;
-
-  private final String BASE_URI = Registry.MAYO_ASSETS_BASE_URI;
-
-  @BeforeEach
-  void setUpRepos() {
-    repos = new JcrKnowledgeArtifactRepository(
-        new Jcr(new Oak()).createRepository(), new KnowledgeArtifactRepositoryServerConfig());
-
-    MapDbIndex index = new MapDbIndex();
-
-    KnowledgeArtifactRepositoryApi knowledgeArtifactRepositoryApi =
-        KnowledgeArtifactRepositoryApi.newInstance(repos);
-    KnowledgeArtifactApi knowledgeArtifactApi =
-        KnowledgeArtifactApi.newInstance(repos);
-    KnowledgeArtifactSeriesApi knowledgeArtifactSeriesApi =
-        KnowledgeArtifactSeriesApi.newInstance(repos);
-    DeserializeApi parserApi = DeserializeApi.newInstance(new LanguageDeSerializer(
-        Collections.singletonList(new SurrogateParser())));
-
-    semanticRepository = new SemanticKnowledgeAssetRepository(knowledgeArtifactRepositoryApi,
-        knowledgeArtifactApi,
-        knowledgeArtifactSeriesApi,
-        parserApi,
-        index,
-        new KnowledgeAssetRepositoryServerConfig());
-  }
-
-  @AfterEach
-  void shutdown() {
-    if (repos != null) {
-      repos.shutdown();
-    }
-  }
+  private static final String BASE_URI = Registry.MAYO_ASSETS_BASE_URI;
 
   @Test
   void testInit() {
@@ -165,11 +114,11 @@ public class SemanticRepositoryTest {
   void testInitAssetReturnsUUIDAndIsCreated() {
     ResponseEntity<UUID> responseEntity = semanticRepository
       .initKnowledgeAsset();
-    assertEquals(responseEntity.getStatusCode(), HttpStatus.CREATED);
+    assertEquals(HttpStatus.CREATED, responseEntity.getStatusCode());
     assertNotNull(responseEntity.getBody());
 
     edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset = semanticRepository
-      .getKnowledgeAsset(responseEntity.getBody())
+      .getKnowledgeAsset(responseEntity.getBody(),null)
       .getBody();
     String expected = BASE_URI + responseEntity.getBody();
     //GUID returned should be id of asset
@@ -190,7 +139,7 @@ public class SemanticRepositoryTest {
       .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "2",
         new KnowledgeAsset().withFormalType(Care_Process_Model)));
     edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset = semanticRepository
-      .getKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()))
+      .getKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()),null)
       .getBody();
 
     assertNotNull(asset);
@@ -206,7 +155,7 @@ public class SemanticRepositoryTest {
       .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "2",
         new KnowledgeAsset().withFormalType(Care_Process_Model)));
     edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset = semanticRepository
-      .getKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()))
+      .getKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()),null)
       .getBody();
 
     assertNotNull(asset);
@@ -223,9 +172,9 @@ public class SemanticRepositoryTest {
       .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "2",
         new KnowledgeAsset().withFormalType(Care_Process_Model)));
     ResponseEntity<edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset> response = semanticRepository
-      .getKnowledgeAsset(UUID.nameUUIDFromBytes("fooDoesNotExist".getBytes()));
+      .getKnowledgeAsset(UUID.nameUUIDFromBytes("fooDoesNotExist".getBytes()),null);
 
-    assertEquals(response.getStatusCode(), HttpStatus.NOT_FOUND);
+    assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
   }
 
   // getKnowledgeAssetVersions
@@ -382,7 +331,7 @@ public class SemanticRepositoryTest {
   void testInconsistentAssetId_shouldFail() {
     edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset = new KnowledgeAsset().withFormalType(Predictive_Model)
       .withAssetId(new URIIdentifier()
-        .withUri(URI.create(BASE_URI +"45a81582-1b1d-3439-9400-6e2fee0c3f52"))
+        .withUri(URI.create(URI_BASE +"45a81582-1b1d-3439-9400-6e2fee0c3f52"))
         .withVersionId(URI.create(BASE_URI + "b9a26917-0a79-483d-b0e8-6610ba9aad5b/versions/1")));
     ResponseEntity <Void> response = semanticRepository
       .setVersionedKnowledgeAsset(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1", asset);

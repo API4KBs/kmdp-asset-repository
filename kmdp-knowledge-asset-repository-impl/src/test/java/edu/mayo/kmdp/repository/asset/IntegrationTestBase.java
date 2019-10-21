@@ -22,6 +22,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.ExitCodeGenerator;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
@@ -29,21 +31,12 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 @ExtendWith(SpringExtension.class)
+@SpringBootTest(
+    webEnvironment = WebEnvironment.DEFINED_PORT,
+    classes = Swagger2SpringBoot.class)
 @ContextConfiguration(classes = IntegrationTestConfig.class)
 @ActiveProfiles("test")
 public abstract class IntegrationTestBase {
 
-  private static ConfigurableApplicationContext ctx;
-
-  @BeforeAll
-  public static void setupServer() {
-    SpringApplication app = new SpringApplication(Swagger2SpringBoot.class);
-    ctx = app.run();
-  }
-
-  @AfterAll
-  public static void stopServer() {
-    SpringApplication.exit(ctx, (ExitCodeGenerator) () -> 0);
-  }
 
 }

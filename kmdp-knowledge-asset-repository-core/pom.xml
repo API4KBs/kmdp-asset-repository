@@ -17,6 +17,16 @@
     <!-- This implementation embeds the Language Service, but delegates to a web-based Repository Service. -->
 
     <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-webmvc</artifactId>
+      <version>5.1.6.RELEASE</version>
+    </dependency>
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>javax.servlet-api</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-rest-ws-utils</artifactId>
     </dependency>

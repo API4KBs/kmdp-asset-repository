@@ -58,9 +58,8 @@ import org.omg.spec.api4kp._1_0.services.tranx.ModelMIMECoder;
 
 public class ContentNegotiationTest extends IntegrationTestBase {
 
-
-  private ApiClientFactory webClientFactory = new ApiClientFactory("http://localhost:11111",
-      WithFHIR.NONE);
+  private ApiClientFactory webClientFactory
+      = new ApiClientFactory("http://localhost:11111",WithFHIR.NONE);
 
   protected KnowledgeAssetCatalogApi ckac = KnowledgeAssetCatalogApi
       .newInstance(webClientFactory);
@@ -79,22 +78,17 @@ public class ContentNegotiationTest extends IntegrationTestBase {
 
     KnowledgeAsset asset = buildAsset(assetId,versionTag,knartXML);
 
-    assertTrue(ckac.listKnowledgeAssets(null,null,null,null)
-        .getOptionalValue().get().isEmpty());
+//    assertTrue(ckac.listKnowledgeAssets(null,null,null,null)
+//        .getOptionalValue().get().isEmpty());
     ckac.setVersionedKnowledgeAsset(assetId,versionTag,asset);
 
     Answer<KnowledgeCarrier> ans = repo.getCanonicalKnowledgeAssetCarrier(
         assetId,
         versionTag,
-        ModelMIMECoder.encode(rep(KNART_1_3,
-            XML_1_1)));
+        ModelMIMECoder.encode(rep(KNART_1_3, XML_1_1)));
 
     assertTrue(ans.isSuccess());
     assertTrue(ans.getOptionalValue().isPresent());
-
-    BinaryCarrier bc = (BinaryCarrier) ans.getOptionalValue().get();
-
-    String x = new String(bc.getEncodedExpression());
 
     Answer<KnowledgeCarrier> ans2 = repo.getCanonicalKnowledgeAssetCarrier(
         assetId,

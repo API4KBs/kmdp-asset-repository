@@ -28,6 +28,7 @@ import static org.omg.spec.api4kp._1_0.contrastors.SyntacticRepresentationContra
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import edu.mayo.kmdp.comparator.Contrastor;
 import edu.mayo.kmdp.id.VersionedIdentifier;
 import edu.mayo.kmdp.id.helper.DatatypeHelper;
 import edu.mayo.kmdp.metadata.surrogate.Association;
@@ -68,8 +69,6 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
 import org.omg.spec.api4kp._1_0.AbstractCarrier;
 import org.omg.spec.api4kp._1_0.identifiers.Pointer;
 import org.omg.spec.api4kp._1_0.identifiers.URIIdentifier;
@@ -81,6 +80,8 @@ import org.omg.spec.api4kp._1_0.services.KnowledgeProcessingOperator;
 import org.omg.spec.api4kp._1_0.services.SyntacticRepresentation;
 import org.omg.spec.api4kp._1_0.services.repository.KnowledgeAssetCatalog;
 import org.omg.spec.api4kp._1_0.services.tranx.ModelMIMECoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -304,16 +305,47 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
 
   @Override
-  public ResponseEntity<KnowledgeAsset> getKnowledgeAsset(UUID assetId) {
+  public ResponseEntity<KnowledgeAsset> getKnowledgeAsset(UUID assetId, String xAccept) {
     Optional<IndexPointer> pointer = Optional.ofNullable(this.index.getLatestAssetForId(assetId.toString()));
-    if (pointer.isPresent()) {
-      return this.getVersionedKnowledgeAsset(
-        ensureUUID(pointer.get().getId())
-          .orElseThrow(IllegalStateException::new),
-        pointer.get().getVersion());
-    } else {
-      return ResponseEntity.notFound().build();
+
+    Optional<KnowledgeAsset> latestAsset = pointer
+        .map(p -> p.getVersion())
+        .flatMap(v -> retrieveAssetSurrogate(assetId,v));
+    if (latestAsset.isPresent()) {
+      KnowledgeAsset asset = latestAsset.get();
+      Optional<ComputableKnowledgeArtifact> bestSurrogate =
+          negotiate(asset.getSurrogate(), xAccept);
+      if (bestSurrogate.isPresent() && bestSurrogate.get().getLocator() != null) {
+        return ResponseHelper.redirectTo(bestSurrogate.get().getLocator());
+      }
     }
+    return attempt(latestAsset);
+  }
+
+  private Optional<ComputableKnowledgeArtifact> negotiate(List<KnowledgeArtifact> artifacts, String xAccept) {
+    List<String> codes = ModelMIMECoder.splitCodes(xAccept);
+
+    List<SyntacticRepresentation> reps = codes.stream()
+        .map(c -> ModelMIMECoder.toModelCode(c,Knowledge_Asset_Surrogate))
+        .flatMap(Util::trimStream)
+        .map(ModelMIMECoder::decode)
+        .flatMap(Util::trimStream)
+        .collect(Collectors.toList());
+
+    return reps.stream()
+        .map(rep -> getBestCandidate(artifacts,rep))
+        .flatMap(Util::trimStream)
+        .findFirst();
+  }
+
+  private Optional<ComputableKnowledgeArtifact> getBestCandidate(List<KnowledgeArtifact> artifacts,
+      SyntacticRepresentation rep) {
+    return artifacts.stream()
+        .flatMap(x -> Util.streamAs(x, ComputableKnowledgeArtifact.class))
+        .filter(x -> Contrastor
+            .isBroaderOrEqual(theRepContrastor.contrast(rep, rep(x.getRepresentation()))))
+        .findAny();
+>>>>>>> b1dab16... [#2392061] Improve support for content negotiation with redirect to HTML variants
   }
 
   @Override
@@ -335,8 +367,23 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       }
     }
 
+    if (! hasDefaultSurrogateManifestation(assetSurrogate)) {
+      // add the canonical representation of the surrogate
+      assetSurrogate.withSurrogate(
+          new ComputableKnowledgeArtifact()
+              .withRepresentation(new Representation()
+                  .withLanguage(Knowledge_Asset_Surrogate)
+                  .withFormat(SerializationFormat.XML_1_1)),
+          new ComputableKnowledgeArtifact()
+              .withRepresentation(new Representation()
+                  .withLanguage(Knowledge_Asset_Surrogate)
+                  .withFormat(SerializationFormat.JSON)));
+    }
+
     String surrogateId = assetSurrogate.getAssetId().getTag();
     String surrogateVersion = assetSurrogate.getAssetId().getVersion();
+
+    logger.debug("SAVING ASSET {} : {}", assetId, versionTag);
 
     this.knowledgeArtifactApi.setKnowledgeArtifactVersion(repositoryId,
         ensureUUID(surrogateId)
@@ -346,6 +393,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
             .orElseThrow(RuntimeException::new));
 
     IndexPointer surrogatePointer = new IndexPointer(surrogateId, surrogateVersion);
+
+    logger.debug("REGISTERING ASSET {} : {}", assetId, versionTag);
 
     this.index.registerAsset(
         new IndexPointer(assetId, versionTag),
@@ -359,7 +408,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     this.index.registerLocation(surrogatePointer,
         hrefBuilder.getArtifactRef(repositoryId, surrogateId, surrogateVersion).toString());
 
-    assetSurrogate.getCarriers().stream().map(c -> (KnowledgeArtifact) c)
+    assetSurrogate.getCarriers()
         .forEach(carrier -> {
           URI masterLocation = carrier.getLocator();
           if (masterLocation != null) {
@@ -371,6 +420,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
             this.index.registerLocation(carrierPointer, masterLocation.toString());
           }
         });
+
+    logger.debug("INITIALIZING SUB-ASSETS {} : {}", assetId, versionTag);
+
 
     // recurse to register dependencies
     assetSurrogate.getRelated().stream().
@@ -395,6 +447,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   protected boolean identifiersConsistent (KnowledgeAsset assetSurrogate, UUID assetId, String versionTag) {
     //checks that assetId and versionTag provided in surrogate match those provided as parameters
     return (assetSurrogate.getAssetId().getTag().equals(assetId.toString()) && assetSurrogate.getAssetId().getVersion().equals(versionTag));
+  }
+
+  private boolean hasDefaultSurrogateManifestation(KnowledgeAsset assetSurrogate) {
+    return assetSurrogate.getSurrogate().stream()
+        .flatMap(x -> Util.streamAs(x,ComputableKnowledgeArtifact.class))
+        .anyMatch(surr -> surr.getRepresentation().getLanguage() == Knowledge_Asset_Surrogate);
   }
 
   @Override
@@ -542,8 +600,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .map(ComputableKnowledgeArtifact.class::cast)
         .map(ComputableKnowledgeArtifact::getRepresentation)
         .map(AbstractCarrier::rep)
-        .map(carrierRep -> theRepContrastor.contrast(carrierRep, preferredRep))
-        .anyMatch(c -> c == BROADER || c == EQUIVALENT);
+        .anyMatch(carrierRep ->
+            Contrastor.isBroaderOrEqual(theRepContrastor.contrast(carrierRep, preferredRep)));
   }
 
 
