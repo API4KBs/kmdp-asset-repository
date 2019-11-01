@@ -15,9 +15,10 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassetrole._20190801.KnowledgeAssetRole.Operational_Concept_Definition;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype._20190801.KnowledgeAssetType.Care_Process_Model;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype._20190801.KnowledgeAssetType.Predictive_Model;
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassetrole.KnowledgeAssetRoleSeries.Operational_Concept_Definition;
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Care_Process_Model;
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Predictive_Model;
+import static edu.mayo.ontology.taxonomies.kmdo.annotationreltype.AnnotationRelTypeSeries.Defines;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -28,7 +29,6 @@ import edu.mayo.kmdp.metadata.annotations.resources.SimpleAnnotation;
 import edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset;
 import edu.mayo.kmdp.registry.Registry;
 import edu.mayo.kmdp.repository.artifact.ResourceNotFoundException;
-import edu.mayo.ontology.taxonomies.kmdo.annotationreltype._20190801.AnnotationRelType;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
@@ -331,7 +331,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
   void testInconsistentAssetId_shouldFail() {
     edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset = new KnowledgeAsset().withFormalType(Predictive_Model)
       .withAssetId(new URIIdentifier()
-        .withUri(URI.create(URI_BASE +"45a81582-1b1d-3439-9400-6e2fee0c3f52"))
+        .withUri(URI.create(BASE_URI +"45a81582-1b1d-3439-9400-6e2fee0c3f52"))
         .withVersionId(URI.create(BASE_URI + "b9a26917-0a79-483d-b0e8-6610ba9aad5b/versions/1")));
     ResponseEntity <Void> response = semanticRepository
       .setVersionedKnowledgeAsset(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1", asset);
@@ -462,7 +462,9 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         new KnowledgeAsset().withSubject(
             new SimpleAnnotation()
                 .withExpr(new ConceptIdentifier().withConceptId(URI.create("http://something")))
-                .withRel(new ConceptIdentifier().withRef(URI.create("http://somerel"))))
+                .withRel(new ConceptIdentifier()
+                    .withConceptId(URI.create("http://somerel"))
+                    .withRef(URI.create("http://somerel"))))
         )
     );
 
@@ -538,7 +540,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     assertNotNull(semanticRepository.setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("1".getBytes()), "1",
         new KnowledgeAsset().withRole(Operational_Concept_Definition)
             .withSubject(new SimpleAnnotation()
-                .withRel(AnnotationRelType.Defines.asConcept())
+                .withRel(Defines.asConcept())
                 .withExpr(dizziness))));
 
     List<Pointer> pointers = semanticRepository
@@ -553,13 +555,13 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     assertNotNull(semanticRepository.setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("1".getBytes()), "1",
         new KnowledgeAsset().withRole(Operational_Concept_Definition)
             .withSubject(new SimpleAnnotation()
-                .withRel(AnnotationRelType.Defines.asConcept())
+                .withRel(Defines.asConcept())
                 .withExpr(dizziness))));
 
     assertNotNull(semanticRepository.setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("2".getBytes()), "1",
         new KnowledgeAsset().withRole(Operational_Concept_Definition)
             .withSubject(new SimpleAnnotation()
-                .withRel(AnnotationRelType.Defines.asConcept())
+                .withRel(Defines.asConcept())
                 .withExpr(sleep_apnea))));
 
     List<Pointer> pointers = semanticRepository
@@ -574,13 +576,13 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     assertNotNull(semanticRepository.setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("1".getBytes()), "1",
         new KnowledgeAsset().withRole(Operational_Concept_Definition)
             .withSubject(new SimpleAnnotation()
-                .withRel(AnnotationRelType.Defines.asConcept())
+                .withRel(Defines.asConcept())
                 .withExpr(dizziness))));
 
     assertNotNull(semanticRepository.setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("1".getBytes()), "2",
         new KnowledgeAsset().withRole(Operational_Concept_Definition)
             .withSubject(new SimpleAnnotation()
-                .withRel(AnnotationRelType.Defines.asConcept())
+                .withRel(Defines.asConcept())
                 .withExpr(dizziness))));
 
     List<Pointer> pointers = semanticRepository

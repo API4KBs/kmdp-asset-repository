@@ -26,7 +26,7 @@ import edu.mayo.kmdp.repository.asset.Bundler;
 import edu.mayo.kmdp.repository.asset.SemanticKnowledgeAssetRepository;
 import edu.mayo.kmdp.util.FileUtil;
 import edu.mayo.kmdp.util.Util;
-import edu.mayo.ontology.taxonomies.krlanguage._20190801.KnowledgeRepresentationLanguage;
+import edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguage;
 import java.net.URI;
 import java.util.List;
 import java.util.Set;

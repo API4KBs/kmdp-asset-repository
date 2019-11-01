@@ -16,13 +16,15 @@
 package edu.mayo.kmdp.repository.asset;
 
 import static edu.mayo.kmdp.SurrogateBuilder.id;
-import static edu.mayo.kmdp.comparator.Contrastor.Comparison.BROADER;
-import static edu.mayo.kmdp.comparator.Contrastor.Comparison.EQUIVALENT;
 import static edu.mayo.kmdp.util.Util.ensureUUID;
 import static edu.mayo.kmdp.util.ws.ResponseHelper.attempt;
 import static edu.mayo.kmdp.util.ws.ResponseHelper.fail;
 import static edu.mayo.kmdp.util.ws.ResponseHelper.succeed;
-import static edu.mayo.ontology.taxonomies.krlanguage._20190801.KnowledgeRepresentationLanguage.Knowledge_Asset_Surrogate;
+import static edu.mayo.ontology.taxonomies.api4kp.parsinglevel.ParsingLevelSeries.Abstract_Knowledge_Expression;
+import static edu.mayo.ontology.taxonomies.api4kp.parsinglevel.ParsingLevelSeries.Encoded_Knowledge_Expression;
+import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.JSON;
+import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.XML_1_1;
+import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate;
 import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 import static org.omg.spec.api4kp._1_0.contrastors.SyntacticRepresentationContrastor.theRepContrastor;
 
@@ -50,12 +52,13 @@ import edu.mayo.kmdp.tranx.TransxionApi;
 import edu.mayo.kmdp.tranx.ValidateApi;
 import edu.mayo.kmdp.util.FileUtil;
 import edu.mayo.kmdp.util.JSonUtil;
+import edu.mayo.kmdp.util.StreamUtil;
 import edu.mayo.kmdp.util.Util;
 import edu.mayo.kmdp.util.ws.ResponseHelper;
-import edu.mayo.ontology.taxonomies.api4kp.parsinglevel._20190801.ParsingLevel;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassetrole._20190801.KnowledgeAssetRole;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassettype._20190801.KnowledgeAssetType;
-import edu.mayo.ontology.taxonomies.krformat._20190801.SerializationFormat;
+import edu.mayo.ontology.taxonomies.kao.knowledgeassetrole.KnowledgeAssetRole;
+import edu.mayo.ontology.taxonomies.kao.knowledgeassetrole.KnowledgeAssetRoleSeries;
+import edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetType;
+import edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries;
 import java.io.ByteArrayOutputStream;
 import java.net.URI;
 import java.util.Collections;
@@ -211,7 +214,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .withId(id(UUID.randomUUID().toString(), null))
         .withName("Knowledge Asset Repository")
         .withSupportedAssetTypes(
-            KnowledgeAssetType.values()
+            KnowledgeAssetTypeSeries.values()
         ));
   }
 
@@ -229,7 +232,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
       //Should not be always binary?
       BinaryCarrier carrier = new org.omg.spec.api4kp._1_0.services.resources.BinaryCarrier()
-          .withLevel(ParsingLevel.Encoded_Knowledge_Expression)
+          .withLevel(Encoded_Knowledge_Expression)
           .withAssetId(surrogate.getAssetId());
 
       Optional<IndexPointer> artifactPtr = lookupDefaultCarriers(assetId, versionTag);
@@ -327,25 +330,24 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     List<SyntacticRepresentation> reps = codes.stream()
         .map(c -> ModelMIMECoder.toModelCode(c,Knowledge_Asset_Surrogate))
-        .flatMap(Util::trimStream)
+        .flatMap(StreamUtil::trimStream)
         .map(ModelMIMECoder::decode)
-        .flatMap(Util::trimStream)
+        .flatMap(StreamUtil::trimStream)
         .collect(Collectors.toList());
 
     return reps.stream()
         .map(rep -> getBestCandidate(artifacts,rep))
-        .flatMap(Util::trimStream)
+        .flatMap(StreamUtil::trimStream)
         .findFirst();
   }
 
   private Optional<ComputableKnowledgeArtifact> getBestCandidate(List<KnowledgeArtifact> artifacts,
       SyntacticRepresentation rep) {
     return artifacts.stream()
-        .flatMap(x -> Util.streamAs(x, ComputableKnowledgeArtifact.class))
+        .flatMap(StreamUtil.filterAs(ComputableKnowledgeArtifact.class))
         .filter(x -> Contrastor
             .isBroaderOrEqual(theRepContrastor.contrast(rep, rep(x.getRepresentation()))))
         .findAny();
->>>>>>> b1dab16... [#2392061] Improve support for content negotiation with redirect to HTML variants
   }
 
   @Override
@@ -373,11 +375,11 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
           new ComputableKnowledgeArtifact()
               .withRepresentation(new Representation()
                   .withLanguage(Knowledge_Asset_Surrogate)
-                  .withFormat(SerializationFormat.XML_1_1)),
+                  .withFormat(XML_1_1)),
           new ComputableKnowledgeArtifact()
               .withRepresentation(new Representation()
                   .withLanguage(Knowledge_Asset_Surrogate)
-                  .withFormat(SerializationFormat.JSON)));
+                  .withFormat(JSON)));
     }
 
     String surrogateId = assetSurrogate.getAssetId().getTag();
@@ -451,7 +453,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   private boolean hasDefaultSurrogateManifestation(KnowledgeAsset assetSurrogate) {
     return assetSurrogate.getSurrogate().stream()
-        .flatMap(x -> Util.streamAs(x,ComputableKnowledgeArtifact.class))
+        .flatMap(StreamUtil.filterAs(ComputableKnowledgeArtifact.class))
         .anyMatch(surr -> surr.getRepresentation().getLanguage() == Knowledge_Asset_Surrogate);
   }
 
@@ -543,8 +545,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .getSurrogateForAsset(new IndexPointer(assetId, versionTag));
     return this.resolve(surrogatePointer)
         .map(sr -> AbstractCarrier.of(sr)
-            .withRepresentation(rep(Knowledge_Asset_Surrogate, SerializationFormat.JSON)))
-        .flatMap(kc -> parser.lift(kc, ParsingLevel.Abstract_Knowledge_Expression).getOptionalValue())
+            .withRepresentation(rep(Knowledge_Asset_Surrogate, JSON)))
+        .flatMap(kc -> parser.lift(kc, Abstract_Knowledge_Expression).getOptionalValue())
         .flatMap(kc -> kc.as(KnowledgeAsset.class));
   }
 
@@ -609,9 +611,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     // Defensive programming: ensure assetType is a known type, and that annotation is a fully qualified URI
     try {
       if (assetType != null) {
-        Optional<KnowledgeAssetType> type = KnowledgeAssetType.resolve(assetType);
+        Optional<KnowledgeAssetType> type = KnowledgeAssetTypeSeries.resolve(assetType);
         if (!type.isPresent()) {
-          Optional<KnowledgeAssetRole> role = KnowledgeAssetRole.resolve(assetType);
+          Optional<KnowledgeAssetRole> role = KnowledgeAssetRoleSeries.resolve(assetType);
           if (!role.isPresent()) {
             throw new IllegalStateException("Unrecognized asset type " + assetType);
           }
