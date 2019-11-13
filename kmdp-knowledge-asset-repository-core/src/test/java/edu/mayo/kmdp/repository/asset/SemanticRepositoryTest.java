@@ -20,7 +20,9 @@ import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype._20190801.Know
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.mayo.kmdp.language.LanguageDeSerializer;
 import edu.mayo.kmdp.language.parsers.SurrogateParser;
 import edu.mayo.kmdp.metadata.annotations.resources.SimpleAnnotation;
@@ -29,6 +31,7 @@ import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactApi;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryApi;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactSeriesApi;
+import edu.mayo.kmdp.repository.artifact.ResourceNotFoundException;
 import edu.mayo.kmdp.repository.artifact.jcr.JcrKnowledgeArtifactRepository;
 import edu.mayo.kmdp.repository.asset.index.MapDbIndex;
 import edu.mayo.kmdp.tranx.DeserializeApi;
@@ -47,6 +50,7 @@ import org.omg.spec.api4kp._1_0.identifiers.ConceptIdentifier;
 import org.omg.spec.api4kp._1_0.identifiers.Pointer;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 
@@ -93,6 +97,33 @@ public class SemanticRepositoryTest {
     assertNotNull(semanticRepository);
   }
 
+  // listKnowledgeAssets
+  @Test
+  void testListAll() {
+    assertNotNull(semanticRepository
+      .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "1",
+        new KnowledgeAsset().withFormalType(Care_Process_Model)));
+    assertNotNull(semanticRepository
+      .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo2".getBytes()), "1",
+        new KnowledgeAsset().withFormalType(Care_Process_Model)));
+    List<Pointer> assets = semanticRepository
+      .listKnowledgeAssets(null, null, null, null)
+      .getBody();
+
+    assertNotNull(assets);
+    assertEquals(2, assets.size());
+  }
+
+  @Test
+  void testListAllEmptyList() {
+    List<Pointer> assets = semanticRepository
+      .listKnowledgeAssets(null, null, null, null)
+      .getBody();
+
+    assertNotNull(assets);
+    assertEquals(0, assets.size());
+  }
+
   @Test
   void testPointersHaveType() {
     assertNotNull(semanticRepository
@@ -108,6 +139,136 @@ public class SemanticRepositoryTest {
     assertEquals(Care_Process_Model.getRef(), assets.get(0).getType());
   }
 
+  // getKnowledgeAsset
+  @Test
+  void testGetLatest() {
+    assertNotNull(semanticRepository
+      .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "1",
+        new KnowledgeAsset().withFormalType(Care_Process_Model)));
+    assertNotNull(semanticRepository
+      .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "2",
+        new KnowledgeAsset().withFormalType(Care_Process_Model)));
+    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset = semanticRepository
+      .getKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()))
+      .getBody();
+
+    assertNotNull(asset);
+    assertEquals("2", asset.getAssetId().getVersion());
+  }
+
+  @Test
+  void testGetLatestOutOfOrder() {
+    assertNotNull(semanticRepository
+      .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "5",
+        new KnowledgeAsset().withFormalType(Care_Process_Model)));
+    assertNotNull(semanticRepository
+      .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "2",
+        new KnowledgeAsset().withFormalType(Care_Process_Model)));
+    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset = semanticRepository
+      .getKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()))
+      .getBody();
+
+    assertNotNull(asset);
+    assertEquals("2", asset.getAssetId().getVersion());
+  }
+
+  @Test
+  void testGetLatestAssetNotFound() {
+    // 404 status returned if attempting to retrieve the latest version of an asset that doesn't exist
+    assertNotNull(semanticRepository
+      .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "5",
+        new KnowledgeAsset().withFormalType(Care_Process_Model)));
+    assertNotNull(semanticRepository
+      .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "2",
+        new KnowledgeAsset().withFormalType(Care_Process_Model)));
+    ResponseEntity<edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset> response = semanticRepository
+      .getKnowledgeAsset(UUID.nameUUIDFromBytes("fooDoesNotExist".getBytes()));
+
+    assertEquals(response.getStatusCode(), HttpStatus.NOT_FOUND);
+  }
+
+  // getKnowledgeAssetVersions
+
+  @Test
+  void getVersions() {
+    assertNotNull(semanticRepository
+      .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "1",
+        new KnowledgeAsset().withFormalType(Care_Process_Model)));
+    assertNotNull(semanticRepository
+      .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "2",
+        new KnowledgeAsset().withFormalType(Care_Process_Model)));
+
+    List<Pointer> versions = semanticRepository
+      .getKnowledgeAssetVersions(UUID.nameUUIDFromBytes("foo".getBytes()), null, null, null, null, null).getBody();
+
+    assertNotNull(versions);
+    assertEquals(2, versions.size());
+  }
+
+  @Test
+  void getVersionsAssetNotFound() {
+    assertNotNull(semanticRepository
+      .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "1",
+        new KnowledgeAsset().withFormalType(Care_Process_Model)));
+    assertNotNull(semanticRepository
+      .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "2",
+        new KnowledgeAsset().withFormalType(Care_Process_Model)));
+
+    assertThrows(
+      ResourceNotFoundException.class,
+      () -> semanticRepository
+        .getKnowledgeAssetVersions(UUID.nameUUIDFromBytes("fooNotFound".getBytes()), null, null, null, null, null));
+  }
+
+  //getVersionedKnowledgeAsset
+
+  @Test
+  void testSpecificVersionSuccess() {
+    assertNotNull(semanticRepository
+      .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "5",
+        new KnowledgeAsset().withFormalType(Care_Process_Model)));
+    assertNotNull(semanticRepository
+      .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "2",
+        new KnowledgeAsset().withFormalType(Care_Process_Model)));
+    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset = semanticRepository
+      .getVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "5")
+      .getBody();
+
+    assertNotNull(asset);
+    assertEquals("5", asset.getAssetId().getVersion());
+  }
+
+  @Test
+  void testSpecificVersionAssetNotFound() {
+    assertNotNull(semanticRepository
+      .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "5",
+        new KnowledgeAsset().withFormalType(Care_Process_Model)));
+    assertNotNull(semanticRepository
+      .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "2",
+        new KnowledgeAsset().withFormalType(Care_Process_Model)));
+    ResponseEntity <edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset> response = semanticRepository
+      .getVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("fooDoeNotExist".getBytes()), "5");
+    assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+  }
+
+  @Test
+  void testSpecificVersionAssetExistsVersionNotFound() throws Exception {
+    assertNotNull(semanticRepository
+      .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "5",
+        new KnowledgeAsset().withFormalType(Care_Process_Model)));
+    assertNotNull(semanticRepository
+      .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "2",
+        new KnowledgeAsset().withFormalType(Care_Process_Model)));
+    ResponseEntity <edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset> response = semanticRepository
+      .getVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "12345");
+    assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+
+    ObjectMapper Obj = new ObjectMapper();
+
+    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset = new edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset().withFormalType(Care_Process_Model);
+    System.out.println(Obj.writeValueAsString(asset));
+  }
+
   @Test
   void initAndGetAssetByType() {
     assertNotNull(semanticRepository
@@ -119,22 +280,6 @@ public class SemanticRepositoryTest {
 
     assertNotNull(assets);
     assertEquals(1, assets.size());
-  }
-
-  @Test
-  void getVersions() {
-    assertNotNull(semanticRepository
-        .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "1",
-            new KnowledgeAsset().withFormalType(Care_Process_Model)));
-    assertNotNull(semanticRepository
-        .setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("foo".getBytes()), "2",
-            new KnowledgeAsset().withFormalType(Care_Process_Model)));
-
-    List<Pointer> versions = semanticRepository
-        .getKnowledgeAssetVersions(UUID.nameUUIDFromBytes("foo".getBytes()), -1, -1, null, null, null).getBody();
-
-    assertNotNull(versions);
-    assertEquals(2, versions.size());
   }
 
   @Test

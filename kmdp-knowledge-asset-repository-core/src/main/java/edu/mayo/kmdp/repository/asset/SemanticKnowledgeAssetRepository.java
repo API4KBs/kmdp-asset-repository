@@ -303,12 +303,15 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   @Override
   public ResponseEntity<KnowledgeAsset> getKnowledgeAsset(UUID assetId) {
-    IndexPointer pointer = this.index.getLatestAssetForId(assetId.toString());
-
-    return this.getVersionedKnowledgeAsset(
-        ensureUUID(pointer.getId())
-            .orElseThrow(IllegalStateException::new),
-        pointer.getVersion());
+    Optional<IndexPointer> pointer = Optional.ofNullable(this.index.getLatestAssetForId(assetId.toString()));
+    if (pointer.isPresent()) {
+      return this.getVersionedKnowledgeAsset(
+        ensureUUID(pointer.get().getId())
+          .orElseThrow(IllegalStateException::new),
+        pointer.get().getVersion());
+    } else {
+      return ResponseEntity.notFound().build();
+    }
   }
 
   @Override
