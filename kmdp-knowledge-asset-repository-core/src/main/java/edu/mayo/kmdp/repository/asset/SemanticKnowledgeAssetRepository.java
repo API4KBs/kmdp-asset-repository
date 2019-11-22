@@ -20,6 +20,7 @@ import static edu.mayo.kmdp.comparator.Contrastor.Comparison.BROADER;
 import static edu.mayo.kmdp.comparator.Contrastor.Comparison.EQUIVALENT;
 import static edu.mayo.kmdp.util.Util.ensureUUID;
 import static edu.mayo.kmdp.util.ws.ResponseHelper.attempt;
+import static edu.mayo.kmdp.util.ws.ResponseHelper.fail;
 import static edu.mayo.kmdp.util.ws.ResponseHelper.succeed;
 import static edu.mayo.ontology.taxonomies.krlanguage._20190801.KnowledgeRepresentationLanguage.Knowledge_Asset_Surrogate;
 import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
@@ -81,6 +82,7 @@ import org.omg.spec.api4kp._1_0.services.SyntacticRepresentation;
 import org.omg.spec.api4kp._1_0.services.repository.KnowledgeAssetCatalog;
 import org.omg.spec.api4kp._1_0.services.tranx.ModelMIMECoder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.CollectionUtils;
 
@@ -179,16 +181,16 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public ResponseEntity<UUID> initKnowledgeAsset() {
     UUID assetId;
-    UUID assetVersion;
+    String assetVersion;
 
     KnowledgeAsset surrogate = new KnowledgeAsset();
     assetId = UUID.randomUUID();
-    assetVersion = UUID.randomUUID();
-    surrogate.setAssetId(DatatypeHelper.uri(URI_BASE, assetId.toString(), assetVersion.toString()));
+    assetVersion = "0.0.0";
+    surrogate.setAssetId(DatatypeHelper.uri(URI_BASE, assetId.toString(), assetVersion));
 
-    this.setVersionedKnowledgeAsset(assetId, assetVersion.toString(), surrogate);
+    this.setVersionedKnowledgeAsset(assetId, assetVersion, surrogate);
 
-    return attempt(assetId);
+    return ResponseHelper.succeed(assetId, HttpStatus.CREATED);
   }
 
   @Override
@@ -328,11 +330,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     if (assetSurrogate.getAssetId() == null) {
       assetSurrogate.setAssetId(DatatypeHelper.uri(URI_BASE, assetId.toString(), versionTag));
     } else {
-      if (!assetSurrogate.getAssetId().getTag().equals(assetId.toString()) ||
-          !assetSurrogate.getAssetId().getVersion().equals(versionTag)) {
-        throw new IllegalStateException("Surrogate ID/version must match asset ID/version. \n"
-            + "> assetId = " + assetId + " vs " + assetSurrogate.getAssetId().getTag() + "\n "
-            + "> versionTag = " + versionTag + " vs " + assetSurrogate.getAssetId().getVersion());
+      if (!identifiersConsistent(assetSurrogate, assetId, versionTag)) {
+        return new ResponseEntity<>(HttpStatus.CONFLICT);
       }
     }
 
@@ -390,7 +389,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
           }
         });
 
-    return ResponseEntity.ok().build();
+    return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+  }
+
+  protected boolean identifiersConsistent (KnowledgeAsset assetSurrogate, UUID assetId, String versionTag) {
+    //checks that assetId and versionTag provided in surrogate match those provided as parameters
+    return (assetSurrogate.getAssetId().getTag().equals(assetId.toString()) && assetSurrogate.getAssetId().getVersion().equals(versionTag));
   }
 
   @Override
