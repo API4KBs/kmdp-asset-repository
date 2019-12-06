@@ -24,10 +24,12 @@ import edu.mayo.kmdp.util.Util;
 import java.io.File;
 import java.net.URL;
 import java.util.Properties;
+import javax.inject.Named;
 
 @SuppressWarnings("unchecked")
 public class KnowledgeAssetRepositoryServerConfig extends
-    ConfigProperties<KnowledgeAssetRepositoryServerConfig, KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions> {
+    ConfigProperties<KnowledgeAssetRepositoryServerConfig,
+        KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions> {
 
   private static final Properties DEFAULTS = defaulted(KnowledgeAssetRepositoryOptions.class);
 

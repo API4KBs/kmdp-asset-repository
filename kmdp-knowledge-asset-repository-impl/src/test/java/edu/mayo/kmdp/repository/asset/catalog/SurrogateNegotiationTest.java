@@ -30,7 +30,7 @@ import edu.mayo.kmdp.id.helper.DatatypeHelper;
 import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.metadata.surrogate.Representation;
-import edu.mayo.kmdp.repository.asset.IntegrationTestBase;
+import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetCatalogApi;
 import edu.mayo.kmdp.repository.asset.client.ApiClientFactory;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
@@ -49,7 +49,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 
 
-public class SurrogateNegotiationTest extends IntegrationTestBase {
+public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
 
   private static Logger logger = LoggerFactory.getLogger(SurrogateNegotiationTest.class);
 

@@ -25,7 +25,7 @@ import edu.mayo.kmdp.id.Term;
 import edu.mayo.kmdp.id.adapter.URIId;
 import edu.mayo.kmdp.metadata.annotations.SimpleApplicability;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
-import edu.mayo.kmdp.repository.asset.IntegrationTestBase;
+import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetCatalogApi;
 import edu.mayo.kmdp.repository.asset.client.ApiClientFactory;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
@@ -39,7 +39,7 @@ import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.Answer;
 import org.omg.spec.api4kp._1_0.identifiers.Pointer;
 
-class SemanticRepositoryIntegrationTest extends IntegrationTestBase {
+class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
 
   private ApiClientFactory webClientFactory = new ApiClientFactory("http://localhost:11111",
       WithFHIR.NONE);

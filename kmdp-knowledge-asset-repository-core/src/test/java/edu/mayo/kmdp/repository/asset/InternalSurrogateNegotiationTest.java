@@ -21,6 +21,7 @@ import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.TX
 import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.XML_1_1;
 import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
 import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.KNART_1_3;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -28,11 +29,11 @@ import edu.mayo.kmdp.id.helper.DatatypeHelper;
 import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.metadata.surrogate.Representation;
+import edu.mayo.ontology.taxonomies.api4kp.responsecodes.ResponseCodeSeries;
 import java.net.URI;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.omg.spec.api4kp._1_0.Answer;
 
 class InternalSurrogateNegotiationTest extends RepositoryTestBase {
 
@@ -42,11 +43,11 @@ class InternalSurrogateNegotiationTest extends RepositoryTestBase {
   @Test
   void testPopulation() {
     populateRepositoryWithRedirectables();
-    ResponseEntity<KnowledgeAsset> a1 = semanticRepository.getKnowledgeAsset(pockId,null);
-    ResponseEntity<KnowledgeAsset> a2 = semanticRepository.getKnowledgeAsset(rulId,null);
+    Answer<KnowledgeAsset> a1 = semanticRepository.getKnowledgeAsset(pockId);
+    Answer<KnowledgeAsset> a2 = semanticRepository.getKnowledgeAsset(rulId);
 
-    assertTrue(a1.getStatusCode().is2xxSuccessful());
-    assertTrue(a2.getStatusCode().is2xxSuccessful());
+    assertTrue(a1.isSuccess());
+    assertTrue(a2.isSuccess());
   }
 
 
@@ -54,33 +55,33 @@ class InternalSurrogateNegotiationTest extends RepositoryTestBase {
   void testHeaders() {
     populateRepositoryWithRedirectables();
 
-    ResponseEntity<KnowledgeAsset> a3 = semanticRepository.getKnowledgeAsset(pockId,
+    Answer<KnowledgeAsset> a3 = semanticRepository.getKnowledgeAsset(pockId,
         "application/json, text/html;q=0.9");
-    assertSame(HttpStatus.OK,a3.getStatusCode());
+    assertEquals(ResponseCodeSeries.OK,a3.getOutcomeType());
 
-    ResponseEntity<KnowledgeAsset> a1 = semanticRepository.getKnowledgeAsset(pockId,
+    Answer<KnowledgeAsset> a1 = semanticRepository.getKnowledgeAsset(pockId,
         "text/html, application/xhtml+xml, application/xml;q=0.9, image/webp, */*;q=0.8");
-    assertSame(HttpStatus.SEE_OTHER,a1.getStatusCode());
+    assertEquals(ResponseCodeSeries.SeeOther,a1.getOutcomeType());
 
-    ResponseEntity<KnowledgeAsset> a2 = semanticRepository.getKnowledgeAsset(pockId,
+    Answer<KnowledgeAsset> a2 = semanticRepository.getKnowledgeAsset(pockId,
         "application/json");
-    assertSame(HttpStatus.OK,a2.getStatusCode());
+    assertEquals(ResponseCodeSeries.OK,a2.getOutcomeType());
 
   }
 
   private void populateRepositoryWithRedirectables() {
     String version = "LATEST";
-    ResponseEntity<Void> r1 = semanticRepository.setVersionedKnowledgeAsset(
+    Answer<Void> r1 = semanticRepository.setVersionedKnowledgeAsset(
         pockId,
         version,
         pocSurrogate(pockId, version));
-    assertTrue(r1.getStatusCode().is2xxSuccessful());
+    assertTrue(r1.isSuccess());
 
-    ResponseEntity<Void> r2 = semanticRepository.setVersionedKnowledgeAsset(
+    Answer<Void> r2 = semanticRepository.setVersionedKnowledgeAsset(
             rulId,
         version,
             rulSurrogate(rulId, version));
-    assertTrue(r2.getStatusCode().is2xxSuccessful());
+    assertTrue(r2.isSuccess());
   }
 
   private KnowledgeAsset rulSurrogate(UUID assetId, String version) {

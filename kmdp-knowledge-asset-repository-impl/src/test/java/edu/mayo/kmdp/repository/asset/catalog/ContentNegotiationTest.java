@@ -30,7 +30,7 @@ import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.InlinedRepresentation;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.metadata.surrogate.Representation;
-import edu.mayo.kmdp.repository.asset.IntegrationTestBase;
+import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetCatalogApi;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryApi;
 import edu.mayo.kmdp.repository.asset.client.ApiClientFactory;
@@ -55,7 +55,7 @@ import org.omg.spec.api4kp._1_0.Answer;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._1_0.services.tranx.ModelMIMECoder;
 
-public class ContentNegotiationTest extends IntegrationTestBase {
+public class ContentNegotiationTest extends SemanticRepoAPITestBase {
 
   private ApiClientFactory webClientFactory
       = new ApiClientFactory("http://localhost:11111",WithFHIR.NONE);

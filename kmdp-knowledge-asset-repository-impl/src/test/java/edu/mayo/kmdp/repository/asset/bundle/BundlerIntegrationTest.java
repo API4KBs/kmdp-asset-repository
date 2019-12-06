@@ -27,7 +27,7 @@ import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.Dependency;
 import edu.mayo.kmdp.metadata.surrogate.Representation;
 import edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset;
-import edu.mayo.kmdp.repository.asset.IntegrationTestBase;
+import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetCatalogApi;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryApi;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRetrievalApi;
@@ -41,7 +41,7 @@ import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 
-class BundlerIntegrationTest extends IntegrationTestBase {
+class BundlerIntegrationTest extends SemanticRepoAPITestBase {
 
   private ApiClientFactory apiClientFactory = new ApiClientFactory("http://localhost:11111", WithFHIR.NONE);
   private KnowledgeAssetRepositoryApi repo = KnowledgeAssetRepositoryApi.newInstance(apiClientFactory);
