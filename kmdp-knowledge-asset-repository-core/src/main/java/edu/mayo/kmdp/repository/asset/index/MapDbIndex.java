@@ -18,8 +18,8 @@ package edu.mayo.kmdp.repository.asset.index;
 import com.google.common.collect.Sets;
 import edu.mayo.kmdp.metadata.annotations.Annotation;
 import edu.mayo.kmdp.metadata.annotations.SimpleAnnotation;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassetrole._20190801.KnowledgeAssetRole;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassettype._20190801.KnowledgeAssetType;
+import edu.mayo.ontology.taxonomies.kao.knowledgeassetrole.KnowledgeAssetRole;
+import edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetType;
 import java.io.File;
 import java.net.URI;
 import java.util.Collection;
@@ -31,6 +31,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.inject.Named;
 import org.apache.commons.lang3.StringUtils;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
@@ -88,6 +89,7 @@ public class MapDbIndex implements DisposableBean, Index {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public void registerAsset(IndexPointer asset, IndexPointer surrogate,
       List<KnowledgeAssetType> types, List<KnowledgeAssetRole> roles, List<Annotation> annotations,
       String name,
@@ -121,6 +123,7 @@ public class MapDbIndex implements DisposableBean, Index {
     map.put(typeTag, entryList);
   }
 
+  @SuppressWarnings("unchecked")
   private void registerLatestAsset(IndexPointer assetPointer) {
     HTreeMap<String, IndexPointer> map =
         (HTreeMap<String, IndexPointer>) getMap(LATEST_ASSET_MAP);
@@ -129,6 +132,7 @@ public class MapDbIndex implements DisposableBean, Index {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public void registerArtifactToAsset(IndexPointer assetPointer, IndexPointer artifact) {
     HTreeMap<IndexPointer, Set<IndexPointer>> map =
         (HTreeMap<IndexPointer, Set<IndexPointer>>) getMap(ASSET_TO_ARTIFACT_MAP);
@@ -140,6 +144,7 @@ public class MapDbIndex implements DisposableBean, Index {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public void registerSurrogateToAsset(IndexPointer assetPointer, IndexPointer surrogate) {
     HTreeMap<IndexPointer, IndexPointer> map =
         (HTreeMap<IndexPointer, IndexPointer>) getMap(ASSET_TO_SURROGATE_MAP);
@@ -148,6 +153,7 @@ public class MapDbIndex implements DisposableBean, Index {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public IndexPointer getSurrogateForAsset(IndexPointer assetPointer) {
     HTreeMap<IndexPointer, IndexPointer> map =
         (HTreeMap<IndexPointer, IndexPointer>) getMap(ASSET_TO_SURROGATE_MAP);
@@ -156,6 +162,7 @@ public class MapDbIndex implements DisposableBean, Index {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public void registerLocation(IndexPointer pointer, String href) {
     HTreeMap<IndexPointer, String> map =
         (HTreeMap<IndexPointer, String>) getMap(ID_TO_LOCATION_MAP);
@@ -164,6 +171,7 @@ public class MapDbIndex implements DisposableBean, Index {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public IndexPointer getLatestAssetForId(String assetId) {
     HTreeMap<String, IndexPointer> map =
         (HTreeMap<String, IndexPointer>) getMap(LATEST_ASSET_MAP);
@@ -172,6 +180,7 @@ public class MapDbIndex implements DisposableBean, Index {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public String getLocation(IndexPointer pointer) {
     HTreeMap<IndexPointer, String> map =
         (HTreeMap<IndexPointer, String>) getMap(ID_TO_LOCATION_MAP);
@@ -185,6 +194,7 @@ public class MapDbIndex implements DisposableBean, Index {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public Set<IndexPointer> getAssetIdsByType(String assetType) {
 
     if (StringUtils.isNotBlank(assetType)) {
@@ -204,6 +214,7 @@ public class MapDbIndex implements DisposableBean, Index {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public void registerAnnotations(IndexPointer pointer, Set<SimpleAnnotation> annotations) {
     HTreeMap<String, Set<IndexPointer>> map =
         (HTreeMap<String, Set<IndexPointer>>) getMap(BY_ANNOTATION_MAP);
@@ -239,6 +250,7 @@ public class MapDbIndex implements DisposableBean, Index {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public void registerDescriptiveMetadata(IndexPointer pointer, String name, String description,
       Set<URI> types) {
     HTreeMap<IndexPointer, DescriptiveMetadata> map =
@@ -255,6 +267,7 @@ public class MapDbIndex implements DisposableBean, Index {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public DescriptiveMetadata getDescriptiveMetadataForAsset(IndexPointer pointer) {
     HTreeMap<IndexPointer, DescriptiveMetadata> map =
         (HTreeMap<IndexPointer, DescriptiveMetadata>) getMap(DESCRIPTIVE_METADATA_MAP);
@@ -263,6 +276,7 @@ public class MapDbIndex implements DisposableBean, Index {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public Set<IndexPointer> getAssetIdsByAnnotation(String annotation) {
 
     if (StringUtils.isNotBlank(annotation)) {
@@ -280,6 +294,7 @@ public class MapDbIndex implements DisposableBean, Index {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public Set<String> getAnnotationsOfType(String annotationPredicate) {
     HTreeMap<String, Set<String>> typeMap =
         (HTreeMap<String, Set<String>>) getMap(BY_ANNOTATION_TYPE_MAP);
@@ -288,6 +303,7 @@ public class MapDbIndex implements DisposableBean, Index {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public Set<IndexPointer> getArtifactsForAsset(IndexPointer artifact) {
     HTreeMap<IndexPointer, Set<IndexPointer>> map =
         (HTreeMap<IndexPointer, Set<IndexPointer>>) getMap(ASSET_TO_ARTIFACT_MAP);

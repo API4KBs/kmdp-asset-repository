@@ -17,6 +17,11 @@
     <!-- This implementation embeds the Language Service, but delegates to a web-based Repository Service. -->
 
     <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>javax.servlet-api</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-rest-ws-utils</artifactId>
     </dependency>
@@ -81,7 +86,7 @@
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-engine</artifactId>
+      <artifactId>junit-jupiter</artifactId>
     </dependency>
 
     <dependency>

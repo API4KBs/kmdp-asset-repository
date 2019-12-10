@@ -26,7 +26,7 @@ import edu.mayo.kmdp.repository.asset.Bundler;
 import edu.mayo.kmdp.repository.asset.SemanticKnowledgeAssetRepository;
 import edu.mayo.kmdp.util.FileUtil;
 import edu.mayo.kmdp.util.Util;
-import edu.mayo.ontology.taxonomies.krlanguage._20190801.KnowledgeRepresentationLanguage;
+import edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguage;
 import java.net.URI;
 import java.util.List;
 import java.util.Set;
@@ -47,10 +47,12 @@ public class DefaultBundler implements Bundler {
 
   @Override
   public List<KnowledgeCarrier> bundle(UUID assetId, String version) {
-    KnowledgeAsset asset = this.coreApi.getVersionedKnowledgeAsset(assetId, version).getBody();
+    KnowledgeAsset asset = this.coreApi.getVersionedKnowledgeAsset(assetId, version)
+        .orElseThrow(IllegalStateException::new);
 
     KnowledgeCarrier carrier = this.coreApi
-        .getCanonicalKnowledgeAssetCarrier(assetId, version, null).getBody();
+        .getCanonicalKnowledgeAssetCarrier(assetId, version)
+        .orElseThrow(IllegalStateException::new);
 
     List<KnowledgeCarrier> returnList = Lists.newArrayList();
 
@@ -75,9 +77,8 @@ public class DefaultBundler implements Bundler {
           this.coreApi.getCanonicalKnowledgeAssetCarrier(
               Util.ensureUUID(id.getTag())
                   .orElseThrow(IllegalStateException::new),
-              id.getVersion(),
-              null)
-              .getBody());
+              id.getVersion())
+              .orElseThrow(IllegalStateException::new));
     } else {
       returnList.addAll(this.getAnonymousArtifacts(x));
     }

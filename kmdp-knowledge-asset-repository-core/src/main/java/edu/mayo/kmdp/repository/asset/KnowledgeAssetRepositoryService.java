@@ -18,19 +18,34 @@ package edu.mayo.kmdp.repository.asset;
 import static edu.mayo.kmdp.util.Util.toUUID;
 
 import edu.mayo.kmdp.id.VersionedIdentifier;
+import edu.mayo.kmdp.language.LanguageDeSerializer;
+import edu.mayo.kmdp.language.LanguageDetector;
+import edu.mayo.kmdp.language.LanguageValidator;
+import edu.mayo.kmdp.language.TransrepresentationExecutor;
+import edu.mayo.kmdp.language.parsers.SurrogateParser;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
-import edu.mayo.kmdp.repository.asset.server.KnowledgeAssetCatalogApiDelegate;
-import edu.mayo.kmdp.repository.asset.server.KnowledgeAssetRepositoryApiDelegate;
-import edu.mayo.kmdp.repository.asset.server.KnowledgeAssetRetrievalApiDelegate;
+import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
+import edu.mayo.kmdp.repository.asset.index.MapDbIndex;
+import edu.mayo.kmdp.repository.asset.v3.server.KnowledgeAssetCatalogApiInternal;
+import edu.mayo.kmdp.repository.asset.v3.server.KnowledgeAssetRepositoryApiInternal;
+import edu.mayo.kmdp.repository.asset.v3.server.KnowledgeAssetRetrievalApiInternal;
+import java.util.Collections;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 
-public interface KnowledgeAssetRepository extends KnowledgeAssetCatalogApiDelegate,
-    KnowledgeAssetRepositoryApiDelegate, KnowledgeAssetRetrievalApiDelegate {
+public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogApiInternal,
+    KnowledgeAssetRepositoryApiInternal, KnowledgeAssetRetrievalApiInternal {
 
-  static KnowledgeAssetRepository newRepository() {
-    return new KnowledgeAssetRepositoryComponentConfig(null, null, null)
-        .selfContainedRepository();
+  static KnowledgeAssetRepositoryService selfContainedRepository() {
+    return new SemanticKnowledgeAssetRepository(
+        KnowledgeArtifactRepositoryService.inMemoryArtifactRepository(),
+        new LanguageDeSerializer(Collections.singletonList(new SurrogateParser())),
+        new LanguageDetector(Collections.emptyList()),
+        new LanguageValidator(Collections.emptyList()),
+        new TransrepresentationExecutor(Collections.emptyList()),
+        new MapDbIndex(),
+        new KnowledgeAssetRepositoryServerConfig()
+    );
   }
 
   default void publish(

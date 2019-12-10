@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+  <springProperty scope="context" name="log-level-root" source="log.level.root" defaultValue="error" />
+  <springProperty scope="context" name="log-level-edu-mayo" source="log.level.edu.mayo" defaultValue="error" />
+
+  <springProperty scope="context" name="console-appender-layout-pattern" source="console.appender.layout.pattern" defaultValue="%d %highlight(%level) %logger{50} - %msg%n" />
+  <springProperty scope="context" name="file-appender-layout-pattern" source="file.appender.layout.pattern" defaultValue="%d{HH:mm:ss.SSS} %highlight(%-5level) %logger{100} - %msg%n" />
+
+  <springProperty scope="context" name="max-file-size" source="max.file.size" defaultValue="10MB" />
+  <springProperty scope="context" name="total-size-cap" source="total.size.cap" defaultValue="15GB" />
+  <springProperty scope="context" name="max-history-days" source="max.history.days" defaultValue="60" />
+  <springProperty scope="context" name="log-dir" source="log.dir" defaultValue="logs" />
+  <springProperty scope="context" name="log-file" source="log.file" defaultValue="application.log" />
+
+  <springProperty scope="context" name="async-never-block" source="async.never.block" defaultValue="true" />
+  <springProperty scope="context" name="async-discard-threshold" source="async.discard.threshold" defaultValue="1" />
+  <springProperty scope="context" name="async-queue-size" source="async-queue.size" defaultValue="500" />
+  <springProperty scope="context" name="async-include-caller-data" source="async.include.caller.data" defaultValue="false" />
+
+
+  <appender name="ColorConsoleAppender" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+      <pattern>%d %highlight(%level) %logger{50} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <appender name="ASYNC_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
+
+    <appender-ref ref="ColorConsoleAppender" />
+    <neverBlock>${async-never-block}</neverBlock>
+    <queueSize>${async-queue-size}</queueSize>
+    <includeCallerData>${async-include-caller-data}</includeCallerData>
+    <discardingThreshold>${async-discard-threshold}</discardingThreshold> <!-- Drop log events when has 1% capacity remaining -->
+
+  </appender>
+
+
+  <!-- Specify the log level for all (ie: root) appenders: file, console-->
+  <if condition='!isDefined("splunk-token")'>
+    <then>
+      <root level="${log-level-root}">
+        <appender-ref ref="ASYNC_CONSOLE"/>
+      </root>
+    </then>
+  </if>
+
+  <!-- Log "edu.mayo" at the specified level: file, console -->
+  <if condition='!isDefined("splunk-token")'>
+    <then>
+      <logger name="edu.mayo" level="${log-level-edu-mayo}" additivity="false">
+        <appender-ref ref="ASYNC_CONSOLE" />
+      </logger>
+    </then>
+  </if>
+
+
+</configuration>

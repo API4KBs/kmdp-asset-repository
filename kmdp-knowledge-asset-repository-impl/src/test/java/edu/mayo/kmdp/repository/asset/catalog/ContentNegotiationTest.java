@@ -16,9 +16,12 @@
 package edu.mayo.kmdp.repository.asset.catalog;
 
 import static edu.mayo.kmdp.SurrogateBuilder.id;
-import static edu.mayo.ontology.taxonomies.krformat._20190801.SerializationFormat.XML_1_1;
-import static edu.mayo.ontology.taxonomies.krlanguage._20190801.KnowledgeRepresentationLanguage.HTML;
-import static edu.mayo.ontology.taxonomies.krlanguage._20190801.KnowledgeRepresentationLanguage.KNART_1_3;
+import static edu.mayo.ontology.taxonomies.iso639_2_languagecodes.LanguageSeries.English;
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Rules_Policies_And_Guidelines;
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Clinical_Rule;
+import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.XML_1_1;
+import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
+import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.KNART_1_3;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
@@ -27,16 +30,13 @@ import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.InlinedRepresentation;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.metadata.surrogate.Representation;
-import edu.mayo.kmdp.repository.asset.IntegrationTestBase;
-import edu.mayo.kmdp.repository.asset.KnowledgeAssetCatalogApi;
-import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryApi;
-import edu.mayo.kmdp.repository.asset.client.ApiClientFactory;
+import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
+import edu.mayo.kmdp.repository.asset.v3.KnowledgeAssetCatalogApi;
+import edu.mayo.kmdp.repository.asset.v3.KnowledgeAssetRepositoryApi;
+import edu.mayo.kmdp.repository.asset.v3.client.ApiClientFactory;
 import edu.mayo.kmdp.util.JaxbUtil;
 import edu.mayo.kmdp.util.Util;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
-import edu.mayo.ontology.taxonomies.iso639_2_languagecodes._20190201.Language;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory._20190801.KnowledgeAssetCategory;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassettype._20190801.KnowledgeAssetType;
 import java.util.Collections;
 import java.util.UUID;
 import org.hl7.cdsdt.r2.ST;
@@ -52,15 +52,13 @@ import org.hl7.knowledgeartifact.r1.Metadata.ArtifactType;
 import org.hl7.knowledgeartifact.r1.ObjectFactory;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.Answer;
-import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._1_0.services.tranx.ModelMIMECoder;
 
-public class ContentNegotiationTest extends IntegrationTestBase {
+public class ContentNegotiationTest extends SemanticRepoAPITestBase {
 
-
-  private ApiClientFactory webClientFactory = new ApiClientFactory("http://localhost:11111",
-      WithFHIR.NONE);
+  private ApiClientFactory webClientFactory
+      = new ApiClientFactory("http://localhost:11111",WithFHIR.NONE);
 
   protected KnowledgeAssetCatalogApi ckac = KnowledgeAssetCatalogApi
       .newInstance(webClientFactory);
@@ -79,22 +77,17 @@ public class ContentNegotiationTest extends IntegrationTestBase {
 
     KnowledgeAsset asset = buildAsset(assetId,versionTag,knartXML);
 
-    assertTrue(ckac.listKnowledgeAssets(null,null,null,null)
-        .getOptionalValue().get().isEmpty());
+//    assertTrue(ckac.listKnowledgeAssets(null,null,null,null)
+//        .getOptionalValue().get().isEmpty());
     ckac.setVersionedKnowledgeAsset(assetId,versionTag,asset);
 
     Answer<KnowledgeCarrier> ans = repo.getCanonicalKnowledgeAssetCarrier(
         assetId,
         versionTag,
-        ModelMIMECoder.encode(rep(KNART_1_3,
-            XML_1_1)));
+        ModelMIMECoder.encode(rep(KNART_1_3, XML_1_1)));
 
     assertTrue(ans.isSuccess());
     assertTrue(ans.getOptionalValue().isPresent());
-
-    BinaryCarrier bc = (BinaryCarrier) ans.getOptionalValue().get();
-
-    String x = new String(bc.getEncodedExpression());
 
     Answer<KnowledgeCarrier> ans2 = repo.getCanonicalKnowledgeAssetCarrier(
         assetId,
@@ -108,12 +101,12 @@ public class ContentNegotiationTest extends IntegrationTestBase {
   private KnowledgeAsset buildAsset(UUID assetId, String versionTag, String inlined) {
     return new edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset()
         .withAssetId(id(assetId, versionTag))
-        .withFormalCategory(KnowledgeAssetCategory.Rules_Policies_And_Guidelines)
-        .withFormalType(KnowledgeAssetType.Clinical_Rule)
+        .withFormalCategory(Rules_Policies_And_Guidelines)
+        .withFormalType(Clinical_Rule)
         .withName("Mock Rule")
         .withCarriers(new ComputableKnowledgeArtifact()
             .withArtifactId(id(UUID.randomUUID(), versionTag))
-            .withLocalization(Language.English)
+            .withLocalization(English)
             .withName("Mock Rule - KNAR version")
             .withRepresentation(new Representation()
                 .withLanguage(KNART_1_3)
