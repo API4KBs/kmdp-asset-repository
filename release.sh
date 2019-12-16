@@ -24,7 +24,7 @@ mvn versions:update-child-modules
 
 ## cannot set parent version to a range with maven 3.3.9 / maven versions 2.7
 ## mvn versions:update-parent -DparentVersion=$1
-sed -i -r "/<parent>/,/<\/parent>/ s|<version>(.*)</version>|<version>$2</version> |" pom.xml
+gsed -i -r "/<parent>/,/<\/parent>/ s|<version>(.*)</version>|<version>$2</version> |" pom.xml
 
 mvn versions:set-property -Dproperty=kmdp.artifact.repo.version -DnewVersion=$3
 mvn versions:set-property -Dproperty=kmdp.language.version -DnewVersion=$4
@@ -60,7 +60,7 @@ mvn versions:set -DnewVersion=$5
 mvn versions:update-child-modules
 
 ## cannot set parent version to a range with maven 3.3.9 / maven versions 2.7
-sed -i -r "/<parent>/,/<\/parent>/ s|<version>([0-9]+\.[0-9]+\.[0-9]+)</version>|<version>[$2,$6]</version> |" pom.xml
+gsed -i -r "/<parent>/,/<\/parent>/ s|<version>([0-9]+\.[0-9]+\.[0-9]+)</version>|<version>[$2,$6]</version> |" pom.xml
 
 mvn versions:set-property -Dproperty=kmdp.artifact.repo.version -DnewVersion="[$3,)"
 mvn versions:set-property -Dproperty=kmdp.language.version -DnewVersion="[$4,)"
