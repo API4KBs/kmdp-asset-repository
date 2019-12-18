@@ -124,7 +124,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   private Bundler bundler;
 
   public SemanticKnowledgeAssetRepository(
-      @Autowired(required = false) @KPComponent KnowledgeArtifactRepositoryService artifactRepo,
+      @Autowired @KPServer KnowledgeArtifactRepositoryService artifactRepo,
       @Autowired @KPServer DeserializeApiInternal parser,
       @Autowired(required = false) @KPServer DetectApiInternal detector,
       @Autowired(required = false) @KPServer ValidateApiInternal validator,
