@@ -16,6 +16,13 @@
 package edu.mayo.kmdp.repository.asset;
 
 import edu.mayo.kmdp.language.TransrepresentationExecutor;
+import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig;
+import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
+import edu.mayo.kmdp.repository.artifact.jcr.JcrKnowledgeArtifactRepository;
+import org.apache.jackrabbit.oak.Oak;
+import org.apache.jackrabbit.oak.jcr.Jcr;
+import org.omg.spec.api4kp._1_0.services.KPServer;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
@@ -26,6 +33,17 @@ import org.springframework.context.annotation.PropertySource;
     TransrepresentationExecutor.class})
 @PropertySource(value = {"classpath:application.properties"})
 public class KnowledgeAssetRepositoryComponentConfig {
+  @Bean
+  public KnowledgeAssetRepositoryServerConfig defaultConfiguration() {
+    return new KnowledgeAssetRepositoryServerConfig();
+  }
+  @Bean
+  @KPServer
+  public KnowledgeArtifactRepositoryService inMemoryRepository() {
+    return new JcrKnowledgeArtifactRepository(new Jcr(new Oak()).createRepository(),
+      new KnowledgeArtifactRepositoryServerConfig());
+  }
+
 
 
 }

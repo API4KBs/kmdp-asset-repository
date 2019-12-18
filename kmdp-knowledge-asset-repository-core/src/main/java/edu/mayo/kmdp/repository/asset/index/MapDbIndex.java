@@ -37,8 +37,10 @@ import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.HTreeMap;
 import org.springframework.beans.factory.DisposableBean;
+import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
+@Component
 public class MapDbIndex implements DisposableBean, Index {
 
   private static final String ASSETS_SET = "assets";
