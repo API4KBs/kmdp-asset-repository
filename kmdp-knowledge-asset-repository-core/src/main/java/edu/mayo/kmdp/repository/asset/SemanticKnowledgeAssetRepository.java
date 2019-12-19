@@ -29,6 +29,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.mayo.kmdp.comparator.Contrastor;
 import edu.mayo.kmdp.id.VersionedIdentifier;
+import edu.mayo.kmdp.id.adapter.URIId;
 import edu.mayo.kmdp.id.helper.DatatypeHelper;
 import edu.mayo.kmdp.metadata.surrogate.Association;
 import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
@@ -355,12 +356,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       KnowledgeAsset assetSurrogate) {
     logger.debug("INITIALIZING ASSET {} : {}", assetId, versionTag);
 
-    if (assetSurrogate.getAssetId() == null) {
-      assetSurrogate.setAssetId(DatatypeHelper.uri(URI_BASE, assetId.toString(), versionTag));
-    } else {
-      if (!identifiersConsistent(assetSurrogate, assetId, versionTag)) {
-        return Answer.of(ResponseCodeSeries.Conflict);
-      }
+    setIdAndVersionIfMissing(assetSurrogate, assetId, versionTag);
+
+    if (!identifiersConsistent(assetSurrogate, assetId, versionTag)) {
+      return Answer.of(ResponseCodeSeries.Conflict);
     }
 
     if (! hasDefaultSurrogateManifestation(assetSurrogate)) {
@@ -448,6 +447,26 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     //checks that assetId and versionTag provided in surrogate match those provided as parameters
     return (assetSurrogate.getAssetId().getTag().equals(assetId.toString())
         && assetSurrogate.getAssetId().getVersion().equals(versionTag));
+  }
+
+  private void setIdAndVersionIfMissing(KnowledgeAsset assetSurrogate, UUID assetId,
+                                        String versionTag) {
+    URIIdentifier existingAssetId = assetSurrogate.getAssetId();
+    URIIdentifier parameterAssetId = DatatypeHelper.uri(URI_BASE, assetId.toString(), versionTag);
+    if (existingAssetId == null) {
+      //If the entire assetId is missing, set it based on parameters.
+      assetSurrogate.setAssetId(parameterAssetId);
+    }
+    else {
+      //If the version tag is missing, set it based on parameter
+      if (existingAssetId.getVersionId() == null) {
+        assetSurrogate.getAssetId().setVersionId(parameterAssetId.getVersionId());
+      }
+      //If the asset tag is missing, set it based on parameter
+      if (existingAssetId.getTag() == null) {
+        assetSurrogate.getAssetId().setUri(parameterAssetId.getUri());
+      }
+    }
   }
 
   private boolean hasDefaultSurrogateManifestation(KnowledgeAsset assetSurrogate) {
