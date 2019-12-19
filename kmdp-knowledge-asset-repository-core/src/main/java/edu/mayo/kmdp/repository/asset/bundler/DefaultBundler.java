@@ -22,8 +22,8 @@ import edu.mayo.kmdp.SurrogateHelper;
 import edu.mayo.kmdp.id.helper.DatatypeHelper;
 import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
-import edu.mayo.kmdp.repository.asset.Bundler;
 import edu.mayo.kmdp.repository.asset.SemanticKnowledgeAssetRepository;
+import edu.mayo.kmdp.repository.asset.v3.server.KnowledgeAssetRetrievalApiInternal;
 import edu.mayo.kmdp.util.FileUtil;
 import edu.mayo.kmdp.util.Util;
 import edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguage;
@@ -31,12 +31,13 @@ import java.net.URI;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import org.omg.spec.api4kp._1_0.Answer;
 import org.omg.spec.api4kp._1_0.identifiers.URIIdentifier;
 import org.omg.spec.api4kp._1_0.identifiers.VersionIdentifier;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 
-public class DefaultBundler implements Bundler {
+public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKnowledgeArtifactBundle {
 
   private SemanticKnowledgeAssetRepository coreApi;
 
@@ -46,12 +47,14 @@ public class DefaultBundler implements Bundler {
   }
 
   @Override
-  public List<KnowledgeCarrier> bundle(UUID assetId, String version) {
-    KnowledgeAsset asset = this.coreApi.getVersionedKnowledgeAsset(assetId, version)
+  public Answer<List<KnowledgeCarrier>> getKnowledgeArtifactBundle(UUID assetId, String versionTag,
+      String assetRelationship, Integer depth, String xAccept) {
+
+    KnowledgeAsset asset = this.coreApi.getVersionedKnowledgeAsset(assetId, versionTag)
         .orElseThrow(IllegalStateException::new);
 
     KnowledgeCarrier carrier = this.coreApi
-        .getCanonicalKnowledgeAssetCarrier(assetId, version)
+        .getCanonicalKnowledgeAssetCarrier(assetId, versionTag)
         .orElseThrow(IllegalStateException::new);
 
     List<KnowledgeCarrier> returnList = Lists.newArrayList();
@@ -65,7 +68,7 @@ public class DefaultBundler implements Bundler {
 
     dependencies.forEach(x -> retrieveCarriers(x, returnList));
 
-    return returnList;
+    return Answer.of(returnList);
   }
 
   private void retrieveCarriers(KnowledgeAsset x, List<KnowledgeCarrier> returnList) {

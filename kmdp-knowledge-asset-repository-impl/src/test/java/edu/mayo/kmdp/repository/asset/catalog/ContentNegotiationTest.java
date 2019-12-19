@@ -15,7 +15,7 @@
  */
 package edu.mayo.kmdp.repository.asset.catalog;
 
-import static edu.mayo.kmdp.SurrogateBuilder.id;
+import static edu.mayo.kmdp.SurrogateBuilder.assetId;
 import static edu.mayo.ontology.taxonomies.iso639_2_languagecodes.LanguageSeries.English;
 import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Rules_Policies_And_Guidelines;
 import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Clinical_Rule;
@@ -107,12 +107,12 @@ public class ContentNegotiationTest extends SemanticRepoAPITestBase {
 
   private KnowledgeAsset buildAsset(UUID assetId, String versionTag, String inlined) {
     return new edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset()
-        .withAssetId(id(assetId, versionTag))
+        .withAssetId(assetId(assetId, versionTag))
         .withFormalCategory(Rules_Policies_And_Guidelines)
         .withFormalType(Clinical_Rule)
         .withName("Mock Rule")
         .withCarriers(new ComputableKnowledgeArtifact()
-            .withArtifactId(id(UUID.randomUUID(), versionTag))
+            .withArtifactId(assetId(UUID.randomUUID(), versionTag))
             .withLocalization(English)
             .withName("Mock Rule - KNAR version")
             .withRepresentation(new Representation()

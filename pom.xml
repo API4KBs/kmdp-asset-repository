@@ -13,6 +13,8 @@
   <artifactId>kmdp-knowledge-asset-repository</artifactId>
   <version>3.6.0</version>
 
+  <name>KMDP :: Server :: Knowledge Asset Repository Service</name>
+
   <packaging>pom</packaging>
 
   <properties>

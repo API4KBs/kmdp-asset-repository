@@ -12,6 +12,8 @@
 
   <artifactId>kmdp-knowledge-asset-repository-core</artifactId>
 
+  <name>KMDP :: Server :: Knowledge Asset Repository Service (Internal) </name>
+
   <dependencies>
 
     <!-- This implementation embeds the Language Service, but delegates to a web-based Repository Service. -->
