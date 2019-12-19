@@ -394,6 +394,51 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     assertEquals(ka.getAssetId().getVersionId().toString(), expectedVersionId);
   }
 
+  @Test
+  void testMissingVersionOnly_getsSet() {
+    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset = new KnowledgeAsset()
+      .withFormalType(Predictive_Model)
+    .withAssetId(new URIIdentifier()
+      .withUri(URI.create(BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52"))
+      );
+    Answer<Void> response = semanticRepository
+      .setVersionedKnowledgeAsset(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1",
+        asset);
+    assertEquals(ResponseCodeSeries.NoContent, response.getOutcomeType());
+    String expectedAssetId = BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52";
+    String expectedVersionId = BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52/versions/1";
+    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka = semanticRepository
+      .getVersionedKnowledgeAsset(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1")
+      .orElse(null);
+    assertNotNull(ka);
+
+    assertEquals(ka.getAssetId().getUri().toString(), expectedAssetId);
+    assertEquals(ka.getAssetId().getVersionId().toString(), expectedVersionId);
+  }
+
+  @Test
+  void testMissingAssetIdOnly_getsSet() {
+    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset = new KnowledgeAsset()
+      .withFormalType(Predictive_Model)
+      .withAssetId(new URIIdentifier()
+        .withVersionId(
+          URI.create(BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52/versions/1"))
+      );
+    Answer<Void> response = semanticRepository
+      .setVersionedKnowledgeAsset(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1",
+        asset);
+    assertEquals(ResponseCodeSeries.NoContent, response.getOutcomeType());
+    String expectedAssetId = BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52";
+    String expectedVersionId = BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52/versions/1";
+    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka = semanticRepository
+      .getVersionedKnowledgeAsset(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1")
+      .orElse(null);
+    assertNotNull(ka);
+
+    assertEquals(ka.getAssetId().getUri().toString(), expectedAssetId);
+    assertEquals(ka.getAssetId().getVersionId().toString(), expectedVersionId);
+  }
+
 
   @Test
   void initAndGetAssetByType() {
