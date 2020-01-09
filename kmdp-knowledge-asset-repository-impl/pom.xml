@@ -8,7 +8,7 @@
   <parent>
     <artifactId>kmdp-knowledge-asset-repository</artifactId>
     <groupId>edu.mayo.kmdp</groupId>
-    <version>3.5.5</version>
+    <version>3.6.0</version>
   </parent>
 
   <artifactId>kmdp-knowledge-asset-repository-impl</artifactId>
