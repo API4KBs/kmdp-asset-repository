@@ -24,6 +24,7 @@ import edu.mayo.kmdp.repository.asset.index.MapDbIndex;
 import org.omg.spec.api4kp._1_0.services.KPComponent;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -32,11 +33,14 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
 @SpringBootTest(
-    webEnvironment = WebEnvironment.DEFINED_PORT,
+    webEnvironment = WebEnvironment.RANDOM_PORT,
     classes = edu.mayo.kmdp.repository.asset.v3.server.Swagger2SpringBoot.class)
 @ContextConfiguration(classes = IntegrationTestConfig.class)
 @ActiveProfiles("test")
 public abstract class SemanticRepoAPITestBase {
+
+  @LocalServerPort
+  protected int port;
 
   @Configuration
   @ComponentScan(basePackageClasses = {

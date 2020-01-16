@@ -35,17 +35,22 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.Answer;
 import org.omg.spec.api4kp._1_0.identifiers.Pointer;
 
 class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
 
-  private ApiClientFactory webClientFactory = new ApiClientFactory("http://localhost:11111",
-      WithFHIR.NONE);
+  private KnowledgeAssetCatalogApi ckac;
 
-  private KnowledgeAssetCatalogApi ckac = KnowledgeAssetCatalogApi.newInstance(webClientFactory);
+  @BeforeEach
+  void init() {
+    ApiClientFactory webClientFactory = new ApiClientFactory("http://localhost:" + port,
+        WithFHIR.NONE);
 
+    ckac = KnowledgeAssetCatalogApi.newInstance(webClientFactory);
+  }
 
   @Test
   void testListKnowledgeAssetsType() {

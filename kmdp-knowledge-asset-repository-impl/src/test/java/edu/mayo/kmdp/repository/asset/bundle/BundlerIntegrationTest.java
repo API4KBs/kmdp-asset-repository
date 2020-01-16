@@ -37,16 +37,27 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 
 class BundlerIntegrationTest extends SemanticRepoAPITestBase {
 
-  private ApiClientFactory apiClientFactory = new ApiClientFactory("http://localhost:11111", WithFHIR.NONE);
-  private KnowledgeAssetRepositoryApi repo = KnowledgeAssetRepositoryApi.newInstance(apiClientFactory);
-  private KnowledgeAssetCatalogApi catalog = KnowledgeAssetCatalogApi.newInstance(apiClientFactory);
-  private KnowledgeAssetRetrievalApi lib = KnowledgeAssetRetrievalApi.newInstance(apiClientFactory);
+  private KnowledgeAssetRepositoryApi repo;
+  private KnowledgeAssetCatalogApi catalog;
+  private KnowledgeAssetRetrievalApi lib;
+
+  @BeforeEach
+  void init() {
+    ApiClientFactory apiClientFactory = new ApiClientFactory("http://localhost:" + port,
+        WithFHIR.NONE);
+
+    repo = KnowledgeAssetRepositoryApi.newInstance(apiClientFactory);
+    catalog = KnowledgeAssetCatalogApi.newInstance(apiClientFactory);
+    lib = KnowledgeAssetRetrievalApi.newInstance(apiClientFactory);
+  }
+
 
 
   @Test

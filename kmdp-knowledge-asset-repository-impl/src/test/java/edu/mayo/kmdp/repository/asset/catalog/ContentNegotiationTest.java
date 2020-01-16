@@ -33,6 +33,7 @@ import edu.mayo.kmdp.metadata.surrogate.Representation;
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
 import edu.mayo.kmdp.repository.asset.v3.KnowledgeAssetCatalogApi;
 import edu.mayo.kmdp.repository.asset.v3.KnowledgeAssetRepositoryApi;
+import edu.mayo.kmdp.repository.asset.v3.KnowledgeAssetRetrievalApi;
 import edu.mayo.kmdp.repository.asset.v3.client.ApiClientFactory;
 import edu.mayo.kmdp.util.JaxbUtil;
 import edu.mayo.kmdp.util.Util;
@@ -50,6 +51,7 @@ import org.hl7.knowledgeartifact.r1.KnowledgeDocument;
 import org.hl7.knowledgeartifact.r1.Metadata;
 import org.hl7.knowledgeartifact.r1.Metadata.ArtifactType;
 import org.hl7.knowledgeartifact.r1.ObjectFactory;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.Answer;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
@@ -57,13 +59,18 @@ import org.omg.spec.api4kp._1_0.services.tranx.ModelMIMECoder;
 
 public class ContentNegotiationTest extends SemanticRepoAPITestBase {
 
-  private ApiClientFactory webClientFactory
-      = new ApiClientFactory("http://localhost:11111",WithFHIR.NONE);
+  private KnowledgeAssetRepositoryApi repo;
+  private KnowledgeAssetCatalogApi ckac;
 
-  protected KnowledgeAssetCatalogApi ckac = KnowledgeAssetCatalogApi
-      .newInstance(webClientFactory);
-  protected KnowledgeAssetRepositoryApi repo = KnowledgeAssetRepositoryApi
-      .newInstance(webClientFactory);
+  @BeforeEach
+  void init() {
+    ApiClientFactory apiClientFactory = new ApiClientFactory("http://localhost:" + port,
+        WithFHIR.NONE);
+
+    repo = KnowledgeAssetRepositoryApi.newInstance(apiClientFactory);
+    ckac = KnowledgeAssetCatalogApi.newInstance(apiClientFactory);
+  }
+
 
 
   @Test

@@ -42,6 +42,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.Answer;
 import org.slf4j.Logger;
@@ -53,14 +54,21 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
 
   private static Logger logger = LoggerFactory.getLogger(SurrogateNegotiationTest.class);
 
-  private ApiClientFactory webClientFactory = new ApiClientFactory("http://localhost:11111",
-      WithFHIR.NONE);
-
-  protected KnowledgeAssetCatalogApi rpo = KnowledgeAssetCatalogApi.newInstance(webClientFactory);
-
   private static final URI REDIRECT_URL = URI.create("https://httpstat.us/306");
 
   private static String version = "LATEST";
+
+  private KnowledgeAssetCatalogApi rpo;
+
+  @BeforeEach
+  void init() {
+    ApiClientFactory apiClientFactory = new ApiClientFactory("http://localhost:" + port,
+        WithFHIR.NONE);
+
+    rpo = KnowledgeAssetCatalogApi.newInstance(apiClientFactory);
+  }
+
+
 
   @Test
   public void testPopulation() {
@@ -84,7 +92,7 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
     CloseableHttpClient httpClient = HttpClients.createDefault();
 
     HttpGet request =
-        new HttpGet("http://localhost:11111/cat/assets/" + pockId);
+        new HttpGet("http://localhost:" + port + "/cat/assets/" + pockId);
     request.addHeader(HttpHeaders.USER_AGENT, "Colorless/42");
     request.addHeader(HttpHeaders.ACCEPT,
         "text/html, application/xhtml+xml, application/xml;q=0.9, image/webp, */*;q=0.8");
