@@ -13,6 +13,8 @@
 
   <artifactId>kmdp-knowledge-asset-repository-impl</artifactId>
 
+  <name>KMDP :: Server :: Knowledge Asset Repository Service (Web)</name>
+
   <dependencies>
 
     <dependency>

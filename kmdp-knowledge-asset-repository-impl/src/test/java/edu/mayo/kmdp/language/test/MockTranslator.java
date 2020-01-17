@@ -52,6 +52,12 @@ public class MockTranslator implements TransxionApiInternal {
   }
 
   @Override
+  public Answer<KnowledgeCarrier> applyTransrepresentationInto(KnowledgeCarrier sourceArtifact,
+      SyntacticRepresentation into) {
+    return Answer.unsupported();
+  }
+
+  @Override
   public Answer<TransrepresentationOperator> getTransrepresentation(String txId) {
     return Answer.of(op);
   }

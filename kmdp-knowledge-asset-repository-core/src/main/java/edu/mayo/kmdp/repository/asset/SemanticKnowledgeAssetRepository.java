@@ -15,7 +15,6 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
-import static edu.mayo.kmdp.SurrogateBuilder.id;
 import static edu.mayo.kmdp.util.Util.ensureUUID;
 import static edu.mayo.ontology.taxonomies.api4kp.parsinglevel.ParsingLevelSeries.Abstract_Knowledge_Expression;
 import static edu.mayo.ontology.taxonomies.api4kp.parsinglevel.ParsingLevelSeries.Encoded_Knowledge_Expression;
@@ -27,6 +26,7 @@ import static org.omg.spec.api4kp._1_0.contrastors.SyntacticRepresentationContra
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import edu.mayo.kmdp.SurrogateBuilder;
 import edu.mayo.kmdp.comparator.Contrastor;
 import edu.mayo.kmdp.id.VersionedIdentifier;
 import edu.mayo.kmdp.id.adapter.URIId;
@@ -122,7 +122,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   private HrefBuilder hrefBuilder;
 
-  private Bundler bundler;
+  private DefaultBundler bundler;
 
   public SemanticKnowledgeAssetRepository(
       @Autowired @KPServer KnowledgeArtifactRepositoryService artifactRepo,
@@ -160,7 +160,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<List<KnowledgeCarrier>> getKnowledgeArtifactBundle(UUID assetId,
       String versionTag, String assetRelationship, Integer depth, String xAccept) {
-    return Answer.of(bundler.bundle(assetId, versionTag));
+    return bundler.getKnowledgeArtifactBundle(assetId, versionTag, null,null, null);
   }
 
   @Override
@@ -203,7 +203,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<KnowledgeAssetCatalog> getAssetCatalog() {
     return Answer.of(new KnowledgeAssetCatalog()
-        .withId(id(UUID.randomUUID().toString(), null))
+        .withId(SurrogateBuilder.assetId(UUID.randomUUID().toString(), null))
         .withName("Knowledge Asset Repository")
         .withSupportedAssetTypes(
             KnowledgeAssetTypeSeries.values()
@@ -263,7 +263,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
           .map(KnowledgeProcessingOperator::getOperatorId)
           .flatMap(id -> translator.applyTransrepresentation(
               id,
-              resolveInlined(surrogate).map(KnowledgeCarrier::of).get(),
+              resolveInlined(surrogate).map(AbstractCarrier::of).get(),
               new Properties()))
           .getOptionalValue());
 
