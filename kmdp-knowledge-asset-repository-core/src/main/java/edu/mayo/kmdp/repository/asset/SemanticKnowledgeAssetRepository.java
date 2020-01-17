@@ -15,6 +15,7 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
+import static edu.mayo.kmdp.SurrogateBuilder.assetId;
 import static edu.mayo.kmdp.util.Util.ensureUUID;
 import static edu.mayo.ontology.taxonomies.api4kp.parsinglevel.ParsingLevelSeries.Abstract_Knowledge_Expression;
 import static edu.mayo.ontology.taxonomies.api4kp.parsinglevel.ParsingLevelSeries.Encoded_Knowledge_Expression;
@@ -26,10 +27,8 @@ import static org.omg.spec.api4kp._1_0.contrastors.SyntacticRepresentationContra
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import edu.mayo.kmdp.SurrogateBuilder;
 import edu.mayo.kmdp.comparator.Contrastor;
 import edu.mayo.kmdp.id.VersionedIdentifier;
-import edu.mayo.kmdp.id.adapter.URIId;
 import edu.mayo.kmdp.id.helper.DatatypeHelper;
 import edu.mayo.kmdp.metadata.surrogate.Association;
 import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
@@ -78,7 +77,6 @@ import org.omg.spec.api4kp._1_0.identifiers.Pointer;
 import org.omg.spec.api4kp._1_0.identifiers.URIIdentifier;
 import org.omg.spec.api4kp._1_0.identifiers.VersionIdentifier;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
-import org.omg.spec.api4kp._1_0.services.KPComponent;
 import org.omg.spec.api4kp._1_0.services.KPServer;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeProcessingOperator;
@@ -89,6 +87,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.MimeTypeUtils;
 
 @Named
 @KPServer
@@ -203,7 +202,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<KnowledgeAssetCatalog> getAssetCatalog() {
     return Answer.of(new KnowledgeAssetCatalog()
-        .withId(SurrogateBuilder.assetId(UUID.randomUUID().toString(), null))
+        .withId(assetId(UUID.randomUUID().toString(), null))
         .withName("Knowledge Asset Repository")
         .withSupportedAssetTypes(
             KnowledgeAssetTypeSeries.values()
@@ -321,7 +320,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   private Optional<ComputableKnowledgeArtifact> negotiate(List<KnowledgeArtifact> artifacts, String xAccept) {
-    List<String> codes = ModelMIMECoder.splitCodes(xAccept);
+    List<String> codes = MimeTypeUtils.tokenize(xAccept);
 
     List<SyntacticRepresentation> reps = codes.stream()
         .map(c -> ModelMIMECoder.toModelCode(c,Knowledge_Asset_Surrogate))
