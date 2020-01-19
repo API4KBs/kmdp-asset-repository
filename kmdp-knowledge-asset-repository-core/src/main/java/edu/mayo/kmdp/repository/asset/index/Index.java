@@ -39,7 +39,7 @@ public interface Index {
 
   void registerLocation(IndexPointer pointer, String href);
 
-  void registerAnnotations(IndexPointer pointer, Set<SimpleAnnotation> annotations);
+  void registerAnnotations(IndexPointer pointer, Set<Annotation> annotations);
 
   void registerDescriptiveMetadata(IndexPointer pointer, String name, String description,
       Set<URI> types);
