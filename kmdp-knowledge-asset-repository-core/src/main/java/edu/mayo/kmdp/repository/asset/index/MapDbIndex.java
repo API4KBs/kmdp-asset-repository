@@ -31,7 +31,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import javax.inject.Named;
 import org.apache.commons.lang3.StringUtils;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
@@ -111,7 +110,7 @@ public class MapDbIndex implements DisposableBean, Index {
     this.registerSurrogateToAsset(asset, surrogate);
 
     this.registerAnnotations(asset,
-        annotations.stream().map(annotation -> (SimpleAnnotation) annotation)
+        annotations.stream()
             .collect(Collectors.toSet()));
     this.registerDescriptiveMetadata(asset, name, description,
         types.stream().map(KnowledgeAssetType::getRef)
@@ -217,7 +216,7 @@ public class MapDbIndex implements DisposableBean, Index {
 
   @Override
   @SuppressWarnings("unchecked")
-  public void registerAnnotations(IndexPointer pointer, Set<SimpleAnnotation> annotations) {
+  public void registerAnnotations(IndexPointer pointer, Set<Annotation> annotations) {
     HTreeMap<String, Set<IndexPointer>> map =
         (HTreeMap<String, Set<IndexPointer>>) getMap(BY_ANNOTATION_MAP);
 
@@ -226,26 +225,28 @@ public class MapDbIndex implements DisposableBean, Index {
 
     if (!CollectionUtils.isEmpty(annotations)) {
       annotations.forEach(annotation -> {
-        String value = annotation.getExpr().getConceptId().toString();
+        // only register SimpleAnnotations
+        if (annotation instanceof SimpleAnnotation) {
+          String value = ((SimpleAnnotation)annotation).getExpr().getConceptId().toString();
 
-        Set<IndexPointer> pointers = map.computeIfAbsent(value, x -> new HashSet<>());
-        pointers.add(pointer);
-        map.put(value, pointers);
-
-        if (annotation.getRel() != null) {
-          String rel = annotation.getRel().getRef().toString();
-
-
-          Set<String> values = typeMap.computeIfAbsent(rel, x -> new HashSet<>());
-          values.add(value);
-
-          typeMap.put(rel, values);
-
-          value = rel + ":" + value;
-          pointers = map.computeIfAbsent(value, x -> new HashSet<>());
+          Set<IndexPointer> pointers = map.computeIfAbsent(value, x -> new HashSet<>());
           pointers.add(pointer);
-
           map.put(value, pointers);
+
+          if (annotation.getRel() != null) {
+            String rel = annotation.getRel().getRef().toString();
+
+            Set<String> values = typeMap.computeIfAbsent(rel, x -> new HashSet<>());
+            values.add(value);
+
+            typeMap.put(rel, values);
+
+            value = rel + ":" + value;
+            pointers = map.computeIfAbsent(value, x -> new HashSet<>());
+            pointers.add(pointer);
+
+            map.put(value, pointers);
+          }
         }
       });
     }
