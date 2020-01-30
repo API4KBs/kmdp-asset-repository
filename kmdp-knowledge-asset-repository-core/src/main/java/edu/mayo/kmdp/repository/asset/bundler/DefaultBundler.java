@@ -39,21 +39,21 @@ import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 
 public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKnowledgeArtifactBundle {
 
-  private SemanticKnowledgeAssetRepository coreApi;
+  private SemanticKnowledgeAssetRepository assetRepository;
 
-  public DefaultBundler(SemanticKnowledgeAssetRepository coreApi) {
+  public DefaultBundler(SemanticKnowledgeAssetRepository assetRepository) {
     super();
-    this.coreApi = coreApi;
+    this.assetRepository = assetRepository;
   }
 
   @Override
   public Answer<List<KnowledgeCarrier>> getKnowledgeArtifactBundle(UUID assetId, String versionTag,
       String assetRelationship, Integer depth, String xAccept) {
 
-    KnowledgeAsset asset = this.coreApi.getVersionedKnowledgeAsset(assetId, versionTag)
+    KnowledgeAsset asset = this.assetRepository.getVersionedKnowledgeAsset(assetId, versionTag)
         .orElseThrow(IllegalStateException::new);
 
-    KnowledgeCarrier carrier = this.coreApi
+    KnowledgeCarrier carrier = this.assetRepository
         .getCanonicalKnowledgeAssetCarrier(assetId, versionTag)
         .orElseThrow(IllegalStateException::new);
 
@@ -64,7 +64,11 @@ public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKn
     }
 
     Set<edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset> dependencies = SurrogateHelper
-        .closure(asset, false);
+        .closure(
+            asset,
+            false,
+            (uuid, ver) -> assetRepository.getVersionedKnowledgeAsset(uuid, ver)
+                .orElse(new KnowledgeAsset()));
 
     dependencies.forEach(x -> retrieveCarriers(x, returnList));
 
@@ -76,8 +80,12 @@ public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKn
 
     if (uriIdentifier != null) {
       VersionIdentifier id = DatatypeHelper.toVersionIdentifier(uriIdentifier);
+      if (id.getTag() == null || id.getVersion() == null) {
+        // TODO can version be optional?
+        return;
+      }
       returnList.add(
-          this.coreApi.getCanonicalKnowledgeAssetCarrier(
+          this.assetRepository.getCanonicalKnowledgeAssetCarrier(
               Util.ensureUUID(id.getTag())
                   .orElseThrow(IllegalStateException::new),
               id.getVersion())
