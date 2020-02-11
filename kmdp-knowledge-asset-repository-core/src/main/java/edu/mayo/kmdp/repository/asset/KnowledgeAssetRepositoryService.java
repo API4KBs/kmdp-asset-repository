@@ -22,7 +22,7 @@ import edu.mayo.kmdp.language.LanguageDeSerializer;
 import edu.mayo.kmdp.language.LanguageDetector;
 import edu.mayo.kmdp.language.LanguageValidator;
 import edu.mayo.kmdp.language.TransrepresentationExecutor;
-import edu.mayo.kmdp.language.parsers.SurrogateParser;
+import edu.mayo.kmdp.language.parsers.surrogate.v1.SurrogateParser;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.asset.index.MapDbIndex;

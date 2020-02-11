@@ -224,6 +224,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       //Should not be always binary?
       BinaryCarrier carrier = new org.omg.spec.api4kp._1_0.services.resources.BinaryCarrier()
           .withLevel(Encoded_Knowledge_Expression)
+          .withLabel(surrogate.getName())
           .withAssetId(surrogate.getAssetId());
 
       Optional<IndexPointer> artifactPtr = lookupDefaultCarriers(assetId, versionTag);
