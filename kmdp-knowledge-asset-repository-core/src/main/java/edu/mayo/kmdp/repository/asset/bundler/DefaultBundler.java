@@ -68,7 +68,7 @@ public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKn
             asset,
             false,
             (uuid, ver) -> assetRepository.getVersionedKnowledgeAsset(uuid, ver)
-                .orElse(new KnowledgeAsset()));
+                .getOptionalValue());
 
     dependencies.forEach(x -> retrieveCarriers(x, returnList));
 
