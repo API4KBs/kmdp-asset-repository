@@ -84,12 +84,11 @@ public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKn
         // TODO can version be optional?
         return;
       }
-      returnList.add(
-          this.assetRepository.getCanonicalKnowledgeAssetCarrier(
-              Util.ensureUUID(id.getTag())
-                  .orElseThrow(IllegalStateException::new),
-              id.getVersion())
-              .orElseThrow(IllegalStateException::new));
+      this.assetRepository.getCanonicalKnowledgeAssetCarrier(
+          Util.ensureUUID(id.getTag())
+              .orElseThrow(IllegalStateException::new),
+          id.getVersion())
+          .ifPresent(returnList::add);
     } else {
       returnList.addAll(this.getAnonymousArtifacts(x));
     }
