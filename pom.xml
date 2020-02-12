@@ -25,7 +25,6 @@
   <modules>
     <module>kmdp-knowledge-asset-repository-core</module>
     <module>kmdp-knowledge-asset-repository-impl</module>
-<!--    <module>kmdp-asset-repository-ui</module>-->
   </modules>
 
   <dependencies>
