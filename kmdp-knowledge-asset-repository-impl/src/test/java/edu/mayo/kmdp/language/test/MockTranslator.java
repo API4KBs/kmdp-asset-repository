@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
 import javax.inject.Named;
+import org.omg.spec.api4kp._1_0.AbstractCarrier;
 import org.omg.spec.api4kp._1_0.Answer;
 import org.omg.spec.api4kp._1_0.services.KPOperation;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
@@ -90,7 +91,11 @@ public class MockTranslator implements TransxionApiInternal {
   }
 
   public KnowledgeCarrier translate(KnowledgeCarrier source) {
-    return source;
+    return AbstractCarrier.of("<html>\n"
+        + "<head>\n"
+        + "<title>" + "Mock Rule" + "</title>\n"
+        + "</head>\n"
+        + "<body>");
   }
 
 }
