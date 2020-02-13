@@ -18,11 +18,16 @@ package edu.mayo.kmdp.repository.asset.catalog;
 import static edu.mayo.kmdp.SurrogateBuilder.assetId;
 import static edu.mayo.ontology.taxonomies.iso639_2_languagecodes.LanguageSeries.English;
 import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Rules_Policies_And_Guidelines;
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Terminology_Ontology_And_Assertional_KBs;
 import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Clinical_Rule;
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Factual_Knowledge;
+import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.TXT;
 import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.XML_1_1;
 import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
 import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.KNART_1_3;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 
@@ -33,12 +38,13 @@ import edu.mayo.kmdp.metadata.surrogate.Representation;
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
 import edu.mayo.kmdp.repository.asset.v3.KnowledgeAssetCatalogApi;
 import edu.mayo.kmdp.repository.asset.v3.KnowledgeAssetRepositoryApi;
-import edu.mayo.kmdp.repository.asset.v3.KnowledgeAssetRetrievalApi;
 import edu.mayo.kmdp.repository.asset.v3.client.ApiClientFactory;
 import edu.mayo.kmdp.util.JaxbUtil;
 import edu.mayo.kmdp.util.Util;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
+import java.net.URI;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.UUID;
 import org.hl7.cdsdt.r2.ST;
 import org.hl7.elm.r1.And;
@@ -82,10 +88,8 @@ public class ContentNegotiationTest extends SemanticRepoAPITestBase {
     String knartXML = serializeExample(knart);
     assertNotEquals("N/A", knartXML);
 
-    KnowledgeAsset asset = buildAsset(assetId,versionTag,knartXML);
+    KnowledgeAsset asset = buildComputableAsset(assetId,versionTag,knartXML);
 
-//    assertTrue(ckac.listKnowledgeAssets(null,null,null,null)
-//        .getOptionalValue().get().isEmpty());
     ckac.setVersionedKnowledgeAsset(assetId,versionTag,asset);
 
     Answer<KnowledgeCarrier> ans = repo.getCanonicalKnowledgeAssetCarrier(
@@ -99,13 +103,38 @@ public class ContentNegotiationTest extends SemanticRepoAPITestBase {
     Answer<KnowledgeCarrier> ans2 = repo.getCanonicalKnowledgeAssetCarrier(
         assetId,
         versionTag,
-        ModelMIMECoder.encode(rep(HTML)));
+        ModelMIMECoder.encode(rep(HTML, TXT)));
 
     assertTrue(ans2.isSuccess());
-
+    Optional<String> txEd = ans2.get().asString();
+    assertTrue(txEd.isPresent());
+    assertTrue(txEd.get().startsWith("<html>"));
   }
 
-  private KnowledgeAsset buildAsset(UUID assetId, String versionTag, String inlined) {
+
+  @Test
+  public void testContentNegotiationWithHTML() {
+    UUID assetId = UUID.nameUUIDFromBytes("2".getBytes());
+    String versionTag = "2";
+
+    KnowledgeAsset asset = buildAssetWithHTMLCarrier(assetId,versionTag);
+    assertFalse(asset.getCarriers().isEmpty());
+    URI redirect = asset.getCarriers().get(0).getLocator();
+    assertNotNull(redirect);
+
+    ckac.setVersionedKnowledgeAsset(assetId,versionTag,asset);
+
+    Answer<KnowledgeCarrier> ans = repo.getCanonicalKnowledgeAssetCarrier(
+        assetId,
+        versionTag,
+        "text/html,application/xhtml+xml,application/xml;q=0.9,"
+            + "image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9");
+
+    assertTrue(ans.isSuccess());
+    assertTrue(HTML.sameAs(ans.get().getRepresentation().getLanguage()));
+  }
+
+  private KnowledgeAsset buildComputableAsset(UUID assetId, String versionTag, String inlined) {
     return new edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset()
         .withAssetId(assetId(assetId, versionTag))
         .withFormalCategory(Rules_Policies_And_Guidelines)
@@ -119,6 +148,23 @@ public class ContentNegotiationTest extends SemanticRepoAPITestBase {
                 .withLanguage(KNART_1_3)
                 .withFormat(XML_1_1))
             .withInlined(new InlinedRepresentation().withExpr(inlined))
+        );
+  }
+
+  private KnowledgeAsset buildAssetWithHTMLCarrier(UUID assetId, String versionTag) {
+    return new edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset()
+        .withAssetId(assetId(assetId, versionTag))
+        .withFormalCategory(Terminology_Ontology_And_Assertional_KBs)
+        .withFormalType(Factual_Knowledge)
+        .withName("Stuff")
+        .withCarriers(new ComputableKnowledgeArtifact()
+            .withArtifactId(assetId(UUID.randomUUID(), versionTag))
+            .withLocalization(English)
+            .withName("Some Text")
+            .withRepresentation(new Representation()
+                .withLanguage(HTML)
+                .withFormat(TXT))
+            .withLocator(URI.create("http://localhost:" + port))
         );
   }
 
