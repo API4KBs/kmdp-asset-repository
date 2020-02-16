@@ -14,6 +14,7 @@
 package edu.mayo.kmdp.repository.asset;
 
 import static edu.mayo.kmdp.SurrogateBuilder.assetId;
+import static edu.mayo.kmdp.SurrogateHelper.getComputableCarrier;
 import static edu.mayo.kmdp.util.Util.ensureUUID;
 import static edu.mayo.ontology.taxonomies.api4kp.parsinglevel.ParsingLevelSeries.Abstract_Knowledge_Expression;
 import static edu.mayo.ontology.taxonomies.api4kp.parsinglevel.ParsingLevelSeries.Encoded_Knowledge_Expression;
@@ -345,10 +346,18 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       UUID artifactId,
       String artifactVersionTag) {
     IndexPointer artifactPointer = new IndexPointer(artifactId.toString(), artifactVersionTag);
-
     byte[] data = this.resolve(artifactPointer).orElse(new byte[]{});
-    return Answer.of(new org.omg.spec.api4kp._1_0.services.resources.BinaryCarrier()
-        .withEncodedExpression(data));
+    KnowledgeCarrier carrier = AbstractCarrier.of(data);
+
+    return getKnowledgeAsset(assetId, versionTag)
+        .flatOpt(surr -> getComputableCarrier(artifactId, artifactVersionTag, surr)
+            .map(artifactMeta ->
+                carrier.withLabel(surr.getName())
+                    .withRepresentation(artifactMeta.getRepresentation() != null
+                        ? rep(artifactMeta.getRepresentation())
+                        : null)
+                    .withArtifactId(artifactMeta.getArtifactId())
+                    .withAssetId(surr.getAssetId())));
   }
 
   @Override
