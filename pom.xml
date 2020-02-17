@@ -7,19 +7,19 @@
   <parent>
     <groupId>edu.mayo.kmdp</groupId>
     <artifactId>kmdp-asset-repository-service-base</artifactId>
-    <version>[5.1.0,6.0.0]</version>            
+    <version>6.1.0-SNAPSHOT</version>
   </parent>
 
   <artifactId>kmdp-knowledge-asset-repository</artifactId>
-  <version>3.6.0</version>
+  <version>3.6.1-SNAPSHOT</version>
 
   <name>KMDP :: Server :: Knowledge Asset Repository Service</name>
 
   <packaging>pom</packaging>
 
   <properties>
-    <kmdp.artifact.repo.version>[3.5.5,)</kmdp.artifact.repo.version>
-    <kmdp.language.version>[3.5.5,)</kmdp.language.version>
+    <kmdp.artifact.repo.version>3.6.1-SNAPSHOT</kmdp.artifact.repo.version>
+    <kmdp.language.version>3.6.1-SNAPSHOT</kmdp.language.version>
   </properties>
 
   <modules>
