@@ -17,7 +17,6 @@ package edu.mayo.kmdp.repository.asset.index;
 
 
 import edu.mayo.kmdp.metadata.annotations.Annotation;
-import edu.mayo.kmdp.metadata.annotations.SimpleAnnotation;
 import edu.mayo.ontology.taxonomies.kao.knowledgeassetrole.KnowledgeAssetRole;
 import edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetType;
 import java.io.Serializable;

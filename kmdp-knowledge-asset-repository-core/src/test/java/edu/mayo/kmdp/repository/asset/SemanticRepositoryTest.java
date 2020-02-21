@@ -18,22 +18,30 @@ import static edu.mayo.ontology.taxonomies.kao.knowledgeassetrole.KnowledgeAsset
 import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Care_Process_Model;
 import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Predictive_Model;
 import static edu.mayo.ontology.taxonomies.kmdo.annotationreltype.AnnotationRelTypeSeries.Defines;
+import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
 import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 
+import edu.mayo.kmdp.id.helper.DatatypeHelper;
 import edu.mayo.kmdp.metadata.annotations.resources.SimpleAnnotation;
+import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
+import edu.mayo.kmdp.metadata.surrogate.Representation;
 import edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset;
 import edu.mayo.kmdp.registry.Registry;
 import edu.mayo.kmdp.repository.artifact.exceptions.ResourceNotFoundException;
 import edu.mayo.ontology.taxonomies.api4kp.responsecodes.ResponseCodeSeries;
+import edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguage;
+import edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.omg.spec.api4kp._1_0.AbstractCarrier;
 import org.omg.spec.api4kp._1_0.Answer;
 import org.omg.spec.api4kp._1_0.identifiers.ConceptIdentifier;
 import org.omg.spec.api4kp._1_0.identifiers.Pointer;
@@ -681,5 +689,37 @@ class SemanticRepositoryTest extends RepositoryTestBase {
 
     assertEquals(1, pointers.size());
   }
+
+  @Test
+  void testResultCarrierHasMinimalMetadata() {
+    assertNotNull(semanticRepository
+        .setVersionedKnowledgeAsset(uuid("foo"), "1",
+            new KnowledgeAsset()
+                .withName("Test")
+                .withCarriers(new ComputableKnowledgeArtifact()
+                    .withArtifactId(
+                        DatatypeHelper.uri(Registry.BASE_UUID_URN, uuid("q").toString(), "z"))
+                    .withRepresentation(new Representation()
+                        .withLanguage(HTML))
+                )
+        ));
+
+    semanticRepository
+        .setKnowledgeAssetCarrierVersion(uuid("foo"), "1", uuid("q"), "z", "there".getBytes());
+
+    Answer<KnowledgeCarrier> kc = semanticRepository.getKnowledgeAssetCarrierVersion(
+        uuid("foo"), "1",
+        uuid("q"), "z"
+    );
+
+    assertTrue(kc.isSuccess());
+
+    KnowledgeCarrier ck = kc.orElse(AbstractCarrier.of(""));
+    assertNotNull(ck.getArtifactId());
+    assertNotNull(ck.getAssetId());
+    assertEquals("Test", ck.getLabel());
+    assertTrue(HTML.sameAs(ck.getRepresentation().getLanguage()));
+  }
+
 
 }
