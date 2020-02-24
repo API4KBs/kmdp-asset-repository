@@ -18,9 +18,7 @@ package edu.mayo.kmdp.repository.asset;
 import edu.mayo.kmdp.language.TransrepresentationExecutor;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
-import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase.IntegrationTestConfig;
-import edu.mayo.kmdp.repository.asset.index.Index;
-import edu.mayo.kmdp.repository.asset.index.MapDbIndex;
+import org.junit.jupiter.api.AfterEach;
 import org.omg.spec.api4kp._1_0.services.KPComponent;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
@@ -30,42 +28,36 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.ContextConfiguration;
 
 @SpringBootTest(
     webEnvironment = WebEnvironment.RANDOM_PORT,
     classes = edu.mayo.kmdp.repository.asset.v3.server.Swagger2SpringBoot.class)
-@ContextConfiguration(classes = IntegrationTestConfig.class)
 @ActiveProfiles("test")
+@Configuration
+@ComponentScan(basePackageClasses = {
+        SemanticKnowledgeAssetRepository.class,
+        TransrepresentationExecutor.class})
+@PropertySource(value = {"classpath:application.test.properties"})
 public abstract class SemanticRepoAPITestBase {
 
   @LocalServerPort
   protected int port;
 
-  @Configuration
-  @ComponentScan(basePackageClasses = {
-      SemanticKnowledgeAssetRepository.class,
-      TransrepresentationExecutor.class})
-  @PropertySource(value = {"classpath:application.test.properties"})
-  public static class IntegrationTestConfig {
+  @AfterEach
+  void init() {
 
-    @Bean
-    public Index index() {
-      return new MapDbIndex();
-    }
+  }
 
-    @Bean
-    public KnowledgeAssetRepositoryServerConfig cfg() {
-      return new KnowledgeAssetRepositoryServerConfig()
-              .with(KnowledgeAssetRepositoryOptions.SERVER_HOST, "http://localhost:11111");
-    }
+  @Bean
+  public KnowledgeAssetRepositoryServerConfig cfg() {
+    return new KnowledgeAssetRepositoryServerConfig()
+            .with(KnowledgeAssetRepositoryOptions.SERVER_HOST, "http://localhost:" + this.port);
+  }
 
-    @Bean
-    @KPComponent
-    public KnowledgeArtifactRepositoryService artifactRepository() {
-      return KnowledgeArtifactRepositoryService.inMemoryArtifactRepository();
-    }
-
+  @Bean
+  @KPComponent
+  public KnowledgeArtifactRepositoryService artifactRepository() {
+    return KnowledgeArtifactRepositoryService.inMemoryArtifactRepository();
   }
 
 

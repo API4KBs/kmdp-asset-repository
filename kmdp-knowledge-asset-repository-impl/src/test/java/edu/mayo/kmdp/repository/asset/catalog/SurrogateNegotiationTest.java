@@ -13,19 +13,6 @@
  */
 package edu.mayo.kmdp.repository.asset.catalog;
 
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Rules_Policies_And_Guidelines;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Terminology_Ontology_And_Assertional_KBs;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Clinical_Rule;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Factual_Knowledge;
-import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.JSON;
-import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.TXT;
-import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.XML_1_1;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.KNART_1_3;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import edu.mayo.kmdp.id.helper.DatatypeHelper;
 import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
@@ -34,9 +21,6 @@ import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
 import edu.mayo.kmdp.repository.asset.v3.KnowledgeAssetCatalogApi;
 import edu.mayo.kmdp.repository.asset.v3.client.ApiClientFactory;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
-import java.io.IOException;
-import java.net.URI;
-import java.util.UUID;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -49,6 +33,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 
+import java.io.IOException;
+import java.net.URI;
+import java.util.UUID;
+
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Rules_Policies_And_Guidelines;
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Terminology_Ontology_And_Assertional_KBs;
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Clinical_Rule;
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Factual_Knowledge;
+import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.*;
+import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
 
@@ -67,8 +63,6 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
 
     rpo = KnowledgeAssetCatalogApi.newInstance(apiClientFactory);
   }
-
-
 
   @Test
   public void testPopulation() {
@@ -128,7 +122,7 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
     return new KnowledgeAsset()
         .withAssetId(DatatypeHelper.vuri(
             "urn:uuid:" + assetId,
-            "urn:uuid:" + assetId + ":" + version))
+            "urn:uuid:/asset/" + assetId + "/versions/" + version))
         .withFormalCategory(Rules_Policies_And_Guidelines)
         .withFormalType(Clinical_Rule)
         .withName("Test rule")
@@ -164,7 +158,7 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
     return new KnowledgeAsset()
         .withAssetId(DatatypeHelper.vuri(
             "urn:uuid:" + pockId,
-            "urn:uuid:" + pockId + ":" + version))
+            "urn:uuid:/asset/" + pockId + "/versions/" + version))
         .withFormalCategory(Terminology_Ontology_And_Assertional_KBs)
         .withFormalType(Factual_Knowledge)
         .withName("Test section of content")

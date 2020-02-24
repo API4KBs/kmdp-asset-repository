@@ -15,22 +15,6 @@
  */
 package edu.mayo.kmdp.repository.asset.catalog;
 
-import static edu.mayo.kmdp.SurrogateBuilder.assetId;
-import static edu.mayo.ontology.taxonomies.iso639_2_languagecodes.LanguageSeries.English;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Rules_Policies_And_Guidelines;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Terminology_Ontology_And_Assertional_KBs;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Clinical_Rule;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Factual_Knowledge;
-import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.TXT;
-import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.XML_1_1;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.KNART_1_3;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
-
 import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.InlinedRepresentation;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
@@ -42,26 +26,35 @@ import edu.mayo.kmdp.repository.asset.v3.client.ApiClientFactory;
 import edu.mayo.kmdp.util.JaxbUtil;
 import edu.mayo.kmdp.util.Util;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
-import java.net.URI;
-import java.util.Collections;
-import java.util.Optional;
-import java.util.UUID;
 import org.hl7.cdsdt.r2.ST;
 import org.hl7.elm.r1.And;
 import org.hl7.elm.r1.ExpressionRef;
-import org.hl7.knowledgeartifact.r1.Condition;
+import org.hl7.knowledgeartifact.r1.*;
 import org.hl7.knowledgeartifact.r1.Condition.ConditionRole;
-import org.hl7.knowledgeartifact.r1.ConditionRoleType;
-import org.hl7.knowledgeartifact.r1.Conditions;
-import org.hl7.knowledgeartifact.r1.KnowledgeDocument;
-import org.hl7.knowledgeartifact.r1.Metadata;
 import org.hl7.knowledgeartifact.r1.Metadata.ArtifactType;
-import org.hl7.knowledgeartifact.r1.ObjectFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.Answer;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._1_0.services.tranx.ModelMIMECoder;
+
+import java.net.URI;
+import java.util.Collections;
+import java.util.Optional;
+import java.util.UUID;
+
+import static edu.mayo.kmdp.SurrogateBuilder.assetId;
+import static edu.mayo.ontology.taxonomies.iso639_2_languagecodes.LanguageSeries.English;
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Rules_Policies_And_Guidelines;
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Terminology_Ontology_And_Assertional_KBs;
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Clinical_Rule;
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Factual_Knowledge;
+import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.TXT;
+import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.XML_1_1;
+import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
+import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.KNART_1_3;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 
 public class ContentNegotiationTest extends SemanticRepoAPITestBase {
 

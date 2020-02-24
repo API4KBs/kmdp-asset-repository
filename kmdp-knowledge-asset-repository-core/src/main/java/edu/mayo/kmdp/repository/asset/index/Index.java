@@ -19,80 +19,99 @@ package edu.mayo.kmdp.repository.asset.index;
 import edu.mayo.kmdp.metadata.annotations.Annotation;
 import edu.mayo.ontology.taxonomies.kao.knowledgeassetrole.KnowledgeAssetRole;
 import edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetType;
-import java.io.Serializable;
+
 import java.net.URI;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * An interface to index Assets and their relationships.
+ */
 public interface Index {
 
+  /**
+   * Register an Asset and its initial metadata.
+   *
+   * @param asset
+   * @param surrogate
+   * @param types
+   * @param roles
+   * @param annotations
+   * @param name
+   * @param description
+   */
   void registerAsset(IndexPointer asset, IndexPointer surrogate, List<KnowledgeAssetType> types,
       List<KnowledgeAssetRole> roles, List<Annotation> annotations, String name,
       String description);
 
+  /**
+   * Link an Artifact to an Asset.
+   *
+   * @param assetPointer
+   * @param artifact
+   */
   void registerArtifactToAsset(IndexPointer assetPointer, IndexPointer artifact);
 
+  /**
+   * Linke a Surrogate to an Asset.
+   *
+   * @param assetPointer
+   * @param surrogate
+   */
   void registerSurrogateToAsset(IndexPointer assetPointer, IndexPointer surrogate);
 
+  /**
+   * Retrieve a pointer to the Surrogate given an Asset.
+   *
+   * @param assetPointer
+   * @return
+   */
   IndexPointer getSurrogateForAsset(IndexPointer assetPointer);
 
-  void registerLocation(IndexPointer pointer, String href);
-
-  void registerAnnotations(IndexPointer pointer, Set<Annotation> annotations);
-
-  void registerDescriptiveMetadata(IndexPointer pointer, String name, String description,
-      Set<URI> types);
-
+  /**
+   * Get the storage location of an Asset/Artifact.
+   *
+   * @param pointer
+   * @return
+   */
   String getLocation(IndexPointer pointer);
 
-  Set<IndexPointer> getAssetIdsByType(String assetType);
+  /**
+   * Retrieve a list of Assets of a given type.
+   *
+   * @param assetType
+   * @return
+   */
+  Set<IndexPointer> getAssetIdsByType(URI assetType);
 
-  Set<IndexPointer> getAssetIdsByAnnotation(String annotation);
+  /**
+   * Retrieve a list of Assets with a given annotation.
+   *
+   * @param annotation
+   * @return
+   */
+  Set<IndexPointer> getAssetIdsByAnnotation(URI annotation);
 
+  /**
+   * Retrieve a list of all Assets.
+   *
+   * @return
+   */
+  Set<IndexPointer> getAllAssetIds();
+
+  /**
+   * Get the list of all Artifacts (carriers) for an Asset.
+   * @param artifact
+   * @return
+   */
   Set<IndexPointer> getArtifactsForAsset(IndexPointer artifact);
 
-  DescriptiveMetadata getDescriptiveMetadataForAsset(IndexPointer artifact);
-
-  Set<String> getAnnotationsOfType(String operationallyDefinesPredicate);
-
-  IndexPointer getLatestAssetForId(String assetId);
-
+  /**
+   * Reset and clear the store.
+   *
+   * NOTE: Implementations are encouraged to throw an {@link UnsupportedOperationException} unless
+   * there is a very specific need to reset the store.
+   */
   void reset();
 
-  class DescriptiveMetadata implements Serializable {
-
-    protected String name;
-    protected String description;
-    protected String type;
-
-    public DescriptiveMetadata(String name, String description, String type) {
-      this.name = name;
-      this.description = description;
-      this.type = type;
-    }
-
-    public String getName() {
-      return name;
-    }
-
-    public void setName(String name) {
-      this.name = name;
-    }
-
-    public String getDescription() {
-      return description;
-    }
-
-    public void setDescription(String description) {
-      this.description = description;
-    }
-
-    public String getType() {
-      return type;
-    }
-
-    public void setType(String type) {
-      this.type = type;
-    }
-  }
 }

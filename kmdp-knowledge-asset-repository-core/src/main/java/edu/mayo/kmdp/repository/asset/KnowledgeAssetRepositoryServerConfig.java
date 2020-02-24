@@ -21,7 +21,7 @@ import edu.mayo.kmdp.Option;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig.KnowledgeArtifactRepositoryOptions;
 import edu.mayo.kmdp.util.Util;
-import java.io.File;
+
 import java.net.URL;
 import java.util.Properties;
 
@@ -56,13 +56,6 @@ public class KnowledgeAssetRepositoryServerConfig extends
             getHost(),
             "Host",
             URL.class,
-            false)),
-
-    BASE_DIR(
-        Opt.of("http://edu.mayo.kmdp/assetRepository/filesystem/directory",
-            getConfigDir().getAbsolutePath(),
-            "Root directory for filesystem-based asset/artifct indexes",
-            File.class,
             false));
 
     private Opt<KnowledgeAssetRepositoryOptions> opt;
@@ -85,26 +78,6 @@ public class KnowledgeAssetRepositoryServerConfig extends
     private static String getDefaultRepositoryId() {
       return new KnowledgeArtifactRepositoryServerConfig().getTyped(
           KnowledgeArtifactRepositoryOptions.DEFAULT_REPOSITORY_ID);
-    }
-
-    private static File getConfigDir() {
-      File home = null;
-
-      String repoHome = System
-          .getProperty("http://edu.mayo.kmdp/assetRepository/repositoryHomeDir");
-
-      if (Util.isEmpty(repoHome)) {
-        repoHome = System.getProperty("user.home");
-      }
-
-      if (!Util.isEmpty(repoHome)) {
-        home = new File(repoHome, ".assetIndex");
-        if (!home.exists()) {
-          home = home.mkdirs() ? home : null;
-        }
-      }
-
-      return home;
     }
 
   }

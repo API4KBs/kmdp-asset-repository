@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+  <springProperty scope="context" name="log-level-root" source="log.level.root" defaultValue="info" />
+  <springProperty scope="context" name="log-level-edu-mayo" source="log.level.edu.mayo" defaultValue="debug" />
+
+  <springProperty scope="context" name="console-appender-layout-pattern" source="console.appender.layout.pattern" defaultValue="%d %highlight(%level) %logger{50} - %msg%n" />
+  <springProperty scope="context" name="file-appender-layout-pattern" source="file.appender.layout.pattern" defaultValue="%d{HH:mm:ss.SSS} %highlight(%-5level) %logger{100} - %msg%n" />
+
+  <springProperty scope="context" name="max-file-size" source="max.file.size" defaultValue="10MB" />
+  <springProperty scope="context" name="total-size-cap" source="total.size.cap" defaultValue="15GB" />
+  <springProperty scope="context" name="max-history-days" source="max.history.days" defaultValue="60" />
+  <springProperty scope="context" name="log-dir" source="log.dir" defaultValue="logs" />
+  <springProperty scope="context" name="log-file" source="log.file" defaultValue="application.log" />
+
+  <springProperty scope="context" name="async-never-block" source="async.never.block" defaultValue="true" />
+  <springProperty scope="context" name="async-discard-threshold" source="async.discard.threshold" defaultValue="1" />
+  <springProperty scope="context" name="async-queue-size" source="async-queue.size" defaultValue="500" />
+  <springProperty scope="context" name="async-include-caller-data" source="async.include.caller.data" defaultValue="false" />
+
+  <springProperty scope="context" name="splunk-url" source="splunk.url" />
+  <springProperty scope="context" name="splunk-token" source="splunk.token" />
+  <springProperty scope="context" name="splunk-host" source="splunk.host" defaultValue="${HOSTNAME}" />
+  <springProperty scope="context" name="splunk-source" source="splunk.source" defaultValue="ccrs" />
+  <springProperty scope="context" name="splunk-index-name" source="splunk.index.name" defaultValue="main"/>
+  <springProperty scope="context" name="splunk-batch-size-count" source="splunk.batch.size.count" defaultValue="1" />
+  <springProperty scope="context" name="splunk-source-type" source="splunk.source.type" defaultValue="httpevent"/>
+  <springProperty scope="context" name="splunk-disable-certificate.validation" source="splunk-disable-certificate-validation" defaultValue="true" />
+  <springProperty scope="context" name="splunk-layout-pattern" source="splunk.layout.pattern" defaultValue="%d %level %logger{50} - %msg%n" />
+  <springProperty scope="context" name="splunk-log-to-console" source="splunk.log.to.console" />
+
+  <appender name="ColorConsoleAppender" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+      <pattern>%d %highlight(%level) %logger{50} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <appender name="FILE-ROLLING" class="ch.qos.logback.core.rolling.RollingFileAppender">
+
+    <file>${log-dir}/${log-file}</file>
+
+    <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+      <fileNamePattern>${log-dir}/archived/${log-file}.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+      <!-- Each archived file, size max 10MB -->
+      <maxFileSize>${max-file-size}</maxFileSize>
+      <!-- Total size of all archive files, if total size > ${total-size-cap} archived file will be deleted-->
+      <totalSizeCap>${total-size-cap}</totalSizeCap>
+      <!-- Days to keep files -->
+      <maxHistory>${max-history-days}</maxHistory>
+    </rollingPolicy>
+
+    <encoder>
+      <pattern>${file-appender-layout-pattern}</pattern>
+    </encoder>
+
+  </appender>
+
+  <appender name="ASYNC_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
+
+    <appender-ref ref="ColorConsoleAppender" />
+    <neverBlock>${async-never-block}</neverBlock>
+    <queueSize>${async-queue-size}</queueSize>
+    <includeCallerData>${async-include-caller-data}</includeCallerData>
+    <discardingThreshold>${async-discard-threshold}</discardingThreshold> <!-- Drop log events when has 1% capacity remaining -->
+
+  </appender>
+
+  <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+
+    <appender-ref ref="FILE-ROLLING" />
+    <neverBlock>${async-never-block}</neverBlock>
+    <queueSize>${async-queue-size}</queueSize>
+    <includeCallerData>${async-include-caller-data}</includeCallerData>
+    <discardingThreshold>${async-discard-threshold}</discardingThreshold> <!-- Drop log events when has 1% capacity remaining -->
+
+  </appender>
+
+  <appender name="SPLUNK" class="com.splunk.logging.HttpEventCollectorLogbackAppender">
+
+    <url>${splunk-url}</url>
+    <host>${splunk-host}</host>
+    <token>${splunk-token}</token>
+    <index>${splunk-index-name}</index>
+    <!-- <source>${splunk-source}</source> -->
+    <sourcetype>${splunk-source-type}</sourcetype>
+    <batch_size_count>${splunk-batch-size-count}</batch_size_count>
+    <layout class="ch.qos.logback.classic.PatternLayout">
+      <pattern>${splunk-layout-pattern}</pattern>
+    </layout>
+    <disableCertificateValidation>${splunk-disable-certification-validation}</disableCertificateValidation>
+  </appender>
+
+<!--
+  <if condition='isDefined("SMTP")'>
+    <then>
+      <appender name="SMTP" class="ch.qos.logback.classic.net.SMTPAppender">
+        <smtpHost>ADDRESS-OF-YOUR-SMTP-HOST</smtpHost>
+        <to>EMAIL-DESTINATION</to>
+        <from>SENDER-EMAIL</from>
+        <subject>TESTING: %logger{20} - %m</subject>
+        <layout class="ch.qos.logback.classic.PatternLayout">
+          <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) %logger{100} - %msg%n</pattern>
+        </layout>
+      </appender>
+    </then>
+  </if>
+-->
+
+  <!-- Specify the log level for all (ie: root) appenders: file, console-->
+  <if condition='!isDefined("splunk-token")'>
+    <then>
+      <root level="${log-level-root}">
+        <appender-ref ref="ASYNC_FILE"/>
+        <appender-ref ref="ASYNC_CONSOLE" />
+      </root>
+    </then>
+  </if>
+  <!-- Specify the log level for all (ie: root) appenders: splunk, file -->
+  <if condition='isDefined("splunk-token") &amp;&amp; !isDefined("splunk-log-to-console")'>
+    <then>
+      <root level="${log-level-root}">
+        <appender-ref ref="SPLUNK" />
+        <appender-ref ref="ASYNC_FILE"/>
+      </root>
+    </then>
+  </if>
+  <!-- Specify the log level for all (ie: root) appenders: splunk, file, console -->
+  <if condition='isDefined("splunk-token") &amp;&amp; isDefined("splunk-log-to-console")'>
+    <then>
+      <root level="${log-level-root}">
+        <appender-ref ref="SPLUNK" />
+        <appender-ref ref="ASYNC_FILE"/>
+        <appender-ref ref="ASYNC_CONSOLE" />
+      </root>
+    </then>
+  </if>
+
+  <!-- Log "edu.mayo" at the specified level: file, console -->
+  <if condition='!isDefined("splunk-token")'>
+    <then>
+      <logger name="edu.mayo" level="${log-level-edu-mayo}" additivity="false">
+        <appender-ref ref="ASYNC_FILE"/>
+        <appender-ref ref="ASYNC_CONSOLE" />
+      </logger>
+    </then>
+  </if>
+  <!-- Log "edu.mayo" at the specified level: splunk, file -->
+  <if condition='isDefined("splunk-token") &amp;&amp; !isDefined("splunk-log-to-console")'>
+    <then>
+      <logger name="edu.mayo" level="${log-level-edu-mayo}" additivity="false">
+        <appender-ref ref="SPLUNK" />
+        <appender-ref ref="ASYNC_FILE"/>
+      </logger>
+    </then>
+  </if>
+  <!-- Log "edu.mayo" at the specified level: splunk, file, console -->
+  <if condition='isDefined("splunk-token") &amp;&amp; isDefined("splunk-log-to-console")'>
+    <then>
+      <logger name="edu.mayo" level="${log-level-edu-mayo}" additivity="false">
+        <appender-ref ref="SPLUNK" />
+        <appender-ref ref="ASYNC_FILE"/>
+        <appender-ref ref="ASYNC_CONSOLE" />
+      </logger>
+    </then>
+  </if>
+
+  <logger name="ca.uhn.fhir.parser.LenientErrorHandler" level="error"/>
+
+</configuration>
