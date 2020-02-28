@@ -12,7 +12,7 @@
   </parent>
 
   <artifactId>kmdp-knowledge-asset-repository-impl</artifactId>
-
+  <version>3.6.1-SNAPSHOT</version>
   <name>KMDP :: Server :: Knowledge Asset Repository Service (Web)</name>
 
   <dependencies>
