@@ -81,7 +81,7 @@ steps:
   inputs:
     projectType: java
     versionFilePath: pom.xml
-    versionTransformation: none
+    versionTransformation: 'preprod'
 
 # STEP 4 Download secure settings file
 - task: DownloadSecureFile@1
