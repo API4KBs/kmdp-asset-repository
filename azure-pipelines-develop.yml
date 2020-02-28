@@ -102,6 +102,29 @@ steps:
   inputs:
     artifactsFeeds: 'KMD'
 
+- task: PowerShell@2
+  displayName: 'Grab ALM Version'
+  inputs:
+    targetType: 'inline'
+    script: |
+        Write-Host ALM Version: $env:ALM_VERSION
+        $projectSlmVersion=$env:ALM_VERSION.replace("-SNAPSHOT","")
+        Write-Host Project Version: $projectSlmVersion
+        Write-Host "##vso[task.setvariable variable=projectSlmVersionFinal]$projectSlmVersion"
+  env:
+    ALM_VERSION: $(AlmVersioning.Project.Version)
+
+- task: PowerShell@2
+  displayName: 'Maven SetVersion'
+  inputs:
+    targetType: 'inline'
+    script: |
+        mvn versions:set  "-DnewVersion=$env:PROJECT_SNAP_VERSION"
+        mvn versions:set -pl kmdp-knowledge-asset-repository-impl "-DnewVersion=$env:PROJECT_SLM_VERSION"
+  env:
+    PROJECT_SLM_VERSION: $(projectSlmVersionFinal)
+    PROJECT_SNAP_VERSION: $(projectSnapShotVersion)
+
 # STEP 7 Deploy Maven to AzDo KMD Artifacts
 - task: Maven@3
   displayName: 'Maven Deploy to KMD Artifacts'
@@ -112,6 +135,29 @@ steps:
     jdkVersionOption: '1.8'
     jdkArchitectureOption: 'x64'
     options: '-DaltDeploymentRepository=KMD::default::https://pkgs.dev.azure.com/mclm/_packaging/KMD/maven/v1'
+
+# STEP 8 Copy Files to build
+- task: CopyFiles@2
+  displayName: 'Copy Files to: $(build.artifactstagingdirectory)'
+  inputs:
+      SourceFolder: '$(system.defaultworkingdirectory)'
+      Contents: |
+        **/*.war
+      TargetFolder: '$(build.artifactstagingdirectory)'
+
+# STEP 9 Export Variables
+- task: ImportExportVariables@1
+  displayName: 'Export Build Variables'
+  inputs:
+    action: 'Export'
+
+# STEP 10 Publish to Azure Pipelines
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: deploy'
+  inputs:
+    PathtoPublish: '$(build.artifactstagingdirectory)'
+    ArtifactName: deploy
+  condition: succeededOrFailed()
 
 # ENDING STEP
 - script: |
