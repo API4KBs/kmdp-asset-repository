@@ -4,16 +4,16 @@
 
 # !! Downstream Build: kmdp-inference-broker; develop !!
 
-trigger:
-- develop
+# trigger:
+# - develop
 
-resources:
-  pipelines:
-  - pipeline: kmdpKnowledgeAssetRepositoryServiceDevelop
-    source: kmdpKnowledgebaseServiceDevelop
-    trigger: 
-      branches:
-      - develop
+# resources:
+#   pipelines:
+#   - pipeline: kmdpKnowledgeAssetRepositoryServiceDevelop
+#     source: kmdpKnowledgebaseServiceDevelop
+#     trigger: 
+#       branches:
+#       - develop
 
 pool:
   vmImage: 'ubuntu-latest'
