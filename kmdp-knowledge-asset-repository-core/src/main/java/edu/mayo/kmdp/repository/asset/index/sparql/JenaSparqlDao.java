@@ -14,6 +14,8 @@ import org.apache.jena.sdb.StoreDesc;
 import org.apache.jena.sdb.sql.SDBConnection;
 import org.apache.jena.sdb.store.DatabaseType;
 import org.apache.jena.sdb.store.LayoutType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.support.JdbcUtils;
@@ -36,6 +38,8 @@ import java.util.function.Consumer;
 @Component
 public class JenaSparqlDao {
 
+  private static final Logger logger = LoggerFactory.getLogger(JenaSparqlDao.class);
+
   /**
    * If this is set, it will be used to determine the database type.
    *
@@ -43,6 +47,13 @@ public class JenaSparqlDao {
    */
   @Value("${databaseType:}")
   private String databaseType;
+
+  /**
+   * IMPORTANT!
+   * If true this will drop and recreate all tables.
+   */
+  @Value("${clearAndCreateTables:false}")
+  private boolean clearAndCreateTables = false;
 
   @Autowired
   private DataSource dataSource;
@@ -62,20 +73,21 @@ public class JenaSparqlDao {
   /**
    * Create a new DAO instance.
    *
-   * IMPORTANT: setting 'clearAllTables' to true will really drop and recreate all tables.
+   * IMPORTANT: setting 'clearAndCreateTables' to true will really drop and recreate all tables.
    * Don't set that to true unless you REALLY need to (for example, for testing only).
    * If you set this to true you will lose any existing data.
    *
    * @param dataSource
-   * @param clearAllTables
+   * @param clearAndCreateTables
    */
-  public JenaSparqlDao(DataSource dataSource, boolean clearAllTables) {
+  public JenaSparqlDao(DataSource dataSource, boolean clearAndCreateTables) {
     this.dataSource = dataSource;
+    this.clearAndCreateTables = clearAndCreateTables;
     this.init();
+  }
 
-    if (clearAllTables) {
-      this.store.getTableFormatter().create();
-    }
+  protected void clearAndCreateTables() {
+    this.store.getTableFormatter().create();
   }
 
   /**
@@ -107,6 +119,11 @@ public class JenaSparqlDao {
     }
 
     this.store = SDBFactory.connectStore(conn, storeDesc);
+
+    if (this.clearAndCreateTables) {
+      logger.warn("!!! Clearing and recreating all RDF tables. !!!");
+      this.clearAndCreateTables();
+    }
 
     this.model = SDBFactory.connectDefaultModel(store);
   }
