@@ -82,6 +82,12 @@
     </dependency>
 
     <dependency>
+      <groupId>org.apache.jackrabbit</groupId>
+      <artifactId>oak-store-document</artifactId>
+      <version>1.24.0</version>
+    </dependency>
+
+    <dependency>
       <groupId>org.apache.jena</groupId>
       <artifactId>jena-sdb</artifactId>
       <version>3.14.0</version>

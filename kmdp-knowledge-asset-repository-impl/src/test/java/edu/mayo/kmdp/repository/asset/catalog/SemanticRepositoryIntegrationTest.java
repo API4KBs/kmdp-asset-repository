@@ -22,7 +22,6 @@ import edu.mayo.kmdp.repository.asset.v3.KnowledgeAssetCatalogApi;
 import edu.mayo.kmdp.repository.asset.v3.client.ApiClientFactory;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
 import edu.mayo.ontology.taxonomies.kao.knowledgeprocessingtechnique.KnowledgeProcessingTechniqueSeries;
-import jdk.nashorn.internal.ir.annotations.Ignore;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -97,7 +96,6 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
   }
 
   @Test
-  @Ignore
   void testGeKnowledgeAssetsVersions() {
 
     ckac.setVersionedKnowledgeAsset(strToUUID("4"), "1",

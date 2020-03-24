@@ -15,35 +15,40 @@
  */
 package edu.mayo.kmdp.repository.asset.bundler;
 
-import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
-
 import com.google.common.collect.Lists;
-import edu.mayo.kmdp.SurrogateHelper;
 import edu.mayo.kmdp.id.helper.DatatypeHelper;
 import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.repository.asset.SemanticKnowledgeAssetRepository;
+import edu.mayo.kmdp.repository.asset.index.Index;
+import edu.mayo.kmdp.repository.asset.index.IndexPointer;
 import edu.mayo.kmdp.repository.asset.v3.server.KnowledgeAssetRetrievalApiInternal;
 import edu.mayo.kmdp.util.FileUtil;
 import edu.mayo.kmdp.util.Util;
 import edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguage;
-import java.net.URI;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 import org.omg.spec.api4kp._1_0.Answer;
 import org.omg.spec.api4kp._1_0.identifiers.URIIdentifier;
 import org.omg.spec.api4kp._1_0.identifiers.VersionIdentifier;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 
+import java.net.URI;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
+
 public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKnowledgeArtifactBundle {
 
   private SemanticKnowledgeAssetRepository assetRepository;
+  private Index index;
 
-  public DefaultBundler(SemanticKnowledgeAssetRepository assetRepository) {
+  public DefaultBundler(SemanticKnowledgeAssetRepository assetRepository, Index index) {
     super();
     this.assetRepository = assetRepository;
+    this.index = index;
   }
 
   @Override
@@ -53,22 +58,13 @@ public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKn
     KnowledgeAsset asset = this.assetRepository.getVersionedKnowledgeAsset(assetId, versionTag)
         .orElseThrow(IllegalStateException::new);
 
-    KnowledgeCarrier carrier = this.assetRepository
-        .getCanonicalKnowledgeAssetCarrier(assetId, versionTag)
-        .orElseThrow(IllegalStateException::new);
+    Set<edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset> dependencies =
+            this.index.getRelatedAssets(new IndexPointer(asset.getAssetId())).stream()
+            .map(pointer -> assetRepository.getVersionedKnowledgeAsset(UUID.fromString(pointer.getTag()), pointer.getVersion()))
+                    .map(found-> found.getOptionalValue().orElseThrow(() -> new BundlerException("Could not find Asset of Bundle")))
+                    .collect(Collectors.toSet());
 
     List<KnowledgeCarrier> returnList = Lists.newArrayList();
-
-    if (carrier != null) {
-      returnList.add(carrier);
-    }
-
-    Set<edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset> dependencies = SurrogateHelper
-        .closure(
-            asset,
-            false,
-            (uuid, ver) -> assetRepository.getVersionedKnowledgeAsset(uuid, ver)
-                .getOptionalValue());
 
     dependencies.forEach(x -> retrieveCarriers(x, returnList));
 

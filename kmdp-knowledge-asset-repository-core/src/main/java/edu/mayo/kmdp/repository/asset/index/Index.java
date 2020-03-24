@@ -17,6 +17,7 @@ package edu.mayo.kmdp.repository.asset.index;
 
 
 import edu.mayo.kmdp.metadata.annotations.Annotation;
+import edu.mayo.kmdp.metadata.surrogate.Association;
 import edu.mayo.ontology.taxonomies.kao.knowledgeassetrole.KnowledgeAssetRole;
 import edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetType;
 
@@ -31,18 +32,15 @@ public interface Index {
 
   /**
    * Register an Asset and its initial metadata.
-   *
-   * @param asset
+   *  @param asset
    * @param surrogate
    * @param types
    * @param roles
    * @param annotations
-   * @param name
-   * @param description
+   * @param related
    */
   void registerAsset(IndexPointer asset, IndexPointer surrogate, List<KnowledgeAssetType> types,
-      List<KnowledgeAssetRole> roles, List<Annotation> annotations, String name,
-      String description);
+                     List<KnowledgeAssetRole> roles, List<Annotation> annotations, List<Association> related);
 
   /**
    * Link an Artifact to an Asset.
@@ -51,6 +49,25 @@ public interface Index {
    * @param artifact
    */
   void registerArtifactToAsset(IndexPointer assetPointer, IndexPointer artifact);
+
+  /**
+   * Get all related Assets, regardless our how they are related.
+   * This will transitively search for related Assets.
+   *
+   * @param assetPointer
+   * @return
+   */
+  Set<IndexPointer> getRelatedAssets(IndexPointer assetPointer);
+
+  /**
+   * Get related Assets, restricted to a relation type.
+   * This will transitively search for related Assets.
+   *
+   * @param assetPointer
+   * @param relation
+   * @return
+   */
+  Set<IndexPointer> getRelatedAssets(IndexPointer assetPointer, URI relation);
 
   /**
    * Linke a Surrogate to an Asset.

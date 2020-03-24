@@ -4,10 +4,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.jena.query.*;
-import org.apache.jena.rdf.model.Model;
-import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.rdf.model.ResourceFactory;
-import org.apache.jena.rdf.model.Statement;
+import org.apache.jena.rdf.model.*;
 import org.apache.jena.sdb.SDBFactory;
 import org.apache.jena.sdb.Store;
 import org.apache.jena.sdb.StoreDesc;
@@ -16,6 +13,7 @@ import org.apache.jena.sdb.store.DatabaseType;
 import org.apache.jena.sdb.store.LayoutType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.support.JdbcUtils;
@@ -86,6 +84,21 @@ public class JenaSparqlDao {
     this.init();
   }
 
+  /**
+   * Create a completely in-memory Jena store.
+   *
+   * NOTE: This should be only used for testing purposes. For
+   * general use, see the constructors with the {@link DataSource} arguments.
+   *
+   * @return
+   */
+  public static JenaSparqlDao inMemoryDao() {
+    JenaSparqlDao dao = new JenaSparqlDao();
+    dao.model = ModelFactory.createDefaultModel();
+
+    return dao;
+  }
+
   protected void clearAndCreateTables() {
     this.store.getTableFormatter().create();
   }
@@ -105,7 +118,7 @@ public class JenaSparqlDao {
       try {
         type = DatabaseType.fetch(JdbcUtils.extractDatabaseMetaData(this.dataSource, "getDatabaseProductName"));
       } catch (MetaDataAccessException e) {
-        throw new RuntimeException("Could not determine database type.", e);
+        throw new BeanInitializationException("Could not determine database type.", e);
       }
     }
 
@@ -115,7 +128,7 @@ public class JenaSparqlDao {
     try {
       conn = new SDBConnection(this.dataSource);
     } catch (SQLException e) {
-      throw new RuntimeException(e);
+      throw new BeanInitializationException("Error conneting to DataSource", e);
     }
 
     this.store = SDBFactory.connectStore(conn, storeDesc);
@@ -193,11 +206,11 @@ public class JenaSparqlDao {
       });
     }
 
-    QueryExecution qexec = QueryExecutionFactory.create(pss.toString(), this.model);
+    try (QueryExecution qexec = QueryExecutionFactory.create(pss.toString(), this.model)) {
+      ResultSet rs = qexec.execSelect();
 
-    ResultSet rs = qexec.execSelect();
-
-    rs.forEachRemaining(consumer);
+      rs.forEachRemaining(consumer);
+    }
   }
 
   /**

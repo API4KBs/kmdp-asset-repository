@@ -82,7 +82,7 @@ public class KnowledgeAssetRepositoryComponentConfig {
 
     RDBOptions options = new RDBOptions().tablePrefix(this.artifactTablePrefix);
 
-    RDBDocumentNodeStoreBuilder builder = new RDBDocumentNodeStoreBuilder().newRDBDocumentNodeStoreBuilder();
+    RDBDocumentNodeStoreBuilder builder = RDBDocumentNodeStoreBuilder.newRDBDocumentNodeStoreBuilder();
     builder.setExecutor(MoreExecutors.directExecutor());
 
     builder.setRDBConnection(dataSource, options);

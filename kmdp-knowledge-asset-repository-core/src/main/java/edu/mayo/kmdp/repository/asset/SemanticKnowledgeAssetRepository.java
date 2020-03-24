@@ -48,7 +48,6 @@ import org.omg.spec.api4kp._1_0.AbstractCarrier;
 import org.omg.spec.api4kp._1_0.Answer;
 import org.omg.spec.api4kp._1_0.identifiers.Pointer;
 import org.omg.spec.api4kp._1_0.identifiers.URIIdentifier;
-import org.omg.spec.api4kp._1_0.identifiers.VersionIdentifier;
 import org.omg.spec.api4kp._1_0.services.*;
 import org.omg.spec.api4kp._1_0.services.repository.KnowledgeAssetCatalog;
 import org.omg.spec.api4kp._1_0.services.tranx.ModelMIMECoder;
@@ -132,7 +131,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     this.index = index;
     this.hrefBuilder = new HrefBuilder(cfg);
-    this.bundler = new DefaultBundler(this);
+    this.bundler = new DefaultBundler(this, index);
 
     this.parser = parser;
     this.detector = detector;
@@ -474,12 +473,11 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     this.index.registerAsset(
         new IndexPointer(assetId, versionTag),
-        surrogatePointer,
-        assetSurrogate.getFormalType(),
-        assetSurrogate.getRole(),
-        assetSurrogate.getSubject(),
-        assetSurrogate.getName(),
-        assetSurrogate.getDescription());
+            surrogatePointer,
+            assetSurrogate.getFormalType(),
+            assetSurrogate.getRole(),
+            assetSurrogate.getSubject(),
+            assetSurrogate.getRelated());
 
     logger.debug("INITIALIZING SUB-ASSETS {} : {}", assetId, versionTag);
 
@@ -588,7 +586,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     }
 
     if (StringUtils.isNotBlank(annotation)) {
-      annotationList = this.index.getAssetIdsByAnnotation(RelatedConceptSeries.resolve(annotation).get().getConceptId());
+      annotationList = this.index.getAssetIdsByAnnotation(RelatedConceptSeries.resolve(
+              annotation).orElseThrow(() -> new RuntimeException("Annotation could not be resolved: " + annotation)).getConceptId());
     }
 
     Set<IndexPointer> all = Sets.newHashSet();
@@ -764,7 +763,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   private enum HrefType {ASSET, ASSET_VERSION}
 
   private Pointer toPointer(URIIdentifier entityRef, HrefType hrefType) {
-    VersionIdentifier id = DatatypeHelper.toVersionIdentifier(entityRef);
     return this.toPointer(new IndexPointer(entityRef), hrefType);
   }
 

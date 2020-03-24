@@ -16,6 +16,7 @@ package edu.mayo.kmdp.repository.asset;
 import edu.mayo.kmdp.id.helper.DatatypeHelper;
 import edu.mayo.kmdp.metadata.annotations.resources.SimpleAnnotation;
 import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
+import edu.mayo.kmdp.metadata.surrogate.Dependency;
 import edu.mayo.kmdp.metadata.surrogate.Representation;
 import edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset;
 import edu.mayo.kmdp.registry.Registry;
@@ -32,15 +33,16 @@ import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
 import static edu.mayo.kmdp.util.Util.uuid;
 import static edu.mayo.ontology.taxonomies.kao.knowledgeassetrole.KnowledgeAssetRoleSeries.Operational_Concept_Definition;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Care_Process_Model;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Formal_Ontology;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Predictive_Model;
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.*;
+import static edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype.DependencyTypeSeries.Depends_On;
 import static edu.mayo.ontology.taxonomies.kmdo.annotationreltype.AnnotationRelTypeSeries.Defines;
+import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HL7_ELM;
 import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
 import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.*;
@@ -66,6 +68,23 @@ class SemanticRepositoryTest extends RepositoryTestBase {
             new KnowledgeAsset().withFormalType(Care_Process_Model)));
     List<Pointer> assets = semanticRepository
         .listKnowledgeAssets().orElse(emptyList());
+
+    assertNotNull(assets);
+    assertEquals(2, assets.size());
+  }
+
+  @Test
+  void testListAllInMemoryHelperMethod() {
+    KnowledgeAssetRepositoryService repo = KnowledgeAssetRepositoryService.selfContainedRepository();
+
+    assertNotNull(repo
+            .setVersionedKnowledgeAsset(uuid("foo"), "1",
+                    new KnowledgeAsset().withFormalType(Care_Process_Model)));
+    assertNotNull(repo
+            .setVersionedKnowledgeAsset(uuid("foo2"), "1",
+                    new KnowledgeAsset().withFormalType(Care_Process_Model)));
+    List<Pointer> assets = repo
+            .listKnowledgeAssets().orElse(emptyList());
 
     assertNotNull(assets);
     assertEquals(2, assets.size());
@@ -742,6 +761,33 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     assertNotNull(ck.getAssetId());
     assertEquals("Test", ck.getLabel());
     assertTrue(HTML.sameAs(ck.getRepresentation().getLanguage()));
+  }
+
+  @Test
+  void getRelatedTransitive() {
+    UUID u1 = UUID.nameUUIDFromBytes("1".getBytes());
+    UUID u2 = UUID.nameUUIDFromBytes("2".getBytes());
+
+    semanticRepository.setVersionedKnowledgeAsset(u1, "1", new KnowledgeAsset()
+            .withCarriers(new ComputableKnowledgeArtifact().
+                    withRepresentation(new Representation().withLanguage(
+                            HL7_ELM))));
+    semanticRepository.addKnowledgeAssetCarrier(u1, "1", "HI1!".getBytes());
+
+    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset1 = semanticRepository.getVersionedKnowledgeAsset(u1, "1").getOptionalValue().get();
+
+    semanticRepository.setVersionedKnowledgeAsset(u2, "1", new KnowledgeAsset()
+            .withRelated(new Dependency().withRel(Depends_On).withTgt(asset1))
+            .withCarriers(new ComputableKnowledgeArtifact()
+                    .withRepresentation(new Representation().withLanguage(
+                            HL7_ELM))));
+    semanticRepository.addKnowledgeAssetCarrier(u2, "1", "HI2!".getBytes());
+
+    List<KnowledgeCarrier> carriers = semanticRepository.getKnowledgeArtifactBundle(u2, "1",
+            Depends_On.getTag(), -1, null).getOptionalValue()
+            .orElseGet(Collections::emptyList);
+
+    assertEquals(2, carriers.size());
   }
 
 

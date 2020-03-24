@@ -53,8 +53,6 @@ class BundlerIntegrationTest extends SemanticRepoAPITestBase {
     lib = KnowledgeAssetRetrievalApi.newInstance(apiClientFactory);
   }
 
-
-
   @Test
   void testBundleOnlyOne() {
     UUID u1 = UUID.nameUUIDFromBytes("1".getBytes());
