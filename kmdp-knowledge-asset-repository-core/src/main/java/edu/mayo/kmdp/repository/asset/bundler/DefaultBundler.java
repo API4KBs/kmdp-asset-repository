@@ -31,6 +31,8 @@ import org.omg.spec.api4kp._1_0.identifiers.URIIdentifier;
 import org.omg.spec.api4kp._1_0.identifiers.VersionIdentifier;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.util.List;
@@ -41,6 +43,9 @@ import java.util.stream.Collectors;
 import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 
 public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKnowledgeArtifactBundle {
+
+  private static final Logger logger = LoggerFactory
+          .getLogger(DefaultBundler.class);
 
   private SemanticKnowledgeAssetRepository assetRepository;
   private Index index;
@@ -60,9 +65,19 @@ public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKn
 
     Set<edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset> dependencies =
             this.index.getRelatedAssets(new IndexPointer(asset.getAssetId())).stream()
-            .map(pointer -> assetRepository.getVersionedKnowledgeAsset(UUID.fromString(pointer.getTag()), pointer.getVersion()))
-                    .map(found-> found.getOptionalValue().orElseThrow(() -> new BundlerException("Could not find Asset of Bundle")))
-                    .collect(Collectors.toSet());
+            .map(pointer -> {
+              Answer<KnowledgeAsset> foundRelation = assetRepository.getVersionedKnowledgeAsset(UUID.fromString(pointer.getTag()), pointer.getVersion());
+
+              // TODO: We want to be smarter about this and fail if important dependencies are missing.
+              if (! foundRelation.getOptionalValue().isPresent()) {
+                logger.warn("Related asset not found, FROM: {}, TO: {}", asset.getAssetId().getVersionId(), pointer.getVersionId());
+              }
+
+              return foundRelation;
+            })
+            .filter(found -> found.getOptionalValue().isPresent())
+            .map(found-> found.getOptionalValue().get())
+            .collect(Collectors.toSet());
 
     List<KnowledgeCarrier> returnList = Lists.newArrayList();
 
