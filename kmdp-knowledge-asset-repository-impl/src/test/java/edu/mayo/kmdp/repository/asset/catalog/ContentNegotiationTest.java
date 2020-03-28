@@ -99,7 +99,7 @@ public class ContentNegotiationTest extends SemanticRepoAPITestBase {
         ModelMIMECoder.encode(rep(HTML, TXT)));
 
     assertTrue(ans2.isSuccess());
-    Optional<String> txEd = ans2.get().asString();
+    Optional<String> txEd = ans2.map(Object::toString).getOptionalValue();
     assertTrue(txEd.isPresent());
     assertTrue(txEd.get().startsWith("<html>"));
   }

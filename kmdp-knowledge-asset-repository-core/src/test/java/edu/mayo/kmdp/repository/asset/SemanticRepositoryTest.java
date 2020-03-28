@@ -146,7 +146,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     assertNotNull(assets);
     assertEquals(1, assets.size());
 
-    assertEquals(Care_Process_Model.getRef(), assets.get(0).getType());
+    assertEquals(Care_Process_Model.getRef(), assets.get(0).getHref());
   }
 
   // initKnowledgeAsset
@@ -552,8 +552,8 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     assertNotNull(versions);
     assertEquals(1, versions.size());
 
-    assertNotNull(versions.get(0).getVersionId());
     assertNotNull(versions.get(0).getVersionTag());
+    assertNotNull(versions.get(0).getVersionId());
 
     assertFalse(versions.get(0).getHref().toString().contains("versions"));
 

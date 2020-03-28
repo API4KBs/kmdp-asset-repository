@@ -13,8 +13,8 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
-import static edu.mayo.kmdp.SurrogateBuilder.assetId;
 import static edu.mayo.kmdp.SurrogateHelper.getComputableCarrier;
+import static edu.mayo.kmdp.id.helper.DatatypeHelper.uri;
 import static edu.mayo.kmdp.registry.Registry.MAYO_ASSETS_BASE_URI_URI;
 import static edu.mayo.kmdp.util.Util.ensureUUID;
 import static edu.mayo.ontology.taxonomies.api4kp.parsinglevel.ParsingLevelSeries.Abstract_Knowledge_Expression;
@@ -35,10 +35,11 @@ import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.metadata.surrogate.Representation;
+import edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder;
+import edu.mayo.kmdp.registry.Registry;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.artifact.exceptions.ResourceNotFoundException;
 import edu.mayo.kmdp.repository.artifact.v4.server.KnowledgeArtifactApiInternal;
-import edu.mayo.kmdp.repository.artifact.v4.server.KnowledgeArtifactRepositoryApiInternal;
 import edu.mayo.kmdp.repository.artifact.v4.server.KnowledgeArtifactSeriesApiInternal;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.repository.asset.bundler.DefaultBundler;
@@ -106,8 +107,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   private final String repositoryId;
 
   /* Knowledge Artifact Repository Service Client*/
-  private KnowledgeArtifactRepositoryApiInternal knowledgeArtifactRepositoryApi;
-
   private KnowledgeArtifactApiInternal knowledgeArtifactApi;
 
   private KnowledgeArtifactSeriesApiInternal knowledgeArtifactSeriesApi;
@@ -139,7 +138,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     super();
 
-    this.knowledgeArtifactRepositoryApi = artifactRepo;
+    KnowledgeArtifactRepositoryService knowledgeArtifactRepositoryApi = artifactRepo;
     this.knowledgeArtifactApi = artifactRepo;
     this.knowledgeArtifactSeriesApi = artifactRepo;
 
@@ -154,8 +153,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     this.repositoryId = cfg.getTyped(KnowledgeAssetRepositoryOptions.DEFAULT_REPOSITORY_ID);
 
-    if (this.knowledgeArtifactRepositoryApi == null ||
-        !this.knowledgeArtifactRepositoryApi.getKnowledgeArtifactRepository(repositoryId)
+    if (knowledgeArtifactRepositoryApi == null ||
+        !knowledgeArtifactRepositoryApi.getKnowledgeArtifactRepository(repositoryId)
             .isSuccess()) {
       throw new IllegalStateException(
           "Unable to construct an Asset repository on an inconsistent Artifact repository");
@@ -165,7 +164,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<List<KnowledgeCarrier>> getKnowledgeArtifactBundle(UUID assetId,
       String versionTag, String assetRelationship, Integer depth, String xAccept) {
-    return bundler.getKnowledgeArtifactBundle(assetId, versionTag, null, null, null);
+    return bundler.getKnowledgeArtifactBundle(assetId, versionTag, assetRelationship, -1, xAccept);
   }
 
   @Override
@@ -181,26 +180,26 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   @Override
   public Answer<UUID> initKnowledgeAsset() {
-    UUID assetId;
-    String assetVersion;
-
     KnowledgeAsset surrogate = new KnowledgeAsset();
-    assetId = UUID.randomUUID();
-    assetVersion = "0.0.0";
-    surrogate.setAssetId(DatatypeHelper.toURIIdentifier(SemanticIdentifier.newId(MAYO_ASSETS_BASE_URI_URI, assetId, assetVersion)));
 
-    this.setVersionedKnowledgeAsset(assetId, assetVersion, surrogate);
+    ResourceIdentifier newId = SurrogateBuilder.randomArtifactId();
+    surrogate.setAssetId(DatatypeHelper.toURIIdentifier(newId));
 
-    return Answer.of(ResponseCodeSeries.Created, assetId);
+    this.setVersionedKnowledgeAsset(newId.getUuid(), newId.getVersionTag(), surrogate);
+
+    return Answer.of(ResponseCodeSeries.Created, newId.getUuid());
   }
 
   @Override
   public Answer<Void> addKnowledgeAssetCarrier(UUID assetId, String versionTag,
       byte[] exemplar) {
-    UUID artifactId = this.getNewArtifactId();
-    String artifactVersion = UUID.randomUUID().toString();
+    ResourceIdentifier artifatcId = SurrogateBuilder.randomArtifactId();
 
-    return setKnowledgeAssetCarrierVersion(assetId, versionTag, artifactId, artifactVersion,
+    return setKnowledgeAssetCarrierVersion(
+        assetId,
+        versionTag,
+        artifatcId.getUuid(),
+        artifatcId.getVersionTag(),
         exemplar);
   }
 
@@ -208,7 +207,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<KnowledgeAssetCatalog> getAssetCatalog() {
     return Answer.of(new KnowledgeAssetCatalog()
-        .withId(assetId(UUID.randomUUID().toString(), null))
+        .withId(DatatypeHelper.toURIIdentifier(SemanticIdentifier.newId(UUID.randomUUID())))
         .withName("Knowledge Asset Repository")
         .withSupportedAssetTypes(
             KnowledgeAssetTypeSeries.values()
@@ -238,8 +237,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @return The chosen Knowledge Artifact, wrapped in a KnowledgeCarrier
    */
   @Override
-  public Answer<KnowledgeCarrier> getCanonicalKnowledgeAssetCarrier(UUID assetId,
-      String versionTag, String xAccept) {
+  public Answer<KnowledgeCarrier> getCanonicalKnowledgeAssetCarrier(
+      UUID assetId, String versionTag, String xAccept) {
 
     final KnowledgeAsset surrogate = retrieveAssetSurrogate(assetId, versionTag)
         .orElse(null);
@@ -249,8 +248,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     List<SyntacticRepresentation> preferences = getPreferences(xAccept);
     if (preferences.isEmpty()) {
-      return getDefaultCarrier(surrogate, assetId, versionTag);
+      return getDefaultCarrier(surrogate);
     }
+
     Optional<ComputableKnowledgeArtifact> bestAvailableCarrier =
         negotiate(surrogate.getCarriers(), preferences);
 
@@ -260,7 +260,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       if (chosenCarrier.getLocator() != null) {
         return Answer.referTo(chosenCarrier.getLocator(), false);
       } else {
-        if (!Util.isEmpty(chosenCarrier.getInlined().getExpr())) {
+        if (chosenCarrier.getInlined() != null && !Util.isEmpty(chosenCarrier.getInlined().getExpr())) {
           return Answer.of(AbstractCarrier.of(chosenCarrier.getInlined().getExpr())
               .withRepresentation(rep(chosenCarrier.getRepresentation()))
               .withAssetId(DatatypeHelper.toSemanticIdentifier(surrogate.getAssetId()))
@@ -271,8 +271,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
           return getKnowledgeAssetCarrierVersion(
               assetId,
               versionTag,
-              Util.ensureUUID(artifactId.getTag())
-                  .orElseThrow(IllegalStateException::new),
+              artifactId.getUuid(),
               artifactId.getVersionTag());
         }
       }
@@ -282,14 +281,20 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
               preferred -> attemptTranslation(surrogate, assetId, versionTag, preferred));
       return ephemeralArtifact.isSuccess()
           ? ephemeralArtifact
-          : getDefaultCarrier(surrogate, assetId, versionTag);
+          : getDefaultCarrier(surrogate);
     }
   }
 
-  @Override
-  public Answer<KnowledgeCarrier> getCanonicalKnowledgeAssetSurrogate(UUID uuid, String s,
-      String s1) {
-    return Answer.unsupported();
+
+  public Answer<KnowledgeCarrier> getCanonicalKnowledgeAssetSurrogate(UUID assetId,
+      String versionTag, String xAccept) {
+    //TODO Implement content negotiation
+    return getVersionedKnowledgeAsset(assetId,versionTag)
+        .map(surr -> AbstractCarrier.ofAst(surr)
+            .withRepresentation(rep(Knowledge_Asset_Surrogate))
+            .withAssetId(DatatypeHelper.toSemanticIdentifier(surr.getSurrogate().get(0).getArtifactId()))
+            .withArtifactId(DatatypeHelper.toSemanticIdentifier(surr.getSurrogate().get(0).getArtifactId()))
+        );
   }
 
   private Answer<KnowledgeCarrier> attemptTranslation(KnowledgeAsset surrogate, UUID assetId,
@@ -301,36 +306,38 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       from = artifactPtr
           .flatMap(ptr -> getRepresentation(surrogate, ptr))
           .map(AbstractCarrier::rep)
-          .orElse(null);
+          .orElseThrow(IllegalStateException::new);
     } else {
       from = resolveInlinedArtifact(surrogate)
           .map(ComputableKnowledgeArtifact::getRepresentation)
           .map(AbstractCarrier::rep)
-          .orElse(null);
+          .orElseThrow(IllegalStateException::new);
     }
 
     if (translator == null) {
       return Answer.of(Optional.empty());
     }
-    return Answer.of(translator.listOperators(from, targetRepresentation, null)
-        .map(l -> l.get(0))
-        .map(KnowledgeProcessingOperator::getOperatorId)
-        .flatMap(id -> translator.applyTransrepresentation(
-            id,
-            resolveInlined(surrogate).map(AbstractCarrier::of).get(),
-            new Properties()))
-        .getOptionalValue());
+    return Answer.of(
+        translator.listOperators(from, targetRepresentation, null)
+            .map(l -> l.get(0))
+            .map(KnowledgeProcessingOperator::getOperatorId)
+            .flatMap(id -> translator.applyTransrepresentation(
+                id,
+                resolveInlined(surrogate).map(AbstractCarrier::of).get(),
+                new Properties()))
+            .getOptionalValue());
 
   }
 
-  private Answer<KnowledgeCarrier> getDefaultCarrier(KnowledgeAsset surrogate, UUID assetId,
-      String versionTag) {
+  private Answer<KnowledgeCarrier> getDefaultCarrier(KnowledgeAsset surrogate) {
     BinaryCarrier carrier = new org.omg.spec.api4kp._1_0.services.resources.BinaryCarrier()
         .withLevel(Encoded_Knowledge_Expression)
         .withLabel(surrogate.getName())
         .withAssetId(DatatypeHelper.toSemanticIdentifier(surrogate.getAssetId()));
 
-    Optional<ResourceIdentifier> artifactPtr = lookupDefaultCarriers(assetId, versionTag);
+    ResourceIdentifier id = DatatypeHelper.toSemanticIdentifier(surrogate.getAssetId());
+    Optional<ResourceIdentifier> artifactPtr =
+        lookupDefaultCarriers(id.getUuid(), id.getVersionTag());
 
     artifactPtr
         .flatMap(ptr -> getRepresentation(surrogate, ptr))
@@ -351,7 +358,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       String versionTag,
       UUID artifactId,
       String artifactVersionTag) {
-    ResourceIdentifier artifactPointer = SemanticIdentifier.newId(artifactId, artifactVersionTag);
+    ResourceIdentifier artifactPointer = SurrogateBuilder.artifactId(artifactId, artifactVersionTag);
     byte[] data = this.resolve(artifactPointer).orElse(new byte[]{});
     KnowledgeCarrier carrier = AbstractCarrier.of(data);
 
@@ -374,8 +381,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     return Answer.of(
         this.index.getArtifactsForAsset(assetPointer).stream()
             .map(resourceIdentifier -> {
-              // TODO: need to set anything else here? If use newId, what else should be set?
-              Pointer p = new Pointer();
+              Pointer p = resourceIdentifier.toPointer();
               p.setHref(this.hrefBuilder
                   .getAssetCarrierVersionHref(assetId.toString(), versionTag,
                       resourceIdentifier.getUuid().toString(),
@@ -393,9 +399,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   @Override
-  public Answer<List<Pointer>> getKnowledgeAssetSurrogateVersions(UUID uuid, String s) {
-    return Answer.unsupported();
-  }
+  public Answer<List<Pointer>> getKnowledgeAssetSurrogateVersions(UUID uuid, String s){
+      return Answer.unsupported();
+    }
 
 
   @Override
@@ -416,18 +422,23 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     return Answer.of(knowledgeAsset);
   }
 
-  private KnowledgeAsset getLatestKnowledgeAssetSurrogate(UUID assetId)
-      throws ResourceNotFoundException {
+  private KnowledgeAsset getLatestKnowledgeAssetSurrogate(UUID assetId) {
     Answer<byte[]> artifact = this.knowledgeArtifactSeriesApi
         .getLatestKnowledgeArtifact(repositoryId, assetId);
 
-    if (!artifact.getOptionalValue().isPresent()) {
+    if (!artifact.isSuccess()) {
       throw new ResourceNotFoundException();
     }
 
-    Optional<KnowledgeAsset> latestAsset = JSonUtil.readJson(artifact.get(), KnowledgeAsset.class);
+    Optional<KnowledgeAsset> latestAsset = artifact
+        .map(bytes -> AbstractCarrier.of(bytes)
+            .withRepresentation(rep(Knowledge_Asset_Surrogate, JSON)))
+        .flatMap(kc -> parser.lift(kc, Abstract_Knowledge_Expression))
+        .flatOpt(kc -> kc.as(KnowledgeAsset.class))
+        .getOptionalValue();
 
-    return latestAsset.orElseThrow(() -> new RuntimeException("Unable to parse Surrogate."));
+    return latestAsset
+        .orElseThrow(() -> new RuntimeException("Unable to parse Surrogate."));
   }
 
   private List<SyntacticRepresentation> getPreferences(String xAccept) {
@@ -457,8 +468,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   @Override
-  public Answer<KnowledgeAsset> getVersionedKnowledgeAsset(UUID assetId,
-      String versionTag) {
+  public Answer<KnowledgeAsset> getVersionedKnowledgeAsset(UUID assetId, String versionTag) {
     return Answer.of(retrieveAssetSurrogate(assetId, versionTag));
   }
 
@@ -541,25 +551,19 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   private void setIdAndVersionIfMissing(KnowledgeAsset assetSurrogate, UUID assetId,
       String versionTag) {
-    // TODO: use ResourceIdentifier when Surrogate v2 is ready
-    // This needs to remain URIIdentifier, otherwise the asset ID information gets lost
-    // (can't tell if tag is missing due to how SemanticIdentifier is constructed)
-    URIIdentifier existingAssetId = assetSurrogate.getAssetId();
-    ResourceIdentifier parameterAssetId = SemanticIdentifier
-        .newId(MAYO_ASSETS_BASE_URI_URI, assetId.toString(),
-            versionTag);
-//    URIIdentifier parameterAssetId = DatatypeHelper
-//        .uri(MAYO_ASSETS_BASE_URI, assetId.toString(), versionTag);
-    if (existingAssetId == null) {
+    if (assetSurrogate.getAssetId() == null) {
       //If the entire assetId is missing, set it based on parameters.
-      assetSurrogate.setAssetId(DatatypeHelper.toURIIdentifier(parameterAssetId));
+      assetSurrogate.setAssetId(DatatypeHelper.uri(assetId.toString(),versionTag));
     } else {
+      ResourceIdentifier parameterAssetId =
+          DatatypeHelper.toSemanticIdentifier(assetSurrogate.getAssetId());
+
       //If the version tag is missing, set it based on parameter
-      if (existingAssetId.getVersionId() == null) {
+      if (assetSurrogate.getAssetId().getVersionId() == null) {
         assetSurrogate.getAssetId().setVersionId(parameterAssetId.getVersionId());
       }
       //If the asset tag is missing, set it based on parameter
-      if (existingAssetId.getTag() == null) {
+      if (assetSurrogate.getAssetId().getTag() == null) {
         assetSurrogate.getAssetId().setUri(parameterAssetId.getResourceId());
       }
     }
@@ -581,11 +585,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
             false, -1, -1,
             null, null, null)
         .orElse(Collections.emptyList());
-
-    // TODO: Is this needed? set href on pointer based on HrefType CAO
-//    List<Pointer> versionPointers = pointers.stream()
-//        .map(pointer -> this.toPointer(pointer.getEntityRef(), HrefType.ASSET_VERSION))
-//        .collect(Collectors.toList());
 
     return Answer.of(pointers); // was versionPointers CAO
   }
@@ -675,14 +674,45 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
             exemplar);
 
     this.index.registerArtifactToAsset(
-        SemanticIdentifier.newId(MAYO_ASSETS_BASE_URI_URI, assetId, versionTag),
-        SemanticIdentifier.newId(MAYO_ASSETS_BASE_URI_URI, artifactId, artifactVersion));
+        SurrogateBuilder.assetId(assetId, versionTag),
+        SurrogateBuilder.artifactId(artifactId, artifactVersion));
 
     KnowledgeAsset asset = retrieveAssetSurrogate(assetId, versionTag)
         .orElseThrow(IllegalStateException::new);
+
+    if (asset.getCarriers().stream()
+        .noneMatch(art -> matches(art.getArtifactId(), artifactId,artifactVersion))) {
+      // the Artifact needs to be attached to the surrogate
+      attachCarrier(asset, artifactId, artifactVersion, exemplar);
+      // TODO this should increase the version of the surrogate, but not of the asset!
+      setVersionedKnowledgeAsset(assetId,versionTag,asset);
+    }
     logger.debug("Artifact has been set on asset {}", asset.getAssetId());
 
     return Answer.of(ResponseCodeSeries.OK);
+  }
+
+  private boolean matches(URIIdentifier artifactId, UUID artifactTag, String artifactVersion) {
+    return artifactId != null &&
+        artifactTag.toString().equals(artifactId.getTag()) &&
+        artifactVersion.equals(artifactId.getVersion());
+  }
+
+  private void attachCarrier(KnowledgeAsset asset, UUID artifactId, String artifactVersion,
+      byte[] exemplar) {
+    SyntacticRepresentation rep = detector.getDetectedRepresentation(AbstractCarrier.of(exemplar))
+        .orElse(new SyntacticRepresentation());
+    asset.getCarriers().add(
+        new ComputableKnowledgeArtifact()
+            .withArtifactId(
+                uri(Registry.MAYO_ARTIFACTS_BASE_URI, artifactId.toString(), artifactVersion))
+            .withRepresentation(new Representation()
+                .withLanguage(rep.getLanguage())
+                .withSerialization(rep.getSerialization())
+                .withFormat(rep.getFormat())
+                .withLexicon(rep.getLexicon())
+                .withProfile(rep.getProfile())
+            ));
   }
 
   @Override
@@ -699,8 +729,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   private Optional<KnowledgeAsset> retrieveAssetSurrogate(UUID assetId, String versionTag) {
     Optional<ResourceIdentifier> surrogatePointer = Optional.ofNullable(
-        this.index.getSurrogateForAsset(SemanticIdentifier
-            .newId(MAYO_ASSETS_BASE_URI_URI, assetId, versionTag)));
+        this.index.getSurrogateForAsset(SurrogateBuilder.assetId(assetId, versionTag)));
 
     if (surrogatePointer.isPresent()) {
       return this.resolve(surrogatePointer.get())
@@ -729,7 +758,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     if (resourceId == null) {
       return false;
     }
-//    VersionedIdentifier vid = DatatypeHelper.toVersionIdentifier(resourceId);
     return resourceId.getTag().equals(artifactId.getTag()) && resourceId.getVersionTag()
         .equals(artifactId.getVersionTag());
   }
@@ -818,7 +846,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
       // only set the Pointer type of the asset has one (and only one) type
       if (asset.get().getFormalType() != null && asset.get().getFormalType().size() == 1) {
-        p.setType(asset.get().getFormalType().get(0).getRef());
+//        p.set(asset.get().getFormalType().get(0).getRef());
       }
     }
 
@@ -873,10 +901,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .filter(ComputableKnowledgeArtifact.class::isInstance)
         .map(ComputableKnowledgeArtifact.class::cast)
         .findFirst();
-  }
-
-  private UUID getNewArtifactId() {
-    return UUID.randomUUID();
   }
 
 }

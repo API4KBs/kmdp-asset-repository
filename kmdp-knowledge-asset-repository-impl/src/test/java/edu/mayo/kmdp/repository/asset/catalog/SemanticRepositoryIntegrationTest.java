@@ -91,7 +91,7 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
 
     assertTrue(pointers.stream().anyMatch(p -> p.getResourceId().toString()
         .contains(strToUUID("98").toString())));
-    assertTrue(pointers.stream().anyMatch(p -> p.getResourceId().toString()
+    assertTrue(pointers.stream().anyMatch(p -> p.getHref().toString()
         .contains(strToUUID("89").toString())));
   }
 
