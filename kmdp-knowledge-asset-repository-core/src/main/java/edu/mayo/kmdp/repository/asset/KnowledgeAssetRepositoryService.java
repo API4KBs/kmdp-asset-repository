@@ -15,7 +15,9 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
-import edu.mayo.kmdp.id.VersionedIdentifier;
+import static edu.mayo.kmdp.util.Util.toUUID;
+
+import edu.mayo.kmdp.id.helper.DatatypeHelper;
 import edu.mayo.kmdp.language.LanguageDeSerializer;
 import edu.mayo.kmdp.language.LanguageDetector;
 import edu.mayo.kmdp.language.LanguageValidator;
@@ -25,15 +27,13 @@ import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDao;
 import edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex;
-import edu.mayo.kmdp.repository.asset.v3.server.KnowledgeAssetCatalogApiInternal;
-import edu.mayo.kmdp.repository.asset.v3.server.KnowledgeAssetRepositoryApiInternal;
-import edu.mayo.kmdp.repository.asset.v3.server.KnowledgeAssetRetrievalApiInternal;
+import edu.mayo.kmdp.repository.asset.v4.server.KnowledgeAssetCatalogApiInternal;
+import edu.mayo.kmdp.repository.asset.v4.server.KnowledgeAssetRepositoryApiInternal;
+import edu.mayo.kmdp.repository.asset.v4.server.KnowledgeAssetRetrievalApiInternal;
+import java.util.Collections;
+import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
-
-import java.util.Collections;
-
-import static edu.mayo.kmdp.util.Util.toUUID;
 
 public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogApiInternal,
     KnowledgeAssetRepositoryApiInternal, KnowledgeAssetRetrievalApiInternal {
@@ -54,15 +54,15 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
       KnowledgeAsset surrogate,
       KnowledgeCarrier artifact) {
 
-    VersionedIdentifier surrogateId = surrogate.getAssetId();
+    ResourceIdentifier surrogateId = DatatypeHelper.toSemanticIdentifier(surrogate.getAssetId());
 
     this.setVersionedKnowledgeAsset(
         toUUID(surrogateId.getTag()),
-        surrogateId.getVersion(),
+        surrogateId.getVersionTag(),
         surrogate);
 
     if (artifact != null) {
-      VersionedIdentifier artifactId = artifact.getArtifactId();
+      ResourceIdentifier artifactId = artifact.getArtifactId();
       // the main Surrogate may have sub-surrogates, and this artifact may be associated
       // to one of them, rather than the main one
       if (artifact.getAssetId() != null) {
@@ -70,9 +70,9 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
       }
       this.setKnowledgeAssetCarrierVersion(
           toUUID(surrogateId.getTag()),
-          surrogateId.getVersion(),
+          surrogateId.getVersionTag(),
           toUUID(artifactId.getTag()),
-          artifactId.getVersion(),
+          artifactId.getVersionTag(),
           ((BinaryCarrier) artifact).getEncodedExpression());
     }
   }

@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.AbstractCarrier;
 import org.omg.spec.api4kp._1_0.Answer;
 import org.omg.spec.api4kp._1_0.identifiers.ConceptIdentifier;
-import org.omg.spec.api4kp._1_0.identifiers.Pointer;
+import org.omg.spec.api4kp._1_0.id.Pointer;
 import org.omg.spec.api4kp._1_0.identifiers.URIIdentifier;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
@@ -121,7 +121,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     assertNotNull(assets);
     assertEquals(1, assets.size());
 
-    assertEquals("2", assets.get(0).getEntityRef().getVersion());
+    assertEquals("2", assets.get(0).getVersionTag());
   }
 
   @Test
@@ -552,8 +552,8 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     assertNotNull(versions);
     assertEquals(1, versions.size());
 
-    assertNotNull(versions.get(0).getEntityRef().getVersionId());
-    assertNotNull(versions.get(0).getEntityRef().getVersion());
+    assertNotNull(versions.get(0).getVersionId());
+    assertNotNull(versions.get(0).getVersionTag());
 
     assertFalse(versions.get(0).getHref().toString().contains("versions"));
 

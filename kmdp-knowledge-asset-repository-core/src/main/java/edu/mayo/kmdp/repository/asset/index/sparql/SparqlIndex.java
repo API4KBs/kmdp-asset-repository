@@ -3,7 +3,6 @@ package edu.mayo.kmdp.repository.asset.index.sparql;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import edu.mayo.kmdp.id.helper.DatatypeHelper;
 import edu.mayo.kmdp.metadata.annotations.Annotation;
 import edu.mayo.kmdp.metadata.annotations.BasicAnnotation;
 import edu.mayo.kmdp.metadata.annotations.SimpleAnnotation;
@@ -11,25 +10,25 @@ import edu.mayo.kmdp.metadata.surrogate.Association;
 import edu.mayo.kmdp.metadata.surrogate.Dependency;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.repository.asset.index.Index;
-import edu.mayo.kmdp.repository.asset.index.IndexPointer;
 import edu.mayo.kmdp.util.Util;
 import edu.mayo.ontology.taxonomies.kao.knowledgeassetrole.KnowledgeAssetRole;
 import edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetType;
 import edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype.DependencyTypeSeries;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.rdf.model.ResourceFactory;
-import org.apache.jena.rdf.model.Statement;
-import org.apache.jena.vocabulary.RDF;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.ResourceFactory;
+import org.apache.jena.rdf.model.Statement;
+import org.apache.jena.vocabulary.RDF;
+import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
+import org.omg.spec.api4kp._1_0.id.SemanticIdentifier;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 /**
  * An implementation of the Asset {@link Index} interface that uses an RDF/SPARQL backend.
@@ -62,7 +61,7 @@ public class SparqlIndex implements Index {
   }
 
   @Override
-  public void registerAsset(IndexPointer asset, IndexPointer surrogate, List<KnowledgeAssetType> types, List<KnowledgeAssetRole> roles, List<Annotation> annotations, List<Association> related) {
+  public void registerAsset(ResourceIdentifier asset, ResourceIdentifier surrogate, List<KnowledgeAssetType> types, List<KnowledgeAssetRole> roles, List<Annotation> annotations, List<Association> related) {
     this.jenaSparqlDao.store(this.toRdf(asset, surrogate, types, roles, annotations, related));
   }
 
@@ -76,7 +75,7 @@ public class SparqlIndex implements Index {
    * @param annotations
    * @return
    */
-  public List<Statement> toRdf(IndexPointer asset, IndexPointer surrogate, List<KnowledgeAssetType> types, List<KnowledgeAssetRole> roles, List<Annotation> annotations, List<Association> related) {
+  public List<Statement> toRdf(ResourceIdentifier asset, ResourceIdentifier surrogate, List<KnowledgeAssetType> types, List<KnowledgeAssetRole> roles, List<Annotation> annotations, List<Association> related) {
     List<Statement> statements = Lists.newArrayList();
 
     // annotations
@@ -105,7 +104,7 @@ public class SparqlIndex implements Index {
     statements.add(this.toStatement(asset.getVersionId(), URI.create(RDF.type.getURI()), ASSET_URI));
 
     // version
-    statements.add(this.toStatement(asset.getUri(), HAS_VERSION_URI, asset.getVersionId()));
+    statements.add(this.toStatement(asset.getResourceId(), HAS_VERSION_URI, asset.getVersionId()));
 
     // Surrogate link
     statements.add(this.toStatement(asset.getVersionId(), HAS_SURROGATE_URI, surrogate.getVersionId()));
@@ -133,7 +132,7 @@ public class SparqlIndex implements Index {
   }
 
   @Override
-  public Set<IndexPointer> getRelatedAssets(IndexPointer assetPointer, URI relation) {
+  public Set<ResourceIdentifier> getRelatedAssets(ResourceIdentifier assetPointer, URI relation) {
     String sparql = "" +
             "SELECT ?o\n" +
             "WHERE {\n" +
@@ -144,17 +143,17 @@ public class SparqlIndex implements Index {
     params.put("?s", assetPointer.getVersionId().toString());
     params.put("?p", relation.toString());
 
-    Set<IndexPointer> related = Sets.newHashSet();
+    Set<ResourceIdentifier> related = Sets.newHashSet();
 
     this.jenaSparqlDao.runSparql(sparql, params, (
             querySolution -> related.add(
-                    this.resourceToIndexPointer(querySolution.getResource("?o")))));
+                    this.resourceToResourceIdentifier(querySolution.getResource("?o")))));
 
     return related;
   }
 
   @Override
-  public Set<IndexPointer> getRelatedAssets(IndexPointer assetPointer) {
+  public Set<ResourceIdentifier> getRelatedAssets(ResourceIdentifier assetPointer) {
     String sparql = "" +
             "SELECT ?o\n" +
             "WHERE {\n" +
@@ -164,75 +163,75 @@ public class SparqlIndex implements Index {
     Map<String, String> params = Maps.newHashMap();
     params.put("?s", assetPointer.getVersionId().toString());
 
-    Set<IndexPointer> related = Sets.newHashSet();
+    Set<ResourceIdentifier> related = Sets.newHashSet();
 
     this.jenaSparqlDao.runSparql(sparql, params, (
             querySolution -> related.add(
-                    this.resourceToIndexPointer(querySolution.getResource("?o")))));
+                    this.resourceToResourceIdentifier(querySolution.getResource("?o")))));
 
-    Set<IndexPointer> downstream = Sets.union(related,
+    Set<ResourceIdentifier> downstream = Sets.union(related,
             related.stream().map(this::getRelatedAssets).flatMap(Set::stream).collect(Collectors.toSet()));
 
     return Sets.union(Sets.newHashSet(assetPointer), downstream);
   }
 
   @Override
-  public Set<IndexPointer> getAllAssetIds() {
+  public Set<ResourceIdentifier> getAllAssetIds() {
     return this.jenaSparqlDao.readSubjectByPredicateAndObject(URI.create(RDF.type.getURI()), ASSET_URI)
             .stream()
-            .map(this::resourceToIndexPointer).collect(Collectors.toSet());
+            .map(this::resourceToResourceIdentifier).collect(Collectors.toSet());
   }
 
   @Override
-  public void registerArtifactToAsset(IndexPointer assetPointer, IndexPointer artifact) {
+  public void registerArtifactToAsset(ResourceIdentifier assetPointer, ResourceIdentifier artifact) {
     this.jenaSparqlDao.store(assetPointer.getVersionId(), HAS_CARRIER_URI, artifact.getVersionId());
   }
 
   @Override
-  public void registerSurrogateToAsset(IndexPointer assetPointer, IndexPointer surrogate) {
+  public void registerSurrogateToAsset(ResourceIdentifier assetPointer, ResourceIdentifier surrogate) {
     this.jenaSparqlDao.store(assetPointer.getVersionId(), HAS_SURROGATE_URI, surrogate.getVersionId());
   }
 
   @Override
-  public IndexPointer getSurrogateForAsset(IndexPointer assetPointer) {
+  public ResourceIdentifier getSurrogateForAsset(ResourceIdentifier assetPointer) {
     return this.jenaSparqlDao.readObjectBySubjectAndPredicate(assetPointer.getVersionId(), HAS_SURROGATE_URI)
             .stream()
-            .map(this::resourceToIndexPointer)
+            .map(this::resourceToResourceIdentifier)
             .findFirst().orElse(null);
   }
 
   @Override
-  public String getLocation(IndexPointer pointer) {
+  public String getLocation(ResourceIdentifier pointer) {
     return pointer.getVersionId().toString();
   }
 
   @Override
-  public Set<IndexPointer> getAssetIdsByType(URI assetType) {
+  public Set<ResourceIdentifier> getAssetIdsByType(URI assetType) {
     List<Resource> resources =
             this.jenaSparqlDao.readSubjectByPredicateAndObject(URI.create(RDF.type.getURI()), assetType);
 
-    return resources.stream().map(this::resourceToIndexPointer).collect(Collectors.toSet());
+    return resources.stream().map(this::resourceToResourceIdentifier).collect(Collectors.toSet());
   }
 
-  protected IndexPointer resourceToIndexPointer(Resource resource) {
-    IndexPointer indexPointer = new IndexPointer(DatatypeHelper.toURIIDentifier(resource.getURI()));
-    return indexPointer;
+  protected ResourceIdentifier resourceToResourceIdentifier(Resource resource) {
+    ResourceIdentifier resourceIdentifier = SemanticIdentifier.newVersionId(URI.create(resource.getURI()));
+    return resourceIdentifier;
   }
 
   @Override
-  public Set<IndexPointer> getAssetIdsByAnnotation(URI annotation) {
+  public Set<ResourceIdentifier> getAssetIdsByAnnotation(URI annotation) {
     List<Resource> resources =
             this.jenaSparqlDao.readSubjectByPredicate(annotation);
 
-    return resources.stream().map(this::resourceToIndexPointer).collect(Collectors.toSet());
+    return resources.stream().map(this::resourceToResourceIdentifier).collect(Collectors.toSet());
   }
 
   @Override
-  public Set<IndexPointer> getArtifactsForAsset(IndexPointer artifact) {
+  public Set<ResourceIdentifier> getArtifactsForAsset(ResourceIdentifier artifact) {
     List<Resource> resources =
             this.jenaSparqlDao.readObjectBySubjectAndPredicate(artifact.getVersionId(), HAS_CARRIER_URI);
 
-    return resources.stream().map(this::resourceToIndexPointer).collect(Collectors.toSet());
+    return resources.stream().map(this::resourceToResourceIdentifier).collect(Collectors.toSet());
   }
 
   @Override
