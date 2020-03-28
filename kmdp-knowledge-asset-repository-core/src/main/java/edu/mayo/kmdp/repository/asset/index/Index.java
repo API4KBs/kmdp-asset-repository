@@ -24,6 +24,7 @@ import edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetType;
 import java.net.URI;
 import java.util.List;
 import java.util.Set;
+import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
 
 /**
  * An interface to index Assets and their relationships.
@@ -39,7 +40,7 @@ public interface Index {
    * @param annotations
    * @param related
    */
-  void registerAsset(IndexPointer asset, IndexPointer surrogate, List<KnowledgeAssetType> types,
+  void registerAsset(ResourceIdentifier asset, ResourceIdentifier surrogate, List<KnowledgeAssetType> types,
                      List<KnowledgeAssetRole> roles, List<Annotation> annotations, List<Association> related);
 
   /**
@@ -48,7 +49,7 @@ public interface Index {
    * @param assetPointer
    * @param artifact
    */
-  void registerArtifactToAsset(IndexPointer assetPointer, IndexPointer artifact);
+  void registerArtifactToAsset(ResourceIdentifier assetPointer, ResourceIdentifier artifact);
 
   /**
    * Get all related Assets, regardless our how they are related.
@@ -57,7 +58,7 @@ public interface Index {
    * @param assetPointer
    * @return
    */
-  Set<IndexPointer> getRelatedAssets(IndexPointer assetPointer);
+  Set<ResourceIdentifier> getRelatedAssets(ResourceIdentifier assetPointer);
 
   /**
    * Get related Assets, restricted to a relation type.
@@ -67,7 +68,7 @@ public interface Index {
    * @param relation
    * @return
    */
-  Set<IndexPointer> getRelatedAssets(IndexPointer assetPointer, URI relation);
+  Set<ResourceIdentifier> getRelatedAssets(ResourceIdentifier assetPointer, URI relation);
 
   /**
    * Linke a Surrogate to an Asset.
@@ -75,7 +76,7 @@ public interface Index {
    * @param assetPointer
    * @param surrogate
    */
-  void registerSurrogateToAsset(IndexPointer assetPointer, IndexPointer surrogate);
+  void registerSurrogateToAsset(ResourceIdentifier assetPointer, ResourceIdentifier surrogate);
 
   /**
    * Retrieve a pointer to the Surrogate given an Asset.
@@ -83,7 +84,7 @@ public interface Index {
    * @param assetPointer
    * @return
    */
-  IndexPointer getSurrogateForAsset(IndexPointer assetPointer);
+  ResourceIdentifier getSurrogateForAsset(ResourceIdentifier assetPointer);
 
   /**
    * Get the storage location of an Asset/Artifact.
@@ -91,7 +92,7 @@ public interface Index {
    * @param pointer
    * @return
    */
-  String getLocation(IndexPointer pointer);
+  String getLocation(ResourceIdentifier pointer);
 
   /**
    * Retrieve a list of Assets of a given type.
@@ -99,7 +100,7 @@ public interface Index {
    * @param assetType
    * @return
    */
-  Set<IndexPointer> getAssetIdsByType(URI assetType);
+  Set<ResourceIdentifier> getAssetIdsByType(URI assetType);
 
   /**
    * Retrieve a list of Assets with a given annotation.
@@ -107,21 +108,21 @@ public interface Index {
    * @param annotation
    * @return
    */
-  Set<IndexPointer> getAssetIdsByAnnotation(URI annotation);
+  Set<ResourceIdentifier> getAssetIdsByAnnotation(URI annotation);
 
   /**
    * Retrieve a list of all Assets.
    *
    * @return
    */
-  Set<IndexPointer> getAllAssetIds();
+  Set<ResourceIdentifier> getAllAssetIds();
 
   /**
    * Get the list of all Artifacts (carriers) for an Asset.
    * @param artifact
    * @return
    */
-  Set<IndexPointer> getArtifactsForAsset(IndexPointer artifact);
+  Set<ResourceIdentifier> getArtifactsForAsset(ResourceIdentifier artifact);
 
   /**
    * Reset and clear the store.

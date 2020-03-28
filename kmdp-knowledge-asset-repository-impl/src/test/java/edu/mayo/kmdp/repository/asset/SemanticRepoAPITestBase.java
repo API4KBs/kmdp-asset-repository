@@ -27,7 +27,7 @@ import org.springframework.context.annotation.Configuration;
 
 @SpringBootTest(
     webEnvironment = WebEnvironment.RANDOM_PORT,
-    classes = edu.mayo.kmdp.repository.asset.v3.server.Swagger2SpringBoot.class)
+    classes = edu.mayo.kmdp.repository.asset.v4.server.Swagger2SpringBoot.class)
 @Configuration
 @ComponentScan(basePackageClasses = {
         SemanticKnowledgeAssetRepository.class,

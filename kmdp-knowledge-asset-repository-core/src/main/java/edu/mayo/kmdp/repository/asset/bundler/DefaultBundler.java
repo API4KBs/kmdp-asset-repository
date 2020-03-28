@@ -15,32 +15,31 @@
  */
 package edu.mayo.kmdp.repository.asset.bundler;
 
+import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
+
 import com.google.common.collect.Lists;
 import edu.mayo.kmdp.id.helper.DatatypeHelper;
 import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.repository.asset.SemanticKnowledgeAssetRepository;
 import edu.mayo.kmdp.repository.asset.index.Index;
-import edu.mayo.kmdp.repository.asset.index.IndexPointer;
-import edu.mayo.kmdp.repository.asset.v3.server.KnowledgeAssetRetrievalApiInternal;
+import edu.mayo.kmdp.repository.asset.v4.server.KnowledgeAssetRetrievalApiInternal;
 import edu.mayo.kmdp.util.FileUtil;
 import edu.mayo.kmdp.util.Util;
 import edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguage;
+import java.net.URI;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.omg.spec.api4kp._1_0.Answer;
+import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
 import org.omg.spec.api4kp._1_0.identifiers.URIIdentifier;
 import org.omg.spec.api4kp._1_0.identifiers.VersionIdentifier;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.net.URI;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 
 public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKnowledgeArtifactBundle {
 
@@ -63,10 +62,13 @@ public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKn
     KnowledgeAsset asset = this.assetRepository.getVersionedKnowledgeAsset(assetId, versionTag)
         .orElseThrow(IllegalStateException::new);
 
+    // TODO: Temporary until KnowledgeAsset updated to v2 surrogate
+    ResourceIdentifier uriId = DatatypeHelper.toSemanticIdentifier(asset.getAssetId());
+
     Set<edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset> dependencies =
-            this.index.getRelatedAssets(new IndexPointer(asset.getAssetId())).stream()
+            this.index.getRelatedAssets(uriId).stream()
             .map(pointer -> {
-              Answer<KnowledgeAsset> foundRelation = assetRepository.getVersionedKnowledgeAsset(UUID.fromString(pointer.getTag()), pointer.getVersion());
+              Answer<KnowledgeAsset> foundRelation = assetRepository.getVersionedKnowledgeAsset(UUID.fromString(pointer.getTag()), pointer.getVersionTag());
 
               // TODO: We want to be smarter about this and fail if important dependencies are missing.
               if (! foundRelation.getOptionalValue().isPresent()) {
@@ -123,7 +125,7 @@ public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKn
                 newCarrier.setRepresentation(rep(language));
               }
               newCarrier
-                  .withAssetId(assetSurrogate.getAssetId())
+                  .withAssetId(DatatypeHelper.toSemanticIdentifier(assetSurrogate.getAssetId()))
                   .withEncodedExpression(FileUtil.readBytes(masterLocation).orElse(new byte[0]));
               carriers.add(newCarrier);
             }

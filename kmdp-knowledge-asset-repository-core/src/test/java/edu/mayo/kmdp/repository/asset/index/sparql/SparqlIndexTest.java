@@ -1,15 +1,14 @@
 package edu.mayo.kmdp.repository.asset.index.sparql;
 
-import edu.mayo.kmdp.id.helper.DatatypeHelper;
-import edu.mayo.kmdp.repository.asset.index.IndexPointer;
-import edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype.DependencyTypeSeries;
-import org.h2.jdbcx.JdbcDataSource;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype.DependencyTypeSeries;
 import java.net.URI;
 import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.h2.jdbcx.JdbcDataSource;
+import org.junit.jupiter.api.Test;
+import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
+import org.omg.spec.api4kp._1_0.id.SemanticIdentifier;
 
 class SparqlIndexTest {
 
@@ -41,9 +40,9 @@ class SparqlIndexTest {
     dao.store(uri2, DependencyTypeSeries.Depends_On.getConceptId(), uri3);
     dao.store(uri3, DependencyTypeSeries.Depends_On.getConceptId(), uri4);
 
-    IndexPointer pointer = new IndexPointer(DatatypeHelper.toURIIDentifier(uri1.toString()));
+    ResourceIdentifier pointer = SemanticIdentifier.newVersionId(uri1);
 
-    Set<IndexPointer> related = index.getRelatedAssets(pointer);
+    Set<ResourceIdentifier> related = index.getRelatedAssets(pointer);
 
     assertEquals(4, related.size());
   }
@@ -61,9 +60,9 @@ class SparqlIndexTest {
     dao.store(uri2, DependencyTypeSeries.Depends_On.getConceptId(), uri3);
     dao.store(uri3, DependencyTypeSeries.Depends_On.getConceptId(), uri4);
 
-    IndexPointer pointer = new IndexPointer(DatatypeHelper.toURIIDentifier(uri1.toString()));
+    ResourceIdentifier pointer = SemanticIdentifier.newVersionId(uri1);
 
-    Set<IndexPointer> related = index.getRelatedAssets(pointer, DependencyTypeSeries.Depends_On.getConceptId());
+    Set<ResourceIdentifier> related = index.getRelatedAssets(pointer, DependencyTypeSeries.Depends_On.getConceptId());
 
     assertEquals(4, related.size());
   }
@@ -81,9 +80,9 @@ class SparqlIndexTest {
     dao.store(uri2, DependencyTypeSeries.Imports.getConceptId(), uri3);
     dao.store(uri3, DependencyTypeSeries.Depends_On.getConceptId(), uri4);
 
-    IndexPointer pointer = new IndexPointer(DatatypeHelper.toURIIDentifier(uri1.toString()));
+    ResourceIdentifier pointer = SemanticIdentifier.newVersionId(uri1);
 
-    Set<IndexPointer> related = index.getRelatedAssets(pointer);
+    Set<ResourceIdentifier> related = index.getRelatedAssets(pointer);
 
     assertEquals(4, related.size());
   }

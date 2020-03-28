@@ -18,15 +18,15 @@ import edu.mayo.kmdp.id.adapter.URIId;
 import edu.mayo.kmdp.metadata.annotations.SimpleApplicability;
 import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
-import edu.mayo.kmdp.repository.asset.v3.KnowledgeAssetCatalogApi;
-import edu.mayo.kmdp.repository.asset.v3.client.ApiClientFactory;
+import edu.mayo.kmdp.repository.asset.v4.KnowledgeAssetCatalogApi;
+import edu.mayo.kmdp.repository.asset.v4.client.ApiClientFactory;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
 import edu.mayo.ontology.taxonomies.kao.knowledgeprocessingtechnique.KnowledgeProcessingTechniqueSeries;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.Answer;
-import org.omg.spec.api4kp._1_0.identifiers.Pointer;
+import org.omg.spec.api4kp._1_0.id.Pointer;
 
 import java.util.Collections;
 import java.util.List;
@@ -89,9 +89,9 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
     List<Pointer> pointers = ans
         .orElse(Collections.emptyList());
 
-    assertTrue(pointers.stream().anyMatch(p -> p.getEntityRef().getUri().toString()
+    assertTrue(pointers.stream().anyMatch(p -> p.getResourceId().toString()
         .contains(strToUUID("98").toString())));
-    assertTrue(pointers.stream().anyMatch(p -> p.getEntityRef().getUri().toString()
+    assertTrue(pointers.stream().anyMatch(p -> p.getResourceId().toString()
         .contains(strToUUID("89").toString())));
   }
 

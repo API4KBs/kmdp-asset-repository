@@ -2,10 +2,10 @@ package edu.mayo.kmdp.repository.asset.index;
 
 import edu.mayo.kmdp.id.helper.DatatypeHelper;
 import edu.mayo.kmdp.registry.Registry;
-import org.omg.spec.api4kp._1_0.identifiers.URIIdentifier;
 
 import java.net.URI;
 import java.util.UUID;
+import org.omg.spec.api4kp._1_0.identifiers.URIIdentifier;
 
 /**
  * A wrapper over {@link URIIdentifier} used to index Assets and Artifacts.
@@ -13,6 +13,7 @@ import java.util.UUID;
  * NOTE: this will most likely get replaced with some other ID abstraction, or fall
  * back to just the {@link URIIdentifier}.
  */
+@Deprecated
 public class IndexPointer extends URIIdentifier {
 
   public static final String URI_BASE = Registry.MAYO_ASSETS_BASE_URI;
