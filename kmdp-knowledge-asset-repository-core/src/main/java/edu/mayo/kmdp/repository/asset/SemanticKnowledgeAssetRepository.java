@@ -182,7 +182,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   public Answer<UUID> initKnowledgeAsset() {
     KnowledgeAsset surrogate = new KnowledgeAsset();
 
-    ResourceIdentifier newId = SurrogateBuilder.randomArtifactId();
+    ResourceIdentifier newId = SurrogateBuilder.randomAssetId();
     surrogate.setAssetId(DatatypeHelper.toURIIdentifier(newId));
 
     this.setVersionedKnowledgeAsset(newId.getUuid(), newId.getVersionTag(), surrogate);
@@ -553,10 +553,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       String versionTag) {
     if (assetSurrogate.getAssetId() == null) {
       //If the entire assetId is missing, set it based on parameters.
-      assetSurrogate.setAssetId(DatatypeHelper.uri(assetId.toString(),versionTag));
+      assetSurrogate.setAssetId(
+          DatatypeHelper.toURIIdentifier(SurrogateBuilder.assetId(assetId,versionTag)));
     } else {
-      ResourceIdentifier parameterAssetId =
-          DatatypeHelper.toSemanticIdentifier(assetSurrogate.getAssetId());
+      ResourceIdentifier parameterAssetId = SurrogateBuilder.assetId(assetId,versionTag);
 
       //If the version tag is missing, set it based on parameter
       if (assetSurrogate.getAssetId().getVersionId() == null) {
@@ -846,7 +846,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
       // only set the Pointer type of the asset has one (and only one) type
       if (asset.get().getFormalType() != null && asset.get().getFormalType().size() == 1) {
-//        p.set(asset.get().getFormalType().get(0).getRef());
+        p.setType(asset.get().getFormalType().get(0).getRef());
       }
     }
 
