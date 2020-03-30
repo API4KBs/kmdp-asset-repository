@@ -19,6 +19,7 @@ import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.Dependency;
 import edu.mayo.kmdp.metadata.surrogate.Representation;
 import edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset;
+import edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder;
 import edu.mayo.kmdp.registry.Registry;
 import edu.mayo.kmdp.repository.artifact.exceptions.ResourceNotFoundException;
 import edu.mayo.ontology.taxonomies.api4kp.responsecodes.ResponseCodeSeries;
@@ -446,6 +447,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
       .setVersionedKnowledgeAsset(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1",
         asset);
     assertEquals(ResponseCodeSeries.NoContent, response.getOutcomeType());
+
     String expectedAssetId = BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52";
     String expectedVersionId = BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52/versions/1";
     edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka = semanticRepository
@@ -552,8 +554,8 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     assertNotNull(versions);
     assertEquals(1, versions.size());
 
-    assertNotNull(versions.get(0).getVersionId());
     assertNotNull(versions.get(0).getVersionTag());
+    assertNotNull(versions.get(0).getVersionId());
 
     assertFalse(versions.get(0).getHref().toString().contains("versions"));
 
@@ -769,8 +771,9 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     UUID u2 = UUID.nameUUIDFromBytes("2".getBytes());
 
     semanticRepository.setVersionedKnowledgeAsset(u1, "1", new KnowledgeAsset()
-            .withCarriers(new ComputableKnowledgeArtifact().
-                    withRepresentation(new Representation().withLanguage(
+            .withCarriers(new ComputableKnowledgeArtifact()
+                .withArtifactId(DatatypeHelper.toURIIdentifier(SurrogateBuilder.randomArtifactId()))
+                .withRepresentation(new Representation().withLanguage(
                             HL7_ELM))));
     semanticRepository.addKnowledgeAssetCarrier(u1, "1", "HI1!".getBytes());
 
@@ -779,7 +782,8 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     semanticRepository.setVersionedKnowledgeAsset(u2, "1", new KnowledgeAsset()
             .withRelated(new Dependency().withRel(Depends_On).withTgt(asset1))
             .withCarriers(new ComputableKnowledgeArtifact()
-                    .withRepresentation(new Representation().withLanguage(
+                .withArtifactId(DatatypeHelper.toURIIdentifier(SurrogateBuilder.randomArtifactId()))
+                .withRepresentation(new Representation().withLanguage(
                             HL7_ELM))));
     semanticRepository.addKnowledgeAssetCarrier(u2, "1", "HI2!".getBytes());
 

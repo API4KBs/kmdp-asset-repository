@@ -16,26 +16,27 @@
 package edu.mayo.kmdp.repository.asset.bundle;
 
 
+import static edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype.DependencyTypeSeries.Depends_On;
+import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HL7_ELM;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import edu.mayo.kmdp.id.helper.DatatypeHelper;
 import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
 import edu.mayo.kmdp.metadata.surrogate.Representation;
 import edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset;
+import edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder;
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
 import edu.mayo.kmdp.repository.asset.v4.KnowledgeAssetCatalogApi;
 import edu.mayo.kmdp.repository.asset.v4.KnowledgeAssetRepositoryApi;
 import edu.mayo.kmdp.repository.asset.v4.KnowledgeAssetRetrievalApi;
 import edu.mayo.kmdp.repository.asset.v4.client.ApiClientFactory;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-
-import static edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype.DependencyTypeSeries.Depends_On;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HL7_ELM;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 
 class BundlerIntegrationTest extends SemanticRepoAPITestBase {
 
@@ -58,13 +59,13 @@ class BundlerIntegrationTest extends SemanticRepoAPITestBase {
     UUID u1 = UUID.nameUUIDFromBytes("1".getBytes());
 
     catalog.setVersionedKnowledgeAsset(u1, "2", new KnowledgeAsset().
-        withCarriers(new ComputableKnowledgeArtifact().
-            withRepresentation(new Representation().withLanguage(
-                HL7_ELM))));
+        withCarriers(new ComputableKnowledgeArtifact()
+            .withArtifactId(DatatypeHelper.toURIIdentifier(SurrogateBuilder.randomArtifactId()))
+            .withRepresentation(new Representation().withLanguage(HL7_ELM))));
     repo.addKnowledgeAssetCarrier(u1, "2", "HI!".getBytes());
 
-    List<KnowledgeCarrier> carriers = lib.getKnowledgeArtifactBundle(u1, "2",
-        Depends_On.getTag(), -1, null).getOptionalValue()
+    List<KnowledgeCarrier> carriers =
+        lib.getKnowledgeArtifactBundle(u1, "2", Depends_On.getTag(), -1, null)
         .orElseGet(Collections::emptyList);
 
     assertEquals(1, carriers.size());

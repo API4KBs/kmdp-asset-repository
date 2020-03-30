@@ -15,8 +15,6 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
-import static edu.mayo.kmdp.util.Util.toUUID;
-
 import edu.mayo.kmdp.id.helper.DatatypeHelper;
 import edu.mayo.kmdp.language.LanguageDeSerializer;
 import edu.mayo.kmdp.language.LanguageDetector;
@@ -30,7 +28,12 @@ import edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex;
 import edu.mayo.kmdp.repository.asset.v4.server.KnowledgeAssetCatalogApiInternal;
 import edu.mayo.kmdp.repository.asset.v4.server.KnowledgeAssetRepositoryApiInternal;
 import edu.mayo.kmdp.repository.asset.v4.server.KnowledgeAssetRetrievalApiInternal;
+import edu.mayo.kmdp.tranx.v4.server.DeserializeApiInternal;
+import edu.mayo.kmdp.tranx.v4.server.DetectApiInternal;
+import edu.mayo.kmdp.tranx.v4.server.TransxionApiInternal;
+import edu.mayo.kmdp.tranx.v4.server.ValidateApiInternal;
 import java.util.Collections;
+import java.util.List;
 import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
@@ -40,13 +43,30 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
 
   static KnowledgeAssetRepositoryService selfContainedRepository() {
     return new SemanticKnowledgeAssetRepository(
-            KnowledgeArtifactRepositoryService.inMemoryArtifactRepository(),
-            new LanguageDeSerializer(Collections.singletonList(new SurrogateParser())),
-            new LanguageDetector(Collections.emptyList()),
-            new LanguageValidator(Collections.emptyList()),
-            new TransrepresentationExecutor(Collections.emptyList()),
-            new SparqlIndex(JenaSparqlDao.inMemoryDao()),
-            new KnowledgeAssetRepositoryServerConfig()
+        KnowledgeArtifactRepositoryService.inMemoryArtifactRepository(),
+        new LanguageDeSerializer(Collections.singletonList(new SurrogateParser())),
+        new LanguageDetector(Collections.emptyList()),
+        new LanguageValidator(Collections.emptyList()),
+        new TransrepresentationExecutor(Collections.emptyList()),
+        new SparqlIndex(JenaSparqlDao.inMemoryDao()),
+        new KnowledgeAssetRepositoryServerConfig()
+    );
+  }
+
+  static KnowledgeAssetRepositoryService selfContainedRepository(
+      List<DeserializeApiInternal> parsers,
+      List<DetectApiInternal> detectors,
+      List<ValidateApiInternal> validators,
+      List<TransxionApiInternal> translators
+  ) {
+    return new SemanticKnowledgeAssetRepository(
+        KnowledgeArtifactRepositoryService.inMemoryArtifactRepository(),
+        new LanguageDeSerializer(parsers),
+        new LanguageDetector(detectors),
+        new LanguageValidator(validators),
+        new TransrepresentationExecutor(translators),
+        new SparqlIndex(JenaSparqlDao.inMemoryDao()),
+        new KnowledgeAssetRepositoryServerConfig()
     );
   }
 
@@ -57,7 +77,7 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
     ResourceIdentifier surrogateId = DatatypeHelper.toSemanticIdentifier(surrogate.getAssetId());
 
     this.setVersionedKnowledgeAsset(
-        toUUID(surrogateId.getTag()),
+        surrogateId.getUuid(),
         surrogateId.getVersionTag(),
         surrogate);
 
@@ -69,9 +89,9 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
         surrogateId = artifact.getAssetId();
       }
       this.setKnowledgeAssetCarrierVersion(
-          toUUID(surrogateId.getTag()),
+          surrogateId.getUuid(),
           surrogateId.getVersionTag(),
-          toUUID(artifactId.getTag()),
+          artifactId.getUuid(),
           artifactId.getVersionTag(),
           ((BinaryCarrier) artifact).getEncodedExpression());
     }

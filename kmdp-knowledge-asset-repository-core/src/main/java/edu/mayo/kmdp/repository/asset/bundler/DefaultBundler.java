@@ -68,7 +68,8 @@ public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKn
     Set<edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset> dependencies =
             this.index.getRelatedAssets(uriId).stream()
             .map(pointer -> {
-              Answer<KnowledgeAsset> foundRelation = assetRepository.getVersionedKnowledgeAsset(UUID.fromString(pointer.getTag()), pointer.getVersionTag());
+              Answer<KnowledgeAsset> foundRelation
+                  = assetRepository.getVersionedKnowledgeAsset(pointer.getUuid(), pointer.getVersionTag());
 
               // TODO: We want to be smarter about this and fail if important dependencies are missing.
               if (! foundRelation.getOptionalValue().isPresent()) {
@@ -92,15 +93,14 @@ public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKn
     URIIdentifier uriIdentifier = x.getAssetId();
 
     if (uriIdentifier != null) {
-      VersionIdentifier id = DatatypeHelper.toVersionIdentifier(uriIdentifier);
-      if (id.getTag() == null || id.getVersion() == null) {
+      ResourceIdentifier id = DatatypeHelper.toSemanticIdentifier(uriIdentifier);
+      if (id.getTag() == null || id.getVersionTag() == null) {
         // TODO can version be optional?
         return;
       }
       this.assetRepository.getCanonicalKnowledgeAssetCarrier(
-          Util.ensureUUID(id.getTag())
-              .orElseThrow(IllegalStateException::new),
-          id.getVersion())
+          id.getUuid(),
+          id.getVersionTag())
           .ifPresent(returnList::add);
     } else {
       returnList.addAll(this.getAnonymousArtifacts(x));
