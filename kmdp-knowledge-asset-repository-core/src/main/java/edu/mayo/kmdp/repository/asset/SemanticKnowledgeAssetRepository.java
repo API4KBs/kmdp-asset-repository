@@ -697,15 +697,17 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     Optional<ResourceIdentifier> surrogatePointer = Optional.ofNullable(
         this.index.getSurrogateForAsset(SurrogateBuilder.assetId(assetId, versionTag)));
 
-    if (surrogatePointer.isPresent()) {
-      return this.resolve(surrogatePointer.get())
-          .map(sr -> AbstractCarrier.of(sr)
-              .withRepresentation(rep(Knowledge_Asset_Surrogate, JSON)))
-          .flatMap(kc -> parser.lift(kc, Abstract_Knowledge_Expression).getOptionalValue())
-          .flatMap(kc -> kc.as(KnowledgeAsset.class));
-    } else {
-      return Optional.empty();
-    }
+    return surrogatePointer.flatMap(ptr ->
+        knowledgeArtifactApi.getKnowledgeArtifactVersion(
+            repositoryId,
+            ptr.getUuid(),
+            ptr.getVersionTag(),
+            false)
+            .map(sr -> AbstractCarrier.of(sr)
+                .withRepresentation(rep(Knowledge_Asset_Surrogate, JSON)))
+            .flatMap(kc -> parser.lift(kc, Abstract_Knowledge_Expression))
+            .flatOpt(kc -> kc.as(KnowledgeAsset.class))
+            .getOptionalValue());
   }
 
   private Optional<Representation> getRepresentation(
@@ -811,24 +813,20 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   protected Optional<byte[]> resolve(ResourceIdentifier pointer) {
-    if (pointer == null) {
-      return Optional.empty();
-    } else {
-      URI location = this.index.getLocation(pointer);
+    URI location = this.index.getLocation(pointer);
 
-      Matcher matcher = Pattern.compile("^.*/(?:artifacts|assets)/(.*)/versions/(.*)$")
-          .matcher(location.toString());
-      if (matcher.matches() && matcher.groupCount() == 2) {
-        return knowledgeArtifactApi
-            .getKnowledgeArtifactVersion(repositoryId,
-                ensureUUID(matcher.group(1))
-                    .orElseThrow(IllegalStateException::new),
-                matcher.group(2),
-                false)
-            .getOptionalValue();
-      } else {
-        return FileUtil.readBytes(location);
-      }
+    Matcher matcher = Pattern.compile("^.*/(?:artifacts|assets)/(.*)/versions/(.*)$")
+        .matcher(location.toString());
+    if (matcher.matches() && matcher.groupCount() == 2) {
+      return knowledgeArtifactApi
+          .getKnowledgeArtifactVersion(repositoryId,
+              ensureUUID(matcher.group(1))
+                  .orElseThrow(IllegalStateException::new),
+              matcher.group(2),
+              false)
+          .getOptionalValue();
+    } else {
+      return FileUtil.readBytes(location);
     }
   }
 
