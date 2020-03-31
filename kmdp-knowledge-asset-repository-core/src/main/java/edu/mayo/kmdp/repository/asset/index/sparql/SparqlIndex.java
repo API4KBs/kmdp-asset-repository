@@ -44,11 +44,14 @@ public class SparqlIndex implements Index {
   private static final Set<DependencyTypeSeries> TRAVERSE_DEPS =
       Util.newEnumSet(Arrays.asList(Imports, Includes, Depends_On), DependencyTypeSeries.class);
 
-  // compute the SPARQL query string for all related predicates
-  private static final String TRAVERSE_DEPS_SPARQL =
-      "(" + TRAVERSE_DEPS.stream().map(c -> "<" + c.getRef().toString() + ">")
-          .collect(Collectors.joining("|")) + ")";
+  private static final String TRAVERSE_DEPS_SPARQL;
 
+  // compute the SPARQL query string for all related predicates
+  static {
+    TRAVERSE_DEPS_SPARQL =
+        "(" + TRAVERSE_DEPS.stream().map(c -> "<" + c.getRef().toString() + ">")
+            .collect(Collectors.joining("|")) + ")";
+  }
 
   //TODO: Change this to the official URIs as published in the ontology.
   // All below are likely wrong until changed.
