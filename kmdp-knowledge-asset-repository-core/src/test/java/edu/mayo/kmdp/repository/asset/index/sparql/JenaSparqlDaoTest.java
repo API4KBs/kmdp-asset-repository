@@ -1,14 +1,13 @@
 package edu.mayo.kmdp.repository.asset.index.sparql;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import com.google.common.collect.Lists;
+import java.net.URI;
+import java.util.List;
 import org.apache.jena.rdf.model.Resource;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.Test;
-
-import java.net.URI;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class JenaSparqlDaoTest {
 
@@ -18,9 +17,7 @@ class JenaSparqlDaoTest {
     ds.setUser("sa");
     ds.setPassword("sa");
 
-    JenaSparqlDao dao = new JenaSparqlDao(ds, true);
-
-    return dao;
+    return new JenaSparqlDao(ds, true);
   }
 
   @Test
@@ -83,6 +80,18 @@ class JenaSparqlDaoTest {
     dao.store(URI.create("http://test1"), URI.create("http://test2"), URI.create("http://test3"));
 
     List<Resource> results = dao.readSubjectByPredicate(URI.create("http://test2"));
+
+    assertEquals(1, results.size());
+    assertEquals("http://test1", results.get(0).getURI());
+  }
+
+  @Test
+  void readSubjectByObject() {
+    JenaSparqlDao dao = this.getDao();
+
+    dao.store(URI.create("http://test1"), URI.create("http://test2"), URI.create("http://test3"));
+
+    List<Resource> results = dao.readSubjectByObject(URI.create("http://test3"));
 
     assertEquals(1, results.size());
     assertEquals("http://test1", results.get(0).getURI());

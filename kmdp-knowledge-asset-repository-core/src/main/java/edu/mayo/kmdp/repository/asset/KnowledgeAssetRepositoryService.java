@@ -16,6 +16,7 @@
 package edu.mayo.kmdp.repository.asset;
 
 import edu.mayo.kmdp.id.helper.DatatypeHelper;
+import edu.mayo.kmdp.kbase.query.sparql.v1_1.JenaQuery;
 import edu.mayo.kmdp.language.LanguageDeSerializer;
 import edu.mayo.kmdp.language.LanguageDetector;
 import edu.mayo.kmdp.language.LanguageValidator;
@@ -42,13 +43,15 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
     KnowledgeAssetRepositoryApiInternal, KnowledgeAssetRetrievalApiInternal {
 
   static KnowledgeAssetRepositoryService selfContainedRepository() {
+    JenaSparqlDao dao = JenaSparqlDao.inMemoryDao();
     return new SemanticKnowledgeAssetRepository(
         KnowledgeArtifactRepositoryService.inMemoryArtifactRepository(),
         new LanguageDeSerializer(Collections.singletonList(new SurrogateParser())),
         new LanguageDetector(Collections.emptyList()),
         new LanguageValidator(Collections.emptyList()),
         new TransrepresentationExecutor(Collections.emptyList()),
-        new SparqlIndex(JenaSparqlDao.inMemoryDao()),
+        new JenaQuery(dao),
+        new SparqlIndex(dao),
         new KnowledgeAssetRepositoryServerConfig()
     );
   }
@@ -59,13 +62,15 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
       List<ValidateApiInternal> validators,
       List<TransxionApiInternal> translators
   ) {
+    JenaSparqlDao dao = JenaSparqlDao.inMemoryDao();
     return new SemanticKnowledgeAssetRepository(
         KnowledgeArtifactRepositoryService.inMemoryArtifactRepository(),
         new LanguageDeSerializer(parsers),
         new LanguageDetector(detectors),
         new LanguageValidator(validators),
         new TransrepresentationExecutor(translators),
-        new SparqlIndex(JenaSparqlDao.inMemoryDao()),
+        new JenaQuery(dao),
+        new SparqlIndex(dao),
         new KnowledgeAssetRepositoryServerConfig()
     );
   }

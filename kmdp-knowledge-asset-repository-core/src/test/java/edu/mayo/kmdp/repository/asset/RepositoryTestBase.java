@@ -1,6 +1,7 @@
 package edu.mayo.kmdp.repository.asset;
 
 import com.google.common.util.concurrent.MoreExecutors;
+import edu.mayo.kmdp.kbase.query.sparql.v1_1.JenaQuery;
 import edu.mayo.kmdp.language.LanguageDeSerializer;
 import edu.mayo.kmdp.language.LanguageDetector;
 import edu.mayo.kmdp.language.LanguageValidator;
@@ -71,6 +72,7 @@ abstract class RepositoryTestBase {
         new LanguageDetector(Collections.emptyList()),
         new LanguageValidator(Collections.emptyList()),
         new TransrepresentationExecutor(Collections.emptyList()),
+        new JenaQuery(jenaSparqlDao),
         index,
         new KnowledgeAssetRepositoryServerConfig());
   }
@@ -78,15 +80,13 @@ abstract class RepositoryTestBase {
   public DataSource getDataSource() {
     String dbName = UUID.randomUUID().toString();
 
-    DataSourceBuilder dataSourceBuilder = DataSourceBuilder.create();
+    DataSourceBuilder<?> dataSourceBuilder = DataSourceBuilder.create();
     dataSourceBuilder.driverClassName("org.h2.Driver");
     dataSourceBuilder.url("jdbc:h2:mem:" + dbName);
     dataSourceBuilder.username("SA");
     dataSourceBuilder.password("");
 
-    DataSource ds = dataSourceBuilder.build();
-
-    return ds;
+    return dataSourceBuilder.build();
   }
 
   @AfterEach

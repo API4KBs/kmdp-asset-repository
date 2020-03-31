@@ -18,8 +18,7 @@
   <packaging>pom</packaging>
 
   <properties>
-    <kmdp.artifact.repo.version>3.6.1-SNAPSHOT</kmdp.artifact.repo.version>
-    <kmdp.language.version>3.6.1-SNAPSHOT</kmdp.language.version>
+    <kmdp.servers.version>3.6.1-SNAPSHOT</kmdp.servers.version>
   </properties>
 
   <modules>

@@ -55,7 +55,7 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
 
     List<Pointer> pointers = ckac
         .listKnowledgeAssets(Decision_Model.getTag(),
-            null, -1, -1)
+            null, null, -1, -1)
         .orElse(Collections.emptyList());
 
     assertEquals(1, pointers.size());
@@ -68,7 +68,7 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
         new KnowledgeAsset().withFormalType(Care_Process_Model));
 
     List<Pointer> pointers = ckac.listKnowledgeAssets(Predictive_Model.getTag(),
-        null, -1, -1)
+        null, null, -1, -1)
         .orElse(Collections.emptyList());
 
     assertEquals(0, pointers.size());
@@ -76,7 +76,7 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
 
   @Test
   void testListKnowledgeAssetsNoType() {
-    Answer<List<Pointer>> zero = ckac.listKnowledgeAssets(null, null, -1, -1);
+    Answer<List<Pointer>> zero = ckac.listKnowledgeAssets(null, null, null, -1, -1);
     assertTrue(zero.isSuccess());
 
     ckac.setVersionedKnowledgeAsset(strToUUID("98"), "1",
@@ -85,7 +85,7 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
         new KnowledgeAsset().withFormalType(Clinical_Rule));
 
     Answer<List<Pointer>> ans = ckac.listKnowledgeAssets(null,
-        null, -1, -1);
+        null, null, -1, -1);
     List<Pointer> pointers = ans
         .orElse(Collections.emptyList());
 
@@ -104,7 +104,7 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
         new KnowledgeAsset());
 
     List<Pointer> pointers = ckac.listKnowledgeAssets(null,
-        null, -1, -1)
+        null, null, -1, -1)
         .orElse(Collections.emptyList())
         .stream()
         .filter((p) -> p.getHref().toString()

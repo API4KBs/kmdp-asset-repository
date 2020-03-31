@@ -15,23 +15,27 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
+import edu.mayo.kmdp.inference.v4.server.QueryApiInternal._askQuery;
+import edu.mayo.kmdp.kbase.query.sparql.v1_1.JenaQuery;
 import edu.mayo.kmdp.language.TransrepresentationExecutor;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
+import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase.IntegrationTestConfig;
 import org.junit.jupiter.api.AfterEach;
+import org.omg.spec.api4kp._1_0.services.KPComponent;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.test.context.ContextConfiguration;
 
 @SpringBootTest(
     webEnvironment = WebEnvironment.RANDOM_PORT,
     classes = edu.mayo.kmdp.repository.asset.v4.server.Swagger2SpringBoot.class)
-@Configuration
-@ComponentScan(basePackageClasses = {
-        SemanticKnowledgeAssetRepository.class,
-        TransrepresentationExecutor.class})
+@ContextConfiguration(classes = IntegrationTestConfig.class)
 public abstract class SemanticRepoAPITestBase {
 
   @LocalServerPort
@@ -48,4 +52,13 @@ public abstract class SemanticRepoAPITestBase {
             .with(KnowledgeAssetRepositoryOptions.SERVER_HOST, "http://localhost:" + this.port);
   }
 
+  @Configuration
+  @ComponentScan(basePackageClasses = {
+      SemanticKnowledgeAssetRepository.class,
+      JenaQuery.class,
+      TransrepresentationExecutor.class})
+  @EnableAutoConfiguration
+  public static class IntegrationTestConfig {
+
+  }
 }

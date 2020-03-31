@@ -30,43 +30,23 @@
 
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
-      <artifactId>kmdp-artifact-repository-service-client</artifactId>
-      <version>${kmdp.impl.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>edu.mayo.kmdp</groupId>
-      <artifactId>kmdp-artifact-transrepresentation-service-client</artifactId>
-      <version>${kmdp.impl.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>edu.mayo.kmdp</groupId>
-      <artifactId>kmdp-artifact-transrepresentation-service-interfaces</artifactId>
-      <version>${kmdp.impl.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-knowledge-artifact-repository-core</artifactId>
-      <version>${kmdp.artifact.repo.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>edu.mayo.kmdp</groupId>
-          <artifactId>kmdp-artifact-repository-service-server</artifactId>
-        </exclusion>
-      </exclusions>
+      <version>${kmdp.servers.version}</version>
     </dependency>
-
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-knowledge-transrepresentation-core</artifactId>
-      <version>${kmdp.language.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>edu.mayo.kmdp</groupId>
-          <artifactId>kmdp-language-service-server</artifactId>
-        </exclusion>
-      </exclusions>
+      <version>${kmdp.servers.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>edu.mayo.kmdp</groupId>
+      <artifactId>kmdp-knowledgebase-construction-service-core</artifactId>
+      <version>${kmdp.servers.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>edu.mayo.kmdp</groupId>
+      <artifactId>kmdp-inference-broker-core</artifactId>
+      <version>${kmdp.servers.version}</version>
     </dependency>
 
     <dependency>

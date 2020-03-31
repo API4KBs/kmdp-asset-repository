@@ -36,9 +36,9 @@ class SparqlIndexTest {
     URI uri3 = URI.create("https://clinicalknowledgemanagement.mayo.edu/assets/3/versions/1");
     URI uri4 = URI.create("https://clinicalknowledgemanagement.mayo.edu/assets/4/versions/1");
 
-    dao.store(uri1, DependencyTypeSeries.Depends_On.getConceptId(), uri2);
-    dao.store(uri2, DependencyTypeSeries.Depends_On.getConceptId(), uri3);
-    dao.store(uri3, DependencyTypeSeries.Depends_On.getConceptId(), uri4);
+    dao.store(uri1, DependencyTypeSeries.Depends_On.getRef(), uri2);
+    dao.store(uri2, DependencyTypeSeries.Depends_On.getRef(), uri3);
+    dao.store(uri3, DependencyTypeSeries.Depends_On.getRef(), uri4);
 
     ResourceIdentifier pointer = SemanticIdentifier.newVersionId(uri1);
 
@@ -56,13 +56,13 @@ class SparqlIndexTest {
     URI uri3 = URI.create("https://clinicalknowledgemanagement.mayo.edu/assets/3/versions/1");
     URI uri4 = URI.create("https://clinicalknowledgemanagement.mayo.edu/assets/4/versions/1");
 
-    dao.store(uri1, DependencyTypeSeries.Depends_On.getConceptId(), uri2);
-    dao.store(uri2, DependencyTypeSeries.Depends_On.getConceptId(), uri3);
-    dao.store(uri3, DependencyTypeSeries.Depends_On.getConceptId(), uri4);
+    dao.store(uri1, DependencyTypeSeries.Depends_On.getRef(), uri2);
+    dao.store(uri2, DependencyTypeSeries.Depends_On.getRef(), uri3);
+    dao.store(uri3, DependencyTypeSeries.Depends_On.getRef(), uri4);
 
     ResourceIdentifier pointer = SemanticIdentifier.newVersionId(uri1);
 
-    Set<ResourceIdentifier> related = index.getRelatedAssets(pointer, DependencyTypeSeries.Depends_On.getConceptId());
+    Set<ResourceIdentifier> related = index.getRelatedAssets(pointer, DependencyTypeSeries.Depends_On.getRef());
 
     assertEquals(4, related.size());
   }
@@ -76,9 +76,9 @@ class SparqlIndexTest {
     URI uri3 = URI.create("https://clinicalknowledgemanagement.mayo.edu/assets/3/versions/1");
     URI uri4 = URI.create("https://clinicalknowledgemanagement.mayo.edu/assets/4/versions/1");
 
-    dao.store(uri1, DependencyTypeSeries.Depends_On.getConceptId(), uri2);
-    dao.store(uri2, DependencyTypeSeries.Imports.getConceptId(), uri3);
-    dao.store(uri3, DependencyTypeSeries.Depends_On.getConceptId(), uri4);
+    dao.store(uri1, DependencyTypeSeries.Depends_On.getRef(), uri2);
+    dao.store(uri2, DependencyTypeSeries.Imports.getRef(), uri3);
+    dao.store(uri3, DependencyTypeSeries.Depends_On.getRef(), uri4);
 
     ResourceIdentifier pointer = SemanticIdentifier.newVersionId(uri1);
 

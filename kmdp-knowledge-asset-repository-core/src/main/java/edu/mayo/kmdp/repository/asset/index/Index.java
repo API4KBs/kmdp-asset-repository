@@ -92,7 +92,7 @@ public interface Index {
    * @param pointer
    * @return
    */
-  String getLocation(ResourceIdentifier pointer);
+  URI getLocation(ResourceIdentifier pointer);
 
   /**
    * Retrieve a list of Assets of a given type.
@@ -103,12 +103,29 @@ public interface Index {
   Set<ResourceIdentifier> getAssetIdsByType(URI assetType);
 
   /**
-   * Retrieve a list of Assets with a given annotation.
+   * Retrieve a list of Assets with a given annotation (value).
    *
-   * @param annotation
-   * @return
+   * @param annotationValue the URI of a concept using to annotate the Assets
+   * @return the IDs of the Assets such that (?s * annotationValue)
+   */
+  Set<ResourceIdentifier> getAssetIdsByAnnotationValue(URI annotationValue);
+
+  /**
+   * Retrieve a list of Assets with a given annotation (property).
+   *
+   * @param annotation the URI of a relationship used to annotate the Assets
+   * @return the IDs of the Assets such that (?s annotation *)
    */
   Set<ResourceIdentifier> getAssetIdsByAnnotation(URI annotation);
+
+  /**
+   * Retrieve a list of Assets with a given annotation (property + value)
+   *
+   * @param annotation the URI of a relationship used to annotate the Assets
+   * @param value the URI of a concept using to annotate the Assets
+   * @return the IDs of the Assets such that (?s annotation annotationValue)
+   */
+  Set<ResourceIdentifier> getAssetIdsByAnnotation(URI annotation, URI value);
 
   /**
    * Retrieve a list of all Assets.
