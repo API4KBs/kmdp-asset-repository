@@ -16,11 +16,10 @@
 package edu.mayo.kmdp.repository.asset.index;
 
 
-import edu.mayo.kmdp.metadata.annotations.Annotation;
-import edu.mayo.kmdp.metadata.surrogate.Association;
+import edu.mayo.kmdp.metadata.v2.surrogate.Link;
+import edu.mayo.kmdp.metadata.v2.surrogate.annotations.Annotation;
 import edu.mayo.ontology.taxonomies.kao.knowledgeassetrole.KnowledgeAssetRole;
 import edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetType;
-
 import java.net.URI;
 import java.util.List;
 import java.util.Set;
@@ -41,7 +40,7 @@ public interface Index {
    * @param related
    */
   void registerAsset(ResourceIdentifier asset, ResourceIdentifier surrogate, List<KnowledgeAssetType> types,
-                     List<KnowledgeAssetRole> roles, List<Annotation> annotations, List<Association> related);
+                     List<KnowledgeAssetRole> roles, List<Annotation> annotations, List<Link> related);
 
   /**
    * Link an Artifact to an Asset.

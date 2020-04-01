@@ -13,14 +13,13 @@
  */
 package edu.mayo.kmdp.repository.asset.catalog;
 
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Decision_Model;
 import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Equation;
 import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.TXT;
 import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.SPARQL_1_1;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 
-import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
+import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder;
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
 import edu.mayo.kmdp.repository.asset.v4.KnowledgeAssetCatalogApi;
@@ -31,11 +30,11 @@ import edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSer
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import org.apache.jena.vocabulary.RDF;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.AbstractCarrier;
 import org.omg.spec.api4kp._1_0.datatypes.Bindings;
+import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
 import org.omg.spec.api4kp._1_0.id.SemanticIdentifier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 
@@ -51,8 +50,11 @@ class SemanticRepositoryRemoteQueryTest extends SemanticRepoAPITestBase {
 
     ckac = KnowledgeAssetCatalogApi.newInstance(webClientFactory);
 
-    ckac.setVersionedKnowledgeAsset(UUID.nameUUIDFromBytes("aaa000".getBytes()), "1",
-        new KnowledgeAsset().withFormalType(Equation));
+    ResourceIdentifier assetId = SemanticIdentifier.newId(UUID.nameUUIDFromBytes("aaa000".getBytes()), "1");
+    ckac.setVersionedKnowledgeAsset(assetId.getUuid(),assetId.getVersionTag(),
+        new KnowledgeAsset()
+            .withAssetId(assetId)
+            .withFormalType(Equation));
   }
 
   @Test

@@ -7,6 +7,7 @@ import edu.mayo.kmdp.language.LanguageDetector;
 import edu.mayo.kmdp.language.LanguageValidator;
 import edu.mayo.kmdp.language.TransrepresentationExecutor;
 import edu.mayo.kmdp.language.parsers.surrogate.v1.SurrogateParser;
+import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig;
 import edu.mayo.kmdp.repository.artifact.jcr.JcrKnowledgeArtifactRepository;
 import edu.mayo.kmdp.repository.asset.index.Index;
@@ -68,7 +69,7 @@ abstract class RepositoryTestBase {
     semanticRepository = new SemanticKnowledgeAssetRepository(
         repos,
         new LanguageDeSerializer(
-            Collections.singletonList(new SurrogateParser())),
+            Collections.singletonList(new Surrogate2Parser())),
         new LanguageDetector(Collections.emptyList()),
         new LanguageValidator(Collections.emptyList()),
         new TransrepresentationExecutor(Collections.emptyList()),

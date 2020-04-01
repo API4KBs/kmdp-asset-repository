@@ -18,14 +18,12 @@ package edu.mayo.kmdp.repository.asset.bundler;
 import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 
 import com.google.common.collect.Lists;
-import edu.mayo.kmdp.id.helper.DatatypeHelper;
 import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
-import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
+import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.repository.asset.SemanticKnowledgeAssetRepository;
 import edu.mayo.kmdp.repository.asset.index.Index;
 import edu.mayo.kmdp.repository.asset.v4.server.KnowledgeAssetRetrievalApiInternal;
 import edu.mayo.kmdp.util.FileUtil;
-import edu.mayo.kmdp.util.Util;
 import edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguage;
 import java.net.URI;
 import java.util.List;
@@ -34,8 +32,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.omg.spec.api4kp._1_0.Answer;
 import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
-import org.omg.spec.api4kp._1_0.identifiers.URIIdentifier;
-import org.omg.spec.api4kp._1_0.identifiers.VersionIdentifier;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 import org.slf4j.Logger;
@@ -62,17 +58,16 @@ public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKn
     KnowledgeAsset asset = this.assetRepository.getVersionedKnowledgeAsset(assetId, versionTag)
         .orElseThrow(IllegalStateException::new);
 
-    // TODO: Temporary until KnowledgeAsset updated to v2 surrogate
-    ResourceIdentifier uriId = DatatypeHelper.toSemanticIdentifier(asset.getAssetId());
+    ResourceIdentifier uriId = asset.getAssetId();
 
-    Set<edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset> dependencies =
+    Set<KnowledgeAsset> dependencies =
             this.index.getRelatedAssets(uriId).stream()
             .map(pointer -> {
               Answer<KnowledgeAsset> foundRelation
                   = assetRepository.getVersionedKnowledgeAsset(pointer.getUuid(), pointer.getVersionTag());
 
               // TODO: We want to be smarter about this and fail if important dependencies are missing.
-              if (! foundRelation.getOptionalValue().isPresent()) {
+              if (! foundRelation.isSuccess()) {
                 logger.warn("Related asset not found, FROM: {}, TO: {}", asset.getAssetId().getVersionId(), pointer.getVersionId());
               }
 
@@ -90,10 +85,9 @@ public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKn
   }
 
   private void retrieveCarriers(KnowledgeAsset x, List<KnowledgeCarrier> returnList) {
-    URIIdentifier uriIdentifier = x.getAssetId();
 
-    if (uriIdentifier != null) {
-      ResourceIdentifier id = DatatypeHelper.toSemanticIdentifier(uriIdentifier);
+    if (x.getAssetId() != null) {
+      ResourceIdentifier id = x.getAssetId();
       if (id.getTag() == null || id.getVersionTag() == null) {
         // TODO can version be optional?
         return;
@@ -125,7 +119,7 @@ public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKn
                 newCarrier.setRepresentation(rep(language));
               }
               newCarrier
-                  .withAssetId(DatatypeHelper.toSemanticIdentifier(assetSurrogate.getAssetId()))
+                  .withAssetId(assetSurrogate.getAssetId())
                   .withEncodedExpression(FileUtil.readBytes(masterLocation).orElse(new byte[0]));
               carriers.add(newCarrier);
             }

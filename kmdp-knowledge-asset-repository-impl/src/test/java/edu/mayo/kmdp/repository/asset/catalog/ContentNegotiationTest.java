@@ -15,7 +15,7 @@
  */
 package edu.mayo.kmdp.repository.asset.catalog;
 
-import static edu.mayo.kmdp.SurrogateBuilder.assetId;
+import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder.assetId;
 import static edu.mayo.ontology.taxonomies.iso639_2_languagecodes.LanguageSeries.English;
 import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Rules_Policies_And_Guidelines;
 import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Terminology_Ontology_And_Assertional_KBs;
@@ -31,11 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 
-import edu.mayo.kmdp.id.helper.DatatypeHelper;
-import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
-import edu.mayo.kmdp.metadata.surrogate.InlinedRepresentation;
-import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
-import edu.mayo.kmdp.metadata.surrogate.Representation;
+import edu.mayo.kmdp.metadata.v2.surrogate.ComputableKnowledgeArtifact;
+import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder;
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
 import edu.mayo.kmdp.repository.asset.v4.KnowledgeAssetCatalogApi;
@@ -46,7 +43,6 @@ import edu.mayo.kmdp.util.Util;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
 import java.net.URI;
 import java.util.Collections;
-import java.util.Optional;
 import java.util.UUID;
 import org.hl7.cdsdt.r2.ST;
 import org.hl7.elm.r1.And;
@@ -121,7 +117,7 @@ public class ContentNegotiationTest extends SemanticRepoAPITestBase {
 
     KnowledgeAsset asset = buildAssetWithHTMLCarrier(assetId,versionTag);
     assertFalse(asset.getCarriers().isEmpty());
-    URI redirect = asset.getCarriers().get(0).getLocator();
+    URI redirect = ((ComputableKnowledgeArtifact) asset.getCarriers().get(0)).getLocator();
     assertNotNull(redirect);
 
     ckac.setVersionedKnowledgeAsset(assetId,versionTag,asset);
@@ -137,35 +133,31 @@ public class ContentNegotiationTest extends SemanticRepoAPITestBase {
   }
 
   private KnowledgeAsset buildComputableAsset(UUID assetId, String versionTag, String inlined) {
-    return new edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset()
+    return new KnowledgeAsset()
         .withAssetId(assetId(assetId, versionTag))
         .withFormalCategory(Rules_Policies_And_Guidelines)
         .withFormalType(Clinical_Rule)
         .withName("Mock Rule")
         .withCarriers(new ComputableKnowledgeArtifact()
-            .withArtifactId(DatatypeHelper.toURIIdentifier(SurrogateBuilder.randomArtifactId()))
+            .withArtifactId(SurrogateBuilder.randomArtifactId())
             .withLocalization(English)
             .withName("Mock Rule - KNAR version")
-            .withRepresentation(new Representation()
-                .withLanguage(KNART_1_3)
-                .withFormat(XML_1_1))
-            .withInlined(new InlinedRepresentation().withExpr(inlined))
+            .withRepresentation(rep(KNART_1_3,XML_1_1))
+            .withInlinedExpression(inlined)
         );
   }
 
   private KnowledgeAsset buildAssetWithHTMLCarrier(UUID assetId, String versionTag) {
-    return new edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset()
+    return new KnowledgeAsset()
         .withAssetId(assetId(assetId, versionTag))
         .withFormalCategory(Terminology_Ontology_And_Assertional_KBs)
         .withFormalType(Factual_Knowledge)
         .withName("Stuff")
         .withCarriers(new ComputableKnowledgeArtifact()
-            .withArtifactId(DatatypeHelper.toURIIdentifier(SurrogateBuilder.randomArtifactId()))
+            .withArtifactId(SurrogateBuilder.randomArtifactId())
             .withLocalization(English)
             .withName("Some Text")
-            .withRepresentation(new Representation()
-                .withLanguage(HTML)
-                .withFormat(TXT))
+            .withRepresentation(rep(HTML,TXT))
             .withLocator(URI.create("http://localhost:" + port))
         );
   }

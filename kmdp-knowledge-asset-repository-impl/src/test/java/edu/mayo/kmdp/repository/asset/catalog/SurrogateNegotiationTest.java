@@ -13,46 +13,50 @@
  */
 package edu.mayo.kmdp.repository.asset.catalog;
 
-import edu.mayo.kmdp.id.helper.DatatypeHelper;
-import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
-import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
-import edu.mayo.kmdp.metadata.surrogate.Representation;
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Rules_Policies_And_Guidelines;
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Terminology_Ontology_And_Assertional_KBs;
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Clinical_Rule;
+import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Factual_Knowledge;
+import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.JSON;
+import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.TXT;
+import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.XML_1_1;
+import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
+import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.KNART_1_3;
+import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate_2_0;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
+import static org.omg.spec.api4kp._1_0.id.IdentifierConstants.VERSION_LATEST;
+
+import edu.mayo.kmdp.metadata.v2.surrogate.ComputableKnowledgeArtifact;
+import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
+import edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder;
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
 import edu.mayo.kmdp.repository.asset.v4.KnowledgeAssetCatalogApi;
 import edu.mayo.kmdp.repository.asset.v4.client.ApiClientFactory;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
+import java.io.IOException;
+import java.net.URI;
+import java.util.UUID;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.Answer;
+import org.omg.spec.api4kp._1_0.id.IdentifierConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
-
-import java.io.IOException;
-import java.net.URI;
-import java.util.UUID;
-
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Rules_Policies_And_Guidelines;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Terminology_Ontology_And_Assertional_KBs;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Clinical_Rule;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Factual_Knowledge;
-import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.*;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
 
   private static Logger logger = LoggerFactory.getLogger(SurrogateNegotiationTest.class);
 
   private static final URI REDIRECT_URL = URI.create("https://httpstat.us/306");
-
-  private static String version = "LATEST";
 
   private KnowledgeAssetCatalogApi rpo;
 
@@ -77,6 +81,7 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
 
 
   @Test
+  @Disabled
   public void testHeaders() {
     UUID pockId = UUID.randomUUID();
     UUID rulId = UUID.randomUUID();
@@ -106,77 +111,56 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
   private void populateRepositoryWithRedirectables(UUID pockId, UUID rulId) {
     Answer<Void> ans1 = rpo.setVersionedKnowledgeAsset(
         pockId,
-        version,
-        pocSurrogate(pockId, version));
+        VERSION_LATEST,
+        pocSurrogate(pockId, VERSION_LATEST));
     assertTrue(ans1.isSuccess());
 
     Answer<Void> ans2 = rpo.setVersionedKnowledgeAsset(
         rulId,
-        version,
-        rulSurrogate(rulId, version));
+        VERSION_LATEST,
+        rulSurrogate(rulId, VERSION_LATEST));
     assertTrue(ans2.isSuccess());
   }
 
   private KnowledgeAsset rulSurrogate(UUID assetId, String version) {
     // Rules' catalog entry in KCMS
     return new KnowledgeAsset()
-        .withAssetId(DatatypeHelper.vuri(
-            "urn:uuid:" + assetId,
-            "urn:uuid:/asset/" + assetId + "/versions/" + version))
+        .withAssetId(SurrogateBuilder.assetId(assetId,version))
         .withFormalCategory(Rules_Policies_And_Guidelines)
         .withFormalType(Clinical_Rule)
         .withName("Test rule")
         .withSurrogate(
             new ComputableKnowledgeArtifact()
                 .withLocator(REDIRECT_URL)
-                .withRepresentation(new Representation()
-                    .withLanguage(HTML)
-                    .withFormat(TXT)
-                ),
+                .withRepresentation(rep(HTML,TXT)),
             new ComputableKnowledgeArtifact()
-                .withRepresentation(new Representation()
-                    .withLanguage(Knowledge_Asset_Surrogate)
-                    .withFormat(JSON)
-                )
+                .withRepresentation(rep(Knowledge_Asset_Surrogate_2_0,JSON))
         )
         .withCarriers(
             new ComputableKnowledgeArtifact()
                 .withLocator(URI.create("http://www.myrepo/rule0/carrier?format=xml"))
-                .withRepresentation(new Representation()
-                    .withLanguage(KNART_1_3)
-                    .withFormat(XML_1_1)
-                ),
+                .withRepresentation(rep(KNART_1_3,XML_1_1)),
             new ComputableKnowledgeArtifact()
                 .withLocator(URI.create("http://www.myrepo/rule0/carrier"))
-                .withRepresentation(new Representation()
-                    .withLanguage(HTML)
-                )
+                .withRepresentation(rep(HTML))
         );
   }
 
   private KnowledgeAsset pocSurrogate(UUID pockId, String version) {
     return new KnowledgeAsset()
-        .withAssetId(DatatypeHelper.vuri(
-            "urn:uuid:" + pockId,
-            "urn:uuid:/asset/" + pockId + "/versions/" + version))
+        .withAssetId(SurrogateBuilder.assetId(pockId,version))
         .withFormalCategory(Terminology_Ontology_And_Assertional_KBs)
         .withFormalType(Factual_Knowledge)
         .withName("Test section of content")
         .withSurrogate(
             new ComputableKnowledgeArtifact()
                 .withLocator(REDIRECT_URL)
-                .withRepresentation(new Representation()
-                    .withLanguage(HTML)
-                    .withFormat(TXT)
-                )
+                .withRepresentation(rep(HTML,TXT))
         )
         .withCarriers(
             new ComputableKnowledgeArtifact()
                 .withLocator(URI.create("http://www.myrepo/section0/carrier"))
-                .withRepresentation(new Representation()
-                    .withLanguage(HTML)
-                    .withFormat(TXT)
-                )
+                .withRepresentation(rep(HTML,TXT))
         );
   }
 

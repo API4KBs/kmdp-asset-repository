@@ -22,18 +22,18 @@ import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.XM
 import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
 import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.KNART_1_3;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 
-import edu.mayo.kmdp.id.helper.DatatypeHelper;
-import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
-import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
-import edu.mayo.kmdp.metadata.surrogate.Representation;
+import edu.mayo.kmdp.metadata.v2.surrogate.ComputableKnowledgeArtifact;
+import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
+import edu.mayo.kmdp.registry.Registry;
 import edu.mayo.ontology.taxonomies.api4kp.responsecodes.ResponseCodeSeries;
 import java.net.URI;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.Answer;
+import org.omg.spec.api4kp._1_0.id.SemanticIdentifier;
 
 class InternalSurrogateNegotiationTest extends RepositoryTestBase {
 
@@ -87,56 +87,43 @@ class InternalSurrogateNegotiationTest extends RepositoryTestBase {
   private KnowledgeAsset rulSurrogate(UUID assetId, String version) {
     // Rules' catalog entry in KCMS
     return new KnowledgeAsset()
-        .withAssetId(DatatypeHelper.vuri(
-            "urn:uuid:" + assetId,
-            "urn:uuid:" + assetId + ":" + version))
+        .withAssetId(SemanticIdentifier.newId(Registry.BASE_UUID_URN_URI,assetId,version))
         .withFormalCategory(Rules_Policies_And_Guidelines)
         .withFormalType(Clinical_Rule)
         .withName("Test rule")
         .withSurrogate(
             new ComputableKnowledgeArtifact()
                 .withLocator(URI.create("http://www.google.com"))
-                .withRepresentation(new Representation()
-                    .withLanguage(HTML)
-                    .withFormat(TXT))
+                .withRepresentation(rep(HTML,TXT))
         )
         .withCarriers(
             new ComputableKnowledgeArtifact()
                 .withLocator(URI.create("http://www.myrepo/rule0/carrier?format=xml"))
-                .withRepresentation(new Representation()
-                    .withLanguage(KNART_1_3)
-                    .withFormat(XML_1_1)
+                .withRepresentation(rep(KNART_1_3,XML_1_1)
                 ),
             new ComputableKnowledgeArtifact()
                 .withLocator(URI.create("http://www.myrepo/rule0/carrier"))
-                .withRepresentation(new Representation()
-                    .withLanguage(HTML)
+                .withRepresentation(rep(HTML,TXT)
                 )
         );
   }
 
   private KnowledgeAsset pocSurrogate(UUID pockId, String version) {
     return new KnowledgeAsset()
-        .withAssetId(DatatypeHelper.vuri(
-            "urn:uuid:" + pockId,
-            "urn:uuid:" + pockId + ":" + version))
+        .withAssetId(SemanticIdentifier.newId(Registry.BASE_UUID_URN_URI,pockId,version))
         .withFormalCategory(Terminology_Ontology_And_Assertional_KBs)
         .withFormalType(Factual_Knowledge)
         .withName("Test section of content")
         .withSurrogate(
             new ComputableKnowledgeArtifact()
                 .withLocator(URI.create("http://www.google.com"))
-                .withRepresentation(new Representation()
-                    .withLanguage(HTML)
-                    .withFormat(TXT)
+                .withRepresentation(rep(HTML,TXT)
                 )
         )
         .withCarriers(
             new ComputableKnowledgeArtifact()
                 .withLocator(URI.create("http://www.myrepo/section0/carrier"))
-                .withRepresentation(new Representation()
-                    .withLanguage(HTML)
-                    .withFormat(TXT)
+                .withRepresentation(rep(HTML,TXT)
                 )
         );
   }

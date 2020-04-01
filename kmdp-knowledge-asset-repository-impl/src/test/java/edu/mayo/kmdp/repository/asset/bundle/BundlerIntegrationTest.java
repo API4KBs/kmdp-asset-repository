@@ -19,11 +19,10 @@ package edu.mayo.kmdp.repository.asset.bundle;
 import static edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype.DependencyTypeSeries.Depends_On;
 import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HL7_ELM;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 
-import edu.mayo.kmdp.id.helper.DatatypeHelper;
-import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
-import edu.mayo.kmdp.metadata.surrogate.Representation;
-import edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset;
+import edu.mayo.kmdp.metadata.v2.surrogate.ComputableKnowledgeArtifact;
+import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder;
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
 import edu.mayo.kmdp.repository.asset.v4.KnowledgeAssetCatalogApi;
@@ -60,8 +59,9 @@ class BundlerIntegrationTest extends SemanticRepoAPITestBase {
 
     catalog.setVersionedKnowledgeAsset(u1, "2", new KnowledgeAsset().
         withCarriers(new ComputableKnowledgeArtifact()
-            .withArtifactId(DatatypeHelper.toURIIdentifier(SurrogateBuilder.randomArtifactId()))
-            .withRepresentation(new Representation().withLanguage(HL7_ELM))));
+            .withArtifactId(SurrogateBuilder.randomArtifactId())
+            .withRepresentation(rep(HL7_ELM))));
+
     repo.addKnowledgeAssetCarrier(u1, "2", "HI!".getBytes());
 
     List<KnowledgeCarrier> carriers =

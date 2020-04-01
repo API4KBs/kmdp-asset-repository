@@ -7,12 +7,9 @@ import static edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype.DependencyT
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import edu.mayo.kmdp.metadata.annotations.Annotation;
-import edu.mayo.kmdp.metadata.annotations.BasicAnnotation;
-import edu.mayo.kmdp.metadata.annotations.SimpleAnnotation;
-import edu.mayo.kmdp.metadata.surrogate.Association;
-import edu.mayo.kmdp.metadata.surrogate.Dependency;
-import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
+import edu.mayo.kmdp.metadata.v2.surrogate.Dependency;
+import edu.mayo.kmdp.metadata.v2.surrogate.Link;
+import edu.mayo.kmdp.metadata.v2.surrogate.annotations.Annotation;
 import edu.mayo.kmdp.repository.asset.index.Index;
 import edu.mayo.kmdp.util.StreamUtil;
 import edu.mayo.kmdp.util.Util;
@@ -69,12 +66,6 @@ public class SparqlIndex implements Index {
     this.jenaSparqlDao = jenaSparqlDao;
   }
 
-  @Override
-  public void registerAsset(ResourceIdentifier asset, ResourceIdentifier surrogate,
-      List<KnowledgeAssetType> types, List<KnowledgeAssetRole> roles, List<Annotation> annotations,
-      List<Association> related) {
-    this.jenaSparqlDao.store(this.toRdf(asset, surrogate, types, roles, annotations, related));
-  }
 
   /**
    * Deconstruct an Asset into RDF statements.
@@ -88,22 +79,17 @@ public class SparqlIndex implements Index {
    */
   public List<Statement> toRdf(ResourceIdentifier asset, ResourceIdentifier surrogate,
       List<KnowledgeAssetType> types, List<KnowledgeAssetRole> roles, List<Annotation> annotations,
-      List<Association> related) {
+      List<Link> related) {
     List<Statement> statements = Lists.newArrayList();
     URI versionedAssetId = asset.getVersionId();
 
     // annotations
-    statements.addAll(annotations.stream().map(annotation -> {
-      if (annotation instanceof SimpleAnnotation) {
-        return this.toStatement(
+    statements.addAll(annotations.stream().map(
+        annotation -> this.toStatement(
             versionedAssetId,
-            annotation.getRel().getRef(),
-            ((SimpleAnnotation) annotation).getExpr().getConceptId());
-      } else {
-        throw new UnsupportedOperationException(
-            "Cannot store Annotation of class: " + annotation.getClass().getName());
-      }
-    }).collect(Collectors.toList()));
+            annotation.getRel().getReferentId(),
+            annotation.getRef().getEvokes())
+    ).collect(Collectors.toList()));
 
     // related
     statements.addAll(related.stream()
@@ -111,7 +97,7 @@ public class SparqlIndex implements Index {
         .map(dependency -> this.toStatement(
             versionedAssetId,
             dependency.getRel().asConcept().getRef(),
-            ((KnowledgeAsset) dependency.getTgt()).getAssetId().getVersionId()))
+            dependency.getHref().getVersionId()))
         .collect(Collectors.toList()));
 
     // type of Asset
@@ -214,6 +200,13 @@ public class SparqlIndex implements Index {
         .stream()
         .map(this::resourceToResourceIdentifier)
         .collect(Collectors.toSet());
+  }
+
+  @Override
+  public void registerAsset(ResourceIdentifier asset, ResourceIdentifier surrogate,
+      List<KnowledgeAssetType> types, List<KnowledgeAssetRole> roles, List<Annotation> annotations,
+      List<Link> related) {
+    this.jenaSparqlDao.store(this.toRdf(asset, surrogate, types, roles, annotations, related));
   }
 
   @Override

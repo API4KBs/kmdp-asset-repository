@@ -15,14 +15,13 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
-import edu.mayo.kmdp.id.helper.DatatypeHelper;
 import edu.mayo.kmdp.kbase.query.sparql.v1_1.JenaQuery;
 import edu.mayo.kmdp.language.LanguageDeSerializer;
 import edu.mayo.kmdp.language.LanguageDetector;
 import edu.mayo.kmdp.language.LanguageValidator;
 import edu.mayo.kmdp.language.TransrepresentationExecutor;
-import edu.mayo.kmdp.language.parsers.surrogate.v1.SurrogateParser;
-import edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset;
+import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
+import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDao;
 import edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex;
@@ -46,7 +45,7 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
     JenaSparqlDao dao = JenaSparqlDao.inMemoryDao();
     return new SemanticKnowledgeAssetRepository(
         KnowledgeArtifactRepositoryService.inMemoryArtifactRepository(),
-        new LanguageDeSerializer(Collections.singletonList(new SurrogateParser())),
+        new LanguageDeSerializer(Collections.singletonList(new Surrogate2Parser())),
         new LanguageDetector(Collections.emptyList()),
         new LanguageValidator(Collections.emptyList()),
         new TransrepresentationExecutor(Collections.emptyList()),
@@ -79,7 +78,7 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
       KnowledgeAsset surrogate,
       KnowledgeCarrier artifact) {
 
-    ResourceIdentifier surrogateId = DatatypeHelper.toSemanticIdentifier(surrogate.getAssetId());
+    ResourceIdentifier surrogateId = surrogate.getAssetId();
 
     this.setVersionedKnowledgeAsset(
         surrogateId.getUuid(),

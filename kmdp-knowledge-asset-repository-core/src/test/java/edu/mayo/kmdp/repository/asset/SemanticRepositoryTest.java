@@ -1,11 +1,11 @@
 /**
  * Copyright © 2018 Mayo Clinic (RSTKNOWLEDGEMGMT@mayo.edu)
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
  * or implied. See the License for the specific language governing permissions and limitations under
@@ -29,16 +29,16 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 
-import edu.mayo.kmdp.id.helper.DatatypeHelper;
-import edu.mayo.kmdp.metadata.annotations.resources.SimpleAnnotation;
-import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
-import edu.mayo.kmdp.metadata.surrogate.Dependency;
-import edu.mayo.kmdp.metadata.surrogate.Representation;
-import edu.mayo.kmdp.metadata.surrogate.resources.KnowledgeAsset;
+import edu.mayo.kmdp.metadata.v2.surrogate.ComputableKnowledgeArtifact;
+import edu.mayo.kmdp.metadata.v2.surrogate.Dependency;
+import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder;
+import edu.mayo.kmdp.metadata.v2.surrogate.annotations.Annotation;
 import edu.mayo.kmdp.registry.Registry;
 import edu.mayo.kmdp.repository.artifact.exceptions.ResourceNotFoundException;
+import edu.mayo.kmdp.util.DateTimeUtil;
 import edu.mayo.ontology.taxonomies.api4kp.responsecodes.ResponseCodeSeries;
 import java.net.URI;
 import java.util.Collections;
@@ -47,9 +47,11 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.AbstractCarrier;
 import org.omg.spec.api4kp._1_0.Answer;
+import org.omg.spec.api4kp._1_0.id.ConceptIdentifier;
+import org.omg.spec.api4kp._1_0.id.IdentifierConstants;
 import org.omg.spec.api4kp._1_0.id.Pointer;
-import org.omg.spec.api4kp._1_0.identifiers.ConceptIdentifier;
-import org.omg.spec.api4kp._1_0.identifiers.URIIdentifier;
+import org.omg.spec.api4kp._1_0.id.SemanticIdentifier;
+import org.omg.spec.api4kp._1_0.id.Term;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 
@@ -81,16 +83,23 @@ class SemanticRepositoryTest extends RepositoryTestBase {
 
   @Test
   void testListAllInMemoryHelperMethod() {
-    KnowledgeAssetRepositoryService repo = KnowledgeAssetRepositoryService.selfContainedRepository();
+    KnowledgeAssetRepositoryService repo = KnowledgeAssetRepositoryService
+        .selfContainedRepository();
 
-    assertNotNull(repo
-            .setVersionedKnowledgeAsset(uuid("foo"), "1",
-                    new KnowledgeAsset().withFormalType(Care_Process_Model)));
-    assertNotNull(repo
-            .setVersionedKnowledgeAsset(uuid("foo2"), "1",
-                    new KnowledgeAsset().withFormalType(Care_Process_Model)));
+    assertTrue(repo
+        .setVersionedKnowledgeAsset(uuid("foo"), "1",
+            new KnowledgeAsset()
+                .withFormalType(Care_Process_Model))
+        .isSuccess());
+
+    assertTrue(repo
+        .setVersionedKnowledgeAsset(uuid("foo2"), "1",
+            new KnowledgeAsset()
+                .withFormalType(Care_Process_Model))
+        .isSuccess());
+
     List<Pointer> assets = repo
-            .listKnowledgeAssets().orElse(emptyList());
+        .listKnowledgeAssets().orElse(emptyList());
 
     assertNotNull(assets);
     assertEquals(2, assets.size());
@@ -115,14 +124,14 @@ class SemanticRepositoryTest extends RepositoryTestBase {
   @Test
   void testListAllMultipleVersionsIsLatest() {
     assertNotNull(semanticRepository
-            .setVersionedKnowledgeAsset(uuid("foo"), "1",
-                    new KnowledgeAsset().withFormalType(Care_Process_Model)));
+        .setVersionedKnowledgeAsset(uuid("foo"), "1",
+            new KnowledgeAsset().withFormalType(Care_Process_Model)));
     assertNotNull(semanticRepository
-            .setVersionedKnowledgeAsset(uuid("foo"), "2",
-                    new KnowledgeAsset().withFormalType(Care_Process_Model)));
+        .setVersionedKnowledgeAsset(uuid("foo"), "2",
+            new KnowledgeAsset().withFormalType(Care_Process_Model)));
     List<Pointer> assets = semanticRepository
-            .listKnowledgeAssets()
-            .orElse(emptyList());
+        .listKnowledgeAssets()
+        .orElse(emptyList());
 
     assertNotNull(assets);
     assertEquals(1, assets.size());
@@ -165,13 +174,13 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     UUID newAssetId = responseEntity.get();
     assertNotNull(newAssetId);
 
-    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset =
+    KnowledgeAsset asset =
         semanticRepository.getKnowledgeAsset(newAssetId).orElse(null);
 
     assertNotNull(asset);
     String expected = BASE_URI + newAssetId;
     //GUID returned should be id of asset
-    assertEquals(expected, asset.getAssetId().getUri().toString());
+    assertEquals(expected, asset.getAssetId().getResourceId().toString());
     String versionId = asset.getAssetId().getVersionId().toString();
     //Version should be 0.0.0
     assertEquals("/0.0.0", versionId.substring(versionId.lastIndexOf("/")));
@@ -189,13 +198,13 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         .setVersionedKnowledgeAsset(uuid("foo"), "2",
             new KnowledgeAsset()
                 .withFormalType(Care_Process_Model)));
-    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset =
+    KnowledgeAsset asset =
         semanticRepository
             .getKnowledgeAsset(uuid("foo"))
             .orElse(null);
 
     assertNotNull(asset);
-    assertEquals("2", asset.getAssetId().getVersion());
+    assertEquals("2", asset.getAssetId().getVersionTag());
   }
 
   @Test
@@ -208,13 +217,13 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         .setVersionedKnowledgeAsset(uuid("foo"), "2",
             new KnowledgeAsset()
                 .withFormalType(Care_Process_Model)));
-    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset =
+    KnowledgeAsset asset =
         semanticRepository
             .getKnowledgeAsset(uuid("foo"))
             .orElse(null);
 
     assertNotNull(asset);
-    assertEquals("2", asset.getAssetId().getVersion());
+    assertEquals("2", asset.getAssetId().getVersionTag());
   }
 
   @Test
@@ -228,7 +237,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         .setVersionedKnowledgeAsset(uuid("foo"), "2",
             new KnowledgeAsset()
                 .withFormalType(Care_Process_Model)));
-    Answer<edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset> response =
+    Answer<KnowledgeAsset> response =
         semanticRepository.getKnowledgeAsset(uuid("fooDoesNotExist"));
 
     assertEquals(ResponseCodeSeries.NotFound, response.getOutcomeType());
@@ -284,12 +293,12 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         .setVersionedKnowledgeAsset(uuid("foo"), "2",
             new KnowledgeAsset()
                 .withFormalType(Care_Process_Model)));
-    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset = semanticRepository
+    KnowledgeAsset asset = semanticRepository
         .getVersionedKnowledgeAsset(uuid("foo"), "5")
         .orElse(null);
 
     assertNotNull(asset);
-    assertEquals("5", asset.getAssetId().getVersion());
+    assertEquals("5", asset.getAssetId().getVersionTag());
   }
 
   @Test
@@ -302,7 +311,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         .setVersionedKnowledgeAsset(uuid("foo"), "2",
             new KnowledgeAsset()
                 .withFormalType(Care_Process_Model)));
-    Answer<edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset> response =
+    Answer<KnowledgeAsset> response =
         semanticRepository.getVersionedKnowledgeAsset(uuid("fooDoeNotExist"), "5");
     assertEquals(ResponseCodeSeries.NotFound, response.getOutcomeType());
   }
@@ -317,7 +326,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         .setVersionedKnowledgeAsset(uuid("foo"), "2",
             new KnowledgeAsset()
                 .withFormalType(Care_Process_Model)));
-    Answer<edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset> response =
+    Answer<KnowledgeAsset> response =
         semanticRepository.getVersionedKnowledgeAsset(uuid("foo"), "12345");
     assertEquals(ResponseCodeSeries.NotFound, response.getOutcomeType());
   }
@@ -329,12 +338,10 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         .setVersionedKnowledgeAsset(uuid("foo"), "1",
             new KnowledgeAsset()
                 .withFormalType(Care_Process_Model)));
-    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset = new KnowledgeAsset()
+    KnowledgeAsset asset = new KnowledgeAsset()
         .withFormalType(Care_Process_Model)
-        .withAssetId(new URIIdentifier()
-            .withUri(URI.create(BASE_URI + "45a81582-1b1d-3439-9400-6e2fee0c3f52"))
-            .withVersionId(
-                URI.create(BASE_URI + "b9a26917-0a79-483d-b0e8-6610ba9aad5b/versions/1")));
+        .withAssetId(
+            SurrogateBuilder.assetId(UUID.fromString("45a81582-1b1d-3439-9400-6e2fee0c3f52"), "1"));
     Answer<Void> response = semanticRepository
         .setVersionedKnowledgeAsset(UUID.fromString("45a81582-1b1d-3439-9400-6e2fee0c3f52"), "1",
             asset);
@@ -348,12 +355,10 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         .setVersionedKnowledgeAsset(UUID.fromString("45a81582-1b1d-3439-9400-6e2fee0c3f52"), "1",
             new KnowledgeAsset()
                 .withFormalType(Care_Process_Model)));
-    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset = new KnowledgeAsset()
+    KnowledgeAsset asset = new KnowledgeAsset()
         .withFormalType(Care_Process_Model)
-        .withAssetId(new URIIdentifier()
-            .withUri(URI.create(BASE_URI + "45a81582-1b1d-3439-9400-6e2fee0c3f52"))
-            .withVersionId(
-                URI.create(BASE_URI + "45a81582-1b1d-3439-9400-6e2fee0c3f52/versions/2")));
+        .withAssetId(
+            SurrogateBuilder.assetId(UUID.fromString("45a81582-1b1d-3439-9400-6e2fee0c3f52"), "2"));
     Answer<Void> response = semanticRepository
         .setVersionedKnowledgeAsset(UUID.fromString("45a81582-1b1d-3439-9400-6e2fee0c3f52"), "2",
             asset);
@@ -372,19 +377,17 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         .setVersionedKnowledgeAsset(UUID.fromString("45a81582-1b1d-3439-9400-6e2fee0c3f52"), "1",
             new KnowledgeAsset()
                 .withFormalType(Care_Process_Model)));
-    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset = new KnowledgeAsset()
+    KnowledgeAsset asset = new KnowledgeAsset()
         .withFormalType(Predictive_Model)
-        .withAssetId(new URIIdentifier()
-            .withUri(URI.create(BASE_URI + "45a81582-1b1d-3439-9400-6e2fee0c3f52"))
-            .withVersionId(
-                URI.create(BASE_URI + "45a81582-1b1d-3439-9400-6e2fee0c3f52/versions/1")));
+        .withAssetId(
+            SurrogateBuilder.assetId(UUID.fromString("45a81582-1b1d-3439-9400-6e2fee0c3f52"), "1"));
     Answer<Void> response = semanticRepository
         .setVersionedKnowledgeAsset(UUID.fromString("45a81582-1b1d-3439-9400-6e2fee0c3f52"), "1",
             asset);
     //expect 204 status code
     assertEquals(ResponseCodeSeries.NoContent, response.getOutcomeType());
 
-    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset assetResult = semanticRepository
+    KnowledgeAsset assetResult = semanticRepository
         .getVersionedKnowledgeAsset(UUID.fromString("45a81582-1b1d-3439-9400-6e2fee0c3f52"), "1")
         .orElse(null);
     assertNotNull(assetResult);
@@ -395,12 +398,10 @@ class SemanticRepositoryTest extends RepositoryTestBase {
 
   @Test
   void testInconsistentVersionId_shouldFail() {
-    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset = new KnowledgeAsset()
+    KnowledgeAsset asset = new KnowledgeAsset()
         .withFormalType(Predictive_Model)
-        .withAssetId(new URIIdentifier()
-            .withUri(URI.create(BASE_URI + "45a81582-1b1d-3439-9400-6e2fee0c3f52"))
-            .withVersionId(
-                URI.create(BASE_URI + "45a81582-1b1d-3439-9400-6e2fee0c3f52/versions/1")));
+        .withAssetId(
+            SurrogateBuilder.assetId(UUID.fromString("45a81582-1b1d-3439-9400-6e2fee0c3f52"), "1"));
     Answer<Void> response = semanticRepository
         .setVersionedKnowledgeAsset(UUID.fromString("45a81582-1b1d-3439-9400-6e2fee0c3f52"), "2",
             asset);
@@ -410,12 +411,10 @@ class SemanticRepositoryTest extends RepositoryTestBase {
 
   @Test
   void testInconsistentAssetId_shouldFail() {
-    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset = new KnowledgeAsset()
+    KnowledgeAsset asset = new KnowledgeAsset()
         .withFormalType(Predictive_Model)
-        .withAssetId(new URIIdentifier()
-            .withUri(URI.create(BASE_URI + "45a81582-1b1d-3439-9400-6e2fee0c3f52"))
-            .withVersionId(
-                URI.create(BASE_URI + "b9a26917-0a79-483d-b0e8-6610ba9aad5b/versions/1")));
+        .withAssetId(
+            SurrogateBuilder.assetId(UUID.fromString("45a81582-1b1d-3439-9400-6e2fee0c3f52"), "1"));
     Answer<Void> response = semanticRepository
         .setVersionedKnowledgeAsset(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1",
             asset);
@@ -424,7 +423,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
 
   @Test
   void testMissingAssetId_getsSet() {
-    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset = new KnowledgeAsset()
+    KnowledgeAsset asset = new KnowledgeAsset()
         .withFormalType(Predictive_Model);
     Answer<Void> response = semanticRepository
         .setVersionedKnowledgeAsset(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1",
@@ -432,58 +431,56 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     assertEquals(ResponseCodeSeries.NoContent, response.getOutcomeType());
     String expectedAssetId = BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52";
     String expectedVersionId = BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52/versions/1";
-    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka = semanticRepository
+    KnowledgeAsset ka = semanticRepository
         .getVersionedKnowledgeAsset(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1")
         .orElse(null);
     assertNotNull(ka);
 
-    assertEquals(ka.getAssetId().getUri().toString(), expectedAssetId);
-    assertEquals(ka.getAssetId().getVersionId().toString(), expectedVersionId);
+    assertEquals(URI.create(expectedAssetId), ka.getAssetId().getResourceId());
+    assertEquals(URI.create(expectedVersionId), ka.getAssetId().getVersionId());
   }
 
   @Test
   void testMissingVersionOnly_getsSet() {
-    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset = new KnowledgeAsset()
-      .withFormalType(Predictive_Model)
-    .withAssetId(new URIIdentifier()
-      .withUri(URI.create(BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52"))
-      );
+    KnowledgeAsset asset = new KnowledgeAsset()
+        .withFormalType(Predictive_Model)
+        .withAssetId(SemanticIdentifier.newId(URI.create(BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52")));
+
     Answer<Void> response = semanticRepository
-      .setVersionedKnowledgeAsset(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1",
-        asset);
+        .setVersionedKnowledgeAsset(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1",
+            asset);
     assertEquals(ResponseCodeSeries.NoContent, response.getOutcomeType());
 
     String expectedAssetId = BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52";
     String expectedVersionId = BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52/versions/1";
-    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka = semanticRepository
-      .getVersionedKnowledgeAsset(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1")
-      .orElse(null);
+    KnowledgeAsset ka = semanticRepository
+        .getVersionedKnowledgeAsset(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1")
+        .orElse(null);
     assertNotNull(ka);
 
-    assertEquals(ka.getAssetId().getUri().toString(), expectedAssetId);
+    assertEquals(ka.getAssetId().getResourceId().toString(), expectedAssetId);
     assertEquals(ka.getAssetId().getVersionId().toString(), expectedVersionId);
   }
 
   @Test
   void testMissingAssetIdOnly_getsSet() {
-    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset = new KnowledgeAsset()
-      .withFormalType(Predictive_Model)
-      .withAssetId(new URIIdentifier()
-        .withVersionId(
-          URI.create(BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52/versions/1"))
-      );
+    KnowledgeAsset asset = new KnowledgeAsset()
+        .withFormalType(Predictive_Model)
+        .withAssetId(
+            SemanticIdentifier.newVersionId(URI.create(BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52/versions/1")));
+
     Answer<Void> response = semanticRepository
-      .setVersionedKnowledgeAsset(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1",
-        asset);
+        .setVersionedKnowledgeAsset(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1",
+            asset);
     assertEquals(ResponseCodeSeries.NoContent, response.getOutcomeType());
     String expectedAssetId = BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52";
     String expectedVersionId = BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52/versions/1";
-    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset ka = semanticRepository
-      .getVersionedKnowledgeAsset(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1")
-      .orElse(null);
+    KnowledgeAsset ka = semanticRepository
+        .getVersionedKnowledgeAsset(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1")
+        .orElse(null);
     assertNotNull(ka);
 
-    assertEquals(ka.getAssetId().getUri().toString(), expectedAssetId);
+    assertEquals(ka.getAssetId().getResourceId().toString(), expectedAssetId);
     assertEquals(ka.getAssetId().getVersionId().toString(), expectedVersionId);
   }
 
@@ -515,11 +512,11 @@ class SemanticRepositoryTest extends RepositoryTestBase {
   @Test
   void initAndGetAssetByWrongType() {
     assertNotNull(semanticRepository
-            .setVersionedKnowledgeAsset(uuid("foo"), "1",
-                    new KnowledgeAsset().withFormalType(Care_Process_Model)));
+        .setVersionedKnowledgeAsset(uuid("foo"), "1",
+            new KnowledgeAsset().withFormalType(Care_Process_Model)));
     List<Pointer> assets = semanticRepository
-            .listKnowledgeAssets(Formal_Ontology.getTag(), null, null, -1, -1)
-            .orElse(emptyList());
+        .listKnowledgeAssets(Formal_Ontology.getTag(), null, null, -1, -1)
+        .orElse(emptyList());
 
     assertEquals(0, assets.size());
   }
@@ -605,11 +602,10 @@ class SemanticRepositoryTest extends RepositoryTestBase {
   @Test
   void initAndGetAssetByAnnotation() {
     assertNotNull(semanticRepository.setVersionedKnowledgeAsset(uuid("1"), "1",
-        new KnowledgeAsset().withSubject(
-            new SimpleAnnotation()
-                .withRel(Defines.asConcept())
-                .withExpr(new ConceptIdentifier()
-                    .withConceptId(URI.create("http://something"))))));
+        new KnowledgeAsset().withAnnotation(
+            new Annotation()
+                .withRel(Defines.asConceptIdentifier())
+                .withRef(Term.newTerm("http://something").asConceptIdentifier()))));
 
     List<Pointer> pointers = semanticRepository
         .listKnowledgeAssets(null, Defines.getTag(), null, -1, -1)
@@ -621,15 +617,14 @@ class SemanticRepositoryTest extends RepositoryTestBase {
   @Test
   void initAndGetAssetByWrongAnnotation() {
     assertNotNull(semanticRepository.setVersionedKnowledgeAsset(uuid("1"), "1",
-            new KnowledgeAsset().withSubject(
-                    new SimpleAnnotation()
-                            .withRel(In_Terms_Of.asConcept())
-                            .withExpr(new ConceptIdentifier()
-                                    .withConceptId(URI.create("http://something"))))));
+        new KnowledgeAsset().withAnnotation(
+            new Annotation()
+                .withRel(In_Terms_Of.asConceptIdentifier())
+                .withRef(Term.newTerm("http://something").asConceptIdentifier()))));
 
     List<Pointer> pointers = semanticRepository
-            .listKnowledgeAssets(null, Defines.getTag(), null, -1, -1)
-            .orElse(emptyList());
+        .listKnowledgeAssets(null, Defines.getTag(), null, -1, -1)
+        .orElse(emptyList());
     assertNotNull(pointers);
     assertEquals(0, pointers.size());
   }
@@ -666,17 +661,23 @@ class SemanticRepositoryTest extends RepositoryTestBase {
   }
 
 
-  private ConceptIdentifier dizziness = new ConceptIdentifier()
-      .withConceptId(URI.create("http://foo/term/Dizzy"))
-      .withTag("Dizzy")
-      .withLabel("Dizzy")
-      .withRef(URI.create("uri:urn:Dizzy"));
+  private ConceptIdentifier dizziness = Term.newTerm(
+      "dizzy",
+      UUID.randomUUID(),
+      Registry.BASE_UUID_URN_URI,
+      URI.create("uri:urn:dizzy"),
+      IdentifierConstants.VERSION_LATEST,
+      "Dizzy",
+      DateTimeUtil.now()).asConceptIdentifier();
 
-  private ConceptIdentifier sleep_apnea = new ConceptIdentifier()
-      .withConceptId(URI.create("http://foo/term/SleepApnea"))
-      .withTag("SleepApnea")
-      .withLabel("Sleep Apnea")
-      .withRef(URI.create("uri:urn:SleepApnea"));
+  private ConceptIdentifier sleep_apnea = Term.newTerm(
+      "sleepApnea",
+      UUID.randomUUID(),
+      Registry.BASE_UUID_URN_URI,
+      URI.create("uri:urn:sleepApnea"),
+      IdentifierConstants.VERSION_LATEST,
+      "Sleep Apnea",
+      DateTimeUtil.now()).asConceptIdentifier();
 
   @Test
   void addKnowledgeAssetCarriersMultiple() {
@@ -700,9 +701,9 @@ class SemanticRepositoryTest extends RepositoryTestBase {
   void initAndGetAllDefinitions() {
     assertNotNull(semanticRepository.setVersionedKnowledgeAsset(uuid("1"), "1",
         new KnowledgeAsset().withRole(Operational_Concept_Definition)
-            .withSubject(new SimpleAnnotation()
-                .withRel(Defines.asConcept())
-                .withExpr(dizziness))));
+            .withAnnotation(new Annotation()
+                .withRel(Defines.asConceptIdentifier())
+                .withRef(dizziness))));
 
     List<Pointer> pointers = semanticRepository
         .listKnowledgeAssets(Operational_Concept_Definition.getTag(), null, null, -1, -1)
@@ -714,15 +715,15 @@ class SemanticRepositoryTest extends RepositoryTestBase {
   void initAndGetAllDefinitionsWithMultiple() {
     assertNotNull(semanticRepository.setVersionedKnowledgeAsset(uuid("1"), "1",
         new KnowledgeAsset().withRole(Operational_Concept_Definition)
-            .withSubject(new SimpleAnnotation()
-                .withRel(Defines.asConcept())
-                .withExpr(dizziness))));
+            .withAnnotation(new Annotation()
+                .withRel(Defines.asConceptIdentifier())
+                .withRef(dizziness))));
 
     assertNotNull(semanticRepository.setVersionedKnowledgeAsset(uuid("2"), "1",
         new KnowledgeAsset().withRole(Operational_Concept_Definition)
-            .withSubject(new SimpleAnnotation()
-                .withRel(Defines.asConcept())
-                .withExpr(sleep_apnea))));
+            .withAnnotation(new Annotation()
+                .withRel(Defines.asConceptIdentifier())
+                .withRef(sleep_apnea))));
 
     List<Pointer> pointers = semanticRepository
         .listKnowledgeAssets(Operational_Concept_Definition.getTag(), null, null, -1, -1)
@@ -734,15 +735,15 @@ class SemanticRepositoryTest extends RepositoryTestBase {
   void initAndGetAllDefinitionsWithMultipleVersions() {
     assertNotNull(semanticRepository.setVersionedKnowledgeAsset(uuid("1"), "1",
         new KnowledgeAsset().withRole(Operational_Concept_Definition)
-            .withSubject(new SimpleAnnotation()
-                .withRel(Defines.asConcept())
-                .withExpr(dizziness))));
+            .withAnnotation(new Annotation()
+                .withRel(Defines.asConceptIdentifier())
+                .withRef(dizziness))));
 
     assertNotNull(semanticRepository.setVersionedKnowledgeAsset(uuid("1"), "2",
         new KnowledgeAsset().withRole(Operational_Concept_Definition)
-            .withSubject(new SimpleAnnotation()
-                .withRel(Defines.asConcept())
-                .withExpr(dizziness))));
+            .withAnnotation(new Annotation()
+                .withRel(Defines.asConceptIdentifier())
+                .withRef(dizziness))));
 
     List<Pointer> pointers = semanticRepository
         .listKnowledgeAssets(Operational_Concept_Definition.getTag(), null, null, -1, -1)
@@ -759,9 +760,8 @@ class SemanticRepositoryTest extends RepositoryTestBase {
                 .withName("Test")
                 .withCarriers(new ComputableKnowledgeArtifact()
                     .withArtifactId(
-                        DatatypeHelper.uri(Registry.BASE_UUID_URN, uuid("q").toString(), "z"))
-                    .withRepresentation(new Representation()
-                        .withLanguage(HTML))
+                        SemanticIdentifier.newId(Registry.BASE_UUID_URN_URI, uuid("q"), "z"))
+                    .withRepresentation(rep(HTML))
                 )
         ));
 
@@ -788,25 +788,24 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     UUID u2 = UUID.nameUUIDFromBytes("2".getBytes());
 
     semanticRepository.setVersionedKnowledgeAsset(u1, "1", new KnowledgeAsset()
-            .withCarriers(new ComputableKnowledgeArtifact()
-                .withArtifactId(DatatypeHelper.toURIIdentifier(SurrogateBuilder.randomArtifactId()))
-                .withRepresentation(new Representation().withLanguage(
-                            HL7_ELM))));
+        .withCarriers(new ComputableKnowledgeArtifact()
+            .withArtifactId(SurrogateBuilder.randomArtifactId())
+            .withRepresentation(rep(HL7_ELM))));
     semanticRepository.addKnowledgeAssetCarrier(u1, "1", "HI1!".getBytes());
 
-    edu.mayo.kmdp.metadata.surrogate.KnowledgeAsset asset1 = semanticRepository.getVersionedKnowledgeAsset(u1, "1").getOptionalValue().get();
+    KnowledgeAsset asset1 = semanticRepository.getVersionedKnowledgeAsset(u1, "1")
+        .orElse(new KnowledgeAsset());
 
     semanticRepository.setVersionedKnowledgeAsset(u2, "1", new KnowledgeAsset()
-            .withRelated(new Dependency().withRel(Depends_On).withTgt(asset1))
-            .withCarriers(new ComputableKnowledgeArtifact()
-                .withArtifactId(DatatypeHelper.toURIIdentifier(SurrogateBuilder.randomArtifactId()))
-                .withRepresentation(new Representation().withLanguage(
-                            HL7_ELM))));
+        .withLinks(new Dependency().withRel(Depends_On).withHref(asset1.getAssetId()))
+        .withCarriers(new ComputableKnowledgeArtifact()
+            .withArtifactId(SurrogateBuilder.randomArtifactId())
+            .withRepresentation(rep(HL7_ELM))));
     semanticRepository.addKnowledgeAssetCarrier(u2, "1", "HI2!".getBytes());
 
     List<KnowledgeCarrier> carriers = semanticRepository.getKnowledgeArtifactBundle(u2, "1",
-            Depends_On.getTag(), -1, null).getOptionalValue()
-            .orElseGet(Collections::emptyList);
+        Depends_On.getTag(), -1, null).getOptionalValue()
+        .orElseGet(Collections::emptyList);
 
     assertEquals(2, carriers.size());
   }
