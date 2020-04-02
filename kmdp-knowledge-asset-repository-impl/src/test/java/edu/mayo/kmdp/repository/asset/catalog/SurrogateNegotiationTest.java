@@ -81,7 +81,6 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
 
 
   @Test
-  @Disabled
   public void testHeaders() {
     UUID pockId = UUID.randomUUID();
     UUID rulId = UUID.randomUUID();

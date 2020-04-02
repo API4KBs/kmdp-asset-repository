@@ -57,7 +57,7 @@ import org.omg.spec.api4kp._1_0.id.Pointer;
 import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
 import org.omg.spec.api4kp._1_0.id.SemanticIdentifier;
 import org.omg.spec.api4kp._1_0.id.Term;
-import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
+import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 
 
@@ -647,7 +647,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         .orElse(null);
 
     assertNotNull(artifact);
-    assertEquals("there", new String(((BinaryCarrier) artifact).getEncodedExpression()));
+    assertEquals("there", artifact.asString().orElse(""));
   }
 
   @Test

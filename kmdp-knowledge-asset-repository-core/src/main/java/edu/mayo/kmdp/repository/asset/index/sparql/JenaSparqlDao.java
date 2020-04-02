@@ -34,9 +34,9 @@ import org.apache.jena.sdb.StoreDesc;
 import org.apache.jena.sdb.sql.SDBConnection;
 import org.apache.jena.sdb.store.DatabaseType;
 import org.apache.jena.sdb.store.LayoutType;
+import org.omg.spec.api4kp._1_0.AbstractCarrier;
 import org.omg.spec.api4kp._1_0.Answer;
 import org.omg.spec.api4kp._1_0.id.SemanticIdentifier;
-import org.omg.spec.api4kp._1_0.services.DocumentCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -160,8 +160,7 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
     this.model = SDBFactory.connectDefaultModel(store);
 
     this.kBase = new KnowledgeBase()
-        .withManifestation(new DocumentCarrier()
-            .withStructuredExpression(model)
+        .withManifestation(AbstractCarrier.ofTree(model)
             .withAssetId(SurrogateBuilder.randomAssetId())
             .withArtifactId(SurrogateBuilder.randomArtifactId())
         )

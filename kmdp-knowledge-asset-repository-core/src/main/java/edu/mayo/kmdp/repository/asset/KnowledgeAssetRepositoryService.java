@@ -35,7 +35,7 @@ import edu.mayo.kmdp.tranx.v4.server.ValidateApiInternal;
 import java.util.Collections;
 import java.util.List;
 import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
-import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
+import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 
 public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogApiInternal,
@@ -97,7 +97,8 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
           surrogateId.getVersionTag(),
           artifactId.getUuid(),
           artifactId.getVersionTag(),
-          ((BinaryCarrier) artifact).getEncodedExpression());
+          artifact.asBinary()
+              .orElseThrow(UnsupportedOperationException::new));
     }
   }
 }

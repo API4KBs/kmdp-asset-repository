@@ -31,22 +31,22 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.omg.spec.api4kp._1_0.AbstractCarrier;
 import org.omg.spec.api4kp._1_0.Answer;
 import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
-import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKnowledgeArtifactBundle {
+public class DefaultArtifactBundler implements KnowledgeAssetRetrievalApiInternal._getKnowledgeArtifactBundle {
 
   private static final Logger logger = LoggerFactory
-          .getLogger(DefaultBundler.class);
+          .getLogger(DefaultArtifactBundler.class);
 
   private SemanticKnowledgeAssetRepository assetRepository;
   private Index index;
 
-  public DefaultBundler(SemanticKnowledgeAssetRepository assetRepository, Index index) {
+  public DefaultArtifactBundler(SemanticKnowledgeAssetRepository assetRepository, Index index) {
     super();
     this.assetRepository = assetRepository;
     this.index = index;
@@ -109,16 +109,20 @@ public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKn
         .forEach(carrier -> {
           URI masterLocation = carrier.getLocator();
           if (masterLocation != null) {
-            BinaryCarrier newCarrier = new BinaryCarrier();
+
+            KnowledgeCarrier newCarrier = AbstractCarrier.of(
+                FileUtil.readBytes(masterLocation).orElse(new byte[0])
+            );
+
             if (carrier.getRepresentation() != null
                 && carrier.getRepresentation().getLanguage() != null) {
               KnowledgeRepresentationLanguage language = carrier.getRepresentation()
                   .getLanguage();
               newCarrier.setRepresentation(rep(language));
             }
-            newCarrier
-                .withAssetId(assetSurrogate.getAssetId())
-                .withEncodedExpression(FileUtil.readBytes(masterLocation).orElse(new byte[0]));
+
+            newCarrier.withAssetId(assetSurrogate.getAssetId());
+
             carriers.add(newCarrier);
           }
         });

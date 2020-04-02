@@ -43,7 +43,7 @@ import edu.mayo.kmdp.repository.artifact.exceptions.ResourceNotFoundException;
 import edu.mayo.kmdp.repository.artifact.v4.server.KnowledgeArtifactApiInternal;
 import edu.mayo.kmdp.repository.artifact.v4.server.KnowledgeArtifactSeriesApiInternal;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
-import edu.mayo.kmdp.repository.asset.bundler.DefaultBundler;
+import edu.mayo.kmdp.repository.asset.bundler.DefaultArtifactBundler;
 import edu.mayo.kmdp.repository.asset.index.Index;
 import edu.mayo.kmdp.repository.asset.index.StaticFilter;
 import edu.mayo.kmdp.tranx.v4.server.DeserializeApiInternal;
@@ -80,12 +80,11 @@ import org.omg.spec.api4kp._1_0.id.IdentifierConstants;
 import org.omg.spec.api4kp._1_0.id.Pointer;
 import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
 import org.omg.spec.api4kp._1_0.id.SemanticIdentifier;
-import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
+import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._1_0.services.CompositeKnowledgeCarrier;
 import org.omg.spec.api4kp._1_0.services.CompositeStructType;
 import org.omg.spec.api4kp._1_0.services.KPComponent;
 import org.omg.spec.api4kp._1_0.services.KPServer;
-import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeProcessingOperator;
 import org.omg.spec.api4kp._1_0.services.SyntacticRepresentation;
 import org.omg.spec.api4kp._1_0.services.repository.KnowledgeAssetCatalog;
@@ -134,7 +133,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   private HrefBuilder hrefBuilder;
 
-  private DefaultBundler bundler;
+  private DefaultArtifactBundler bundler;
 
   public SemanticKnowledgeAssetRepository(
       @Autowired @KPServer KnowledgeArtifactRepositoryService artifactRepo,
@@ -154,7 +153,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     this.index = index;
     this.hrefBuilder = new HrefBuilder(cfg);
-    this.bundler = new DefaultBundler(this, index);
+    this.bundler = new DefaultArtifactBundler(this, index);
 
     this.parser = parser;
     this.detector = detector;
@@ -357,7 +356,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   private Answer<KnowledgeCarrier> getDefaultCarrier(KnowledgeAsset surrogate) {
-    BinaryCarrier carrier = new org.omg.spec.api4kp._1_0.services.resources.BinaryCarrier()
+    KnowledgeCarrier carrier = new org.omg.spec.api4kp._1_0.services.resources.KnowledgeCarrier()
         .withLevel(Encoded_Knowledge_Expression)
         .withLabel(surrogate.getName())
         .withAssetId(surrogate.getAssetId());
@@ -372,8 +371,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     return Answer.of(
         artifactPtr.isPresent()
-            ? resolve(artifactPtr.get()).map(carrier::withEncodedExpression)
-            : resolveInlined(surrogate).map(carrier::withEncodedExpression)
+            ? resolve(artifactPtr.get()).map(carrier::withExpression)
+            : resolveInlined(surrogate).map(carrier::withExpression)
     );
 
   }
@@ -616,10 +615,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     logger.debug("SAVING ASSET {} : {}", assetId, versionTag);
 
     this.knowledgeArtifactApi.setKnowledgeArtifactVersion(repositoryId,
-        ensureUUID(surrogatePointer.getTag())
-            .orElseThrow(IllegalStateException::new),
+        surrogatePointer.getUuid(),
         surrogatePointer.getVersionTag(),
-        JSonUtil.writeJson(assetSurrogate).map(ByteArrayOutputStream::toByteArray)
+        JSonUtil.writeJson(assetSurrogate)
+            .map(ByteArrayOutputStream::toByteArray)
             .orElseThrow(RuntimeException::new));
 
     logger.debug("REGISTERING ASSET {} : {}", assetId, versionTag);
