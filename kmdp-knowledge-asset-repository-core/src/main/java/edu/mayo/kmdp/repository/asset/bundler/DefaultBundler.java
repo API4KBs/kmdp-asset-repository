@@ -18,12 +18,13 @@ package edu.mayo.kmdp.repository.asset.bundler;
 import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 
 import com.google.common.collect.Lists;
-import edu.mayo.kmdp.metadata.surrogate.ComputableKnowledgeArtifact;
+import edu.mayo.kmdp.metadata.v2.surrogate.ComputableKnowledgeArtifact;
 import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.repository.asset.SemanticKnowledgeAssetRepository;
 import edu.mayo.kmdp.repository.asset.index.Index;
 import edu.mayo.kmdp.repository.asset.v4.server.KnowledgeAssetRetrievalApiInternal;
 import edu.mayo.kmdp.util.FileUtil;
+import edu.mayo.kmdp.util.StreamUtil;
 import edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguage;
 import java.net.URI;
 import java.util.List;
@@ -73,8 +74,8 @@ public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKn
 
               return foundRelation;
             })
-            .filter(found -> found.getOptionalValue().isPresent())
-            .map(found-> found.getOptionalValue().get())
+            .filter(Answer::isSuccess)
+            .map(Answer::get)
             .collect(Collectors.toSet());
 
     List<KnowledgeCarrier> returnList = Lists.newArrayList();
@@ -85,7 +86,6 @@ public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKn
   }
 
   private void retrieveCarriers(KnowledgeAsset x, List<KnowledgeCarrier> returnList) {
-
     if (x.getAssetId() != null) {
       ResourceIdentifier id = x.getAssetId();
       if (id.getTag() == null || id.getVersionTag() == null) {
@@ -104,27 +104,24 @@ public class DefaultBundler implements KnowledgeAssetRetrievalApiInternal._getKn
   private List<KnowledgeCarrier> getAnonymousArtifacts(KnowledgeAsset assetSurrogate) {
     List<KnowledgeCarrier> carriers = Lists.newArrayList();
 
-    if (assetSurrogate.getCarriers() != null) {
-      assetSurrogate.getCarriers().stream()
-          .filter(ComputableKnowledgeArtifact.class::isInstance)
-          .map(ComputableKnowledgeArtifact.class::cast)
-          .forEach(carrier -> {
-            URI masterLocation = carrier.getLocator();
-            if (masterLocation != null) {
-              BinaryCarrier newCarrier = new BinaryCarrier();
-              if (carrier.getRepresentation() != null
-                  && carrier.getRepresentation().getLanguage() != null) {
-                KnowledgeRepresentationLanguage language = carrier.getRepresentation()
-                    .getLanguage();
-                newCarrier.setRepresentation(rep(language));
-              }
-              newCarrier
-                  .withAssetId(assetSurrogate.getAssetId())
-                  .withEncodedExpression(FileUtil.readBytes(masterLocation).orElse(new byte[0]));
-              carriers.add(newCarrier);
+    assetSurrogate.getCarriers().stream()
+        .flatMap(StreamUtil.filterAs(ComputableKnowledgeArtifact.class))
+        .forEach(carrier -> {
+          URI masterLocation = carrier.getLocator();
+          if (masterLocation != null) {
+            BinaryCarrier newCarrier = new BinaryCarrier();
+            if (carrier.getRepresentation() != null
+                && carrier.getRepresentation().getLanguage() != null) {
+              KnowledgeRepresentationLanguage language = carrier.getRepresentation()
+                  .getLanguage();
+              newCarrier.setRepresentation(rep(language));
             }
-          });
-    }
+            newCarrier
+                .withAssetId(assetSurrogate.getAssetId())
+                .withEncodedExpression(FileUtil.readBytes(masterLocation).orElse(new byte[0]));
+            carriers.add(newCarrier);
+          }
+        });
 
     return carriers;
   }

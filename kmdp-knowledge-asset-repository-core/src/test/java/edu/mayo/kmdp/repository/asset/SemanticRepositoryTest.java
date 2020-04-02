@@ -21,8 +21,10 @@ import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAsset
 import static edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype.DependencyTypeSeries.Depends_On;
 import static edu.mayo.ontology.taxonomies.kmdo.annotationreltype.AnnotationRelTypeSeries.Defines;
 import static edu.mayo.ontology.taxonomies.kmdo.annotationreltype.AnnotationRelTypeSeries.In_Terms_Of;
+import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.TXT;
 import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HL7_ELM;
 import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
+import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate_2_0;
 import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -30,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
+import static org.omg.spec.api4kp._1_0.id.IdentifierConstants.VERSION_ZERO;
 
 import edu.mayo.kmdp.metadata.v2.surrogate.ComputableKnowledgeArtifact;
 import edu.mayo.kmdp.metadata.v2.surrogate.Dependency;
@@ -41,6 +44,7 @@ import edu.mayo.kmdp.repository.artifact.exceptions.ResourceNotFoundException;
 import edu.mayo.kmdp.util.DateTimeUtil;
 import edu.mayo.ontology.taxonomies.api4kp.responsecodes.ResponseCodeSeries;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -50,6 +54,7 @@ import org.omg.spec.api4kp._1_0.Answer;
 import org.omg.spec.api4kp._1_0.id.ConceptIdentifier;
 import org.omg.spec.api4kp._1_0.id.IdentifierConstants;
 import org.omg.spec.api4kp._1_0.id.Pointer;
+import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
 import org.omg.spec.api4kp._1_0.id.SemanticIdentifier;
 import org.omg.spec.api4kp._1_0.id.Term;
 import org.omg.spec.api4kp._1_0.services.BinaryCarrier;
@@ -808,6 +813,66 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         .orElseGet(Collections::emptyList);
 
     assertEquals(2, carriers.size());
+  }
+
+
+  @Test
+  void testGetSurrogates() {
+    UUID u1 = UUID.nameUUIDFromBytes("1".getBytes());
+
+    ResourceIdentifier extraSurrogateId = SurrogateBuilder.randomArtifactId();
+
+    semanticRepository.setVersionedKnowledgeAsset(u1, "1", new KnowledgeAsset()
+        .withCarriers(new ComputableKnowledgeArtifact()
+            .withArtifactId(SurrogateBuilder.randomArtifactId())
+            .withRepresentation(rep(HL7_ELM)))
+        .withSurrogate(
+            new ComputableKnowledgeArtifact()
+            .withArtifactId(extraSurrogateId)
+            .withRepresentation(rep(HTML,TXT))
+            .withInlinedExpression("<p>Metadata</p>")
+        ));
+
+    List<Pointer> surrPointers =
+        semanticRepository.getKnowledgeAssetSurrogates(u1, "1")
+            .orElse(Collections.emptyList());
+    assertEquals(3,surrPointers.size());
+
+    Answer<KnowledgeCarrier> retrievedSurr =
+        semanticRepository.getKnowledgeAssetSurrogateVersion(u1,"1",
+          extraSurrogateId.getUuid(),extraSurrogateId.getVersionTag());
+    assertTrue(retrievedSurr.isSuccess());
+    assertEquals("<p>Metadata</p>",
+        retrievedSurr.get().asString().orElse(""));
+  }
+
+  @Test
+  void testPublishMultiple() {
+    UUID u1 = UUID.nameUUIDFromBytes("1".getBytes());
+    UUID u2 = UUID.nameUUIDFromBytes("2".getBytes());
+
+    KnowledgeAsset a1 = new KnowledgeAsset()
+        .withAssetId(SemanticIdentifier.newId(u1,VERSION_ZERO))
+        .withCarriers(new ComputableKnowledgeArtifact()
+            .withArtifactId(SurrogateBuilder.randomArtifactId())
+            .withRepresentation(rep(HTML)));
+    KnowledgeAsset a2 = new KnowledgeAsset()
+        .withAssetId(SemanticIdentifier.newId(u2,VERSION_ZERO))
+        .withCarriers(new ComputableKnowledgeArtifact()
+            .withArtifactId(SurrogateBuilder.randomArtifactId())
+            .withRepresentation(rep(HL7_ELM)));
+
+    KnowledgeCarrier ckc = AbstractCarrier.ofIdentiableSet(
+        rep(Knowledge_Asset_Surrogate_2_0),
+        KnowledgeAsset::getAssetId,
+        Arrays.asList(a1, a2));
+
+    semanticRepository.publishKnowledgeAsset(u1, VERSION_ZERO, ckc);
+
+    assertEquals(2,
+        semanticRepository.listKnowledgeAssets().orElse(Collections.emptyList()).size());
+    assertTrue(semanticRepository.getKnowledgeAsset(u1).isSuccess());
+    assertTrue(semanticRepository.getKnowledgeAsset(u2).isSuccess());
   }
 
 

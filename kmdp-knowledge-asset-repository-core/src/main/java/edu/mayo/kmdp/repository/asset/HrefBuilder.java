@@ -15,7 +15,10 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
+import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
 import org.omg.spec.api4kp._1_0.services.URIPathHelper;
 
@@ -48,5 +51,15 @@ public class HrefBuilder {
   public URI getArtifactRef(String repositoryId, String artifactId, String version) {
     return URI
         .create(URIPathHelper.knowledgeArtifactLocation(host, repositoryId, artifactId, version));
+  }
+
+  public URL getSurrogateRef(UUID assetId, String versionTag, UUID surrogateId, String surrogateVersionTag) {
+    try {
+      return URI.create(String
+          .format("%s/cat/assets/%s/versions/%s/surrogate/%s/versions/%s", this.host, assetId,
+              versionTag, surrogateId, surrogateVersionTag)).toURL();
+    } catch (MalformedURLException e) {
+      return null;
+    }
   }
 }
