@@ -18,6 +18,38 @@ steps:
     echo Project :: KMDP Knowledge Asset Repository
   displayName: 'Pipeline Steps Started'
 
+# Download Secure Settings m2 File
+- task: DownloadSecureFile@1
+  displayName: 'Download Secure m2'
+  name: settingsxml
+  inputs:
+    secureFile: settings-dev.xml
+
+# Write settings file to Build Server
+- task: PowerShell@2
+  displayName: 'Update m2 Settings File'
+  inputs:
+    targetType: 'inline'
+    script: |
+      New-Item -Type Directory -Force "${HOME}/.m2"
+      Copy-Item -Force "$(settingsxml.secureFilePath)" "${HOME}/.m2/settings.xml"
+
+# Authenticate to Maven Feed 
+- task: MavenAuthenticate@0
+  displayName: 'Maven Authenticate'
+  inputs:
+    artifactsFeeds: 'KMD'
+
+# Set JDK 11 and MVN Validate Project
+- task: Maven@3
+  displayName: 'Set Maven JDK 11'
+  inputs:
+    mavenPomFile: 'pom.xml'
+    goals: 'validate'
+    options: '-ntp'
+    javaHomeOption: 'JDKVersion'
+    jdkVersionOption: '1.11'
+
 # Read Root POM File and Set GAV Variables
 - task: PowerShell@2
   displayName: 'Read POM/Set GAV Variables'
@@ -62,28 +94,6 @@ steps:
     versionFilePath: pom.xml
     versionTransformation: none
 
-# Download Secure Settings m2 File
-- task: DownloadSecureFile@1
-  displayName: 'Download Secure m2'
-  name: settingsxml
-  inputs:
-    secureFile: settings-dev.xml
-
-# Write settings file to Build Server
-- task: PowerShell@2
-  displayName: 'Update m2 Settings File'
-  inputs:
-    targetType: 'inline'
-    script: |
-      New-Item -Type Directory -Force "${HOME}/.m2"
-      Copy-Item -Force "$(settingsxml.secureFilePath)" "${HOME}/.m2/settings.xml"
-
-# Authenticate to Maven Feed 
-- task: MavenAuthenticate@0
-  displayName: 'Maven Authenticate'
-  inputs:
-    artifactsFeeds: 'KMD'
-
 # Maven Clean Test
 - task: Maven@3
   displayName: 'Maven Clean Test'
@@ -93,6 +103,7 @@ steps:
     javaHomeOption: 'JDKVersion'
     jdkVersionOption: '1.11'
     jdkArchitectureOption: 'x64'
+    options: '-ntp'
 
 # ------------------ END PIPELINE  ------------------
 - script: |
