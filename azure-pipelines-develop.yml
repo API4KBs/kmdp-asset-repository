@@ -2,7 +2,7 @@
 ### Develop Snapshot Branch X.X.X-SNAPSHOT
 ### Project :: KMDP KNOWLEDGE ASSET REPO SERVICE
 
-# !! Downstream Build: kmdp-inference-broker; develop !!
+# !! Downstream Build: kmdp-glossary-library-service; develop !!
 
 trigger:
 - develop
@@ -10,7 +10,7 @@ trigger:
 resources:
   pipelines:
     - pipeline: kmdpKnowledgeAssetRepositoryServiceDevelop
-      source: kmdpKnowledgebaseServiceDevelop
+      source: kmdpInferenceBrokerDevelop
       trigger: 
         branches:
           - develop
