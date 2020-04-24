@@ -17,12 +17,26 @@ package edu.mayo.kmdp.repository.asset;
 
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
-import org.omg.spec.api4kp._1_0.services.URIPathHelper;
+import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class HrefBuilder {
+
+  private static Logger logger = LoggerFactory.getLogger(HrefBuilder.class);
+
+  public enum HrefType {
+    ASSET,
+    ASSET_VERSION,
+    ASSET_CARRIER,
+    ASSET_CARRIER_VERSION,
+    ASSET_SURROGATE,
+    ASSET_SURROGATE_VERSION
+  }
 
   private String host;
 
@@ -33,32 +47,102 @@ public class HrefBuilder {
             .toString(), "/");
   }
 
-  public URI getAssetHref(String id) {
-    return URI.create(String.format("%s/cat/assets/%s", this.host, id));
+  public URI getHref(ResourceIdentifier assetId, ResourceIdentifier artifactId, HrefType hrefType) {
+    try {
+      switch (hrefType) {
+        case ASSET:
+          return getAssetHref(assetId.getUuid()).toURI();
+        case ASSET_VERSION:
+          return getAssetVersionHref(assetId.getUuid(), assetId.getVersionTag()).toURI();
+        case ASSET_CARRIER:
+          return getAssetCarrierHref(assetId.getUuid(), assetId.getVersionTag(),
+              artifactId.getUuid()).toURI();
+        case ASSET_CARRIER_VERSION:
+          return getAssetCarrierVersionHref(assetId.getUuid(), assetId.getVersionTag(),
+              artifactId.getUuid(), artifactId.getVersionTag()).toURI();
+        case ASSET_SURROGATE:
+          return getSurrogateRef(assetId.getUuid(), assetId.getVersionTag(),
+              artifactId.getUuid()).toURI();
+        case ASSET_SURROGATE_VERSION:
+          return getSurrogateVersionRef(assetId.getUuid(), assetId.getVersionTag(),
+              artifactId.getUuid(), artifactId.getVersionTag()).toURI();
+        default:
+          throw new UnsupportedOperationException("TODO: add Href for " + hrefType.name());
+      }
+    } catch (URISyntaxException mfe) {
+      logger.error(mfe.getMessage(),mfe);
+      return null;
+    }
   }
 
-  public URI getAssetVersionHref(String id, String version) {
-    return URI.create(String.format("%s/cat/assets/%s/versions/%s", this.host, id, version));
+  public URI getHref(ResourceIdentifier assetId, HrefType hrefType) {
+    switch (hrefType) {
+      case ASSET:
+        return getHref(assetId, null, HrefType.ASSET);
+      case ASSET_VERSION:
+        return getHref(assetId, null, HrefType.ASSET_VERSION);
+      default:
+        throw new UnsupportedOperationException(hrefType.name() + "requires an ArtifactId as well");
+    }
   }
 
-  public URI getAssetCarrierVersionHref(String assetId, String assetVersion, String carrierId,
+  public URL getAssetHref(UUID id) {
+    try {
+      return URI.create(String.format("%s/cat/assets/%s", this.host, id)).toURL();
+    } catch (MalformedURLException e) {
+      logger.error(e.getMessage(),e);
+      return null;
+    }
+  }
+
+  public URL getAssetVersionHref(UUID id, String version) {
+    try {
+      return URI.create(String.format("%s/cat/assets/%s/versions/%s", this.host, id, version)).toURL();
+    } catch (MalformedURLException e) {
+      logger.error(e.getMessage(),e);
+      return null;
+    }
+  }
+
+  public URL getAssetCarrierHref(UUID assetId, String assetVersion, UUID carrierId) {
+    try {
+      return URI.create(String
+          .format("%s/cat/assets/%s/versions/%s/carriers/%s", this.host, assetId,
+              assetVersion, carrierId)).toURL();
+    } catch (MalformedURLException e) {
+      logger.error(e.getMessage(),e);
+      return null;
+    }
+  }
+  public URL getAssetCarrierVersionHref(UUID assetId, String assetVersion, UUID carrierId,
       String carrierVersion) {
-    return URI.create(String
-        .format("%s/cat/assets/%s/versions/%s/carriers/%s/versions/%s", this.host, assetId,
-            assetVersion, carrierId, carrierVersion));
+    try {
+      return URI.create(String
+          .format("%s/cat/assets/%s/versions/%s/carriers/%s/versions/%s", this.host, assetId,
+              assetVersion, carrierId, carrierVersion)).toURL();
+    } catch (MalformedURLException e) {
+      logger.error(e.getMessage(),e);
+      return null;
+    }
   }
 
-  public URI getArtifactRef(String repositoryId, String artifactId, String version) {
-    return URI
-        .create(URIPathHelper.knowledgeArtifactLocation(host, repositoryId, artifactId, version));
+  public URL getSurrogateRef(UUID assetId, String versionTag, UUID surrogateId) {
+    try {
+      return URI.create(String
+          .format("%s/cat/assets/%s/versions/%s/surrogate/%s", this.host, assetId,
+              versionTag, surrogateId)).toURL();
+    } catch (MalformedURLException e) {
+      logger.error(e.getMessage(),e);
+      return null;
+    }
   }
-
-  public URL getSurrogateRef(UUID assetId, String versionTag, UUID surrogateId, String surrogateVersionTag) {
+  public URL getSurrogateVersionRef(UUID assetId, String versionTag, UUID surrogateId, String surrogateVersionTag) {
     try {
       return URI.create(String
           .format("%s/cat/assets/%s/versions/%s/surrogate/%s/versions/%s", this.host, assetId,
               versionTag, surrogateId, surrogateVersionTag)).toURL();
     } catch (MalformedURLException e) {
+      logger.error(e.getMessage(),e);
       return null;
     }
   }

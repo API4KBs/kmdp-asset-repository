@@ -21,7 +21,6 @@ import edu.mayo.kmdp.Option;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig.KnowledgeArtifactRepositoryOptions;
 import edu.mayo.kmdp.util.Util;
-
 import java.net.URL;
 import java.util.Properties;
 

@@ -1,6 +1,7 @@
 package edu.mayo.kmdp.repository.asset.index.sparql;
 
-import static edu.mayo.kmdp.repository.asset.SemanticKnowledgeAssetRepository.KB_UUID;
+import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.OWL_2;
+import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 import static org.omg.spec.api4kp._1_0.id.IdentifierConstants.VERSION_LATEST;
 
 import com.google.common.collect.Lists;
@@ -9,6 +10,7 @@ import edu.mayo.kmdp.knowledgebase.v4.server.KnowledgeBaseApiInternal;
 import edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder;
 import java.net.URI;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -23,6 +25,7 @@ import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
+import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
@@ -163,8 +166,9 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
         .withManifestation(AbstractCarrier.ofTree(model)
             .withAssetId(SurrogateBuilder.randomAssetId())
             .withArtifactId(SurrogateBuilder.randomArtifactId())
+            .withRepresentation(rep(OWL_2))
         )
-        .withKbaseId(SemanticIdentifier.newIdAsPointer(KB_UUID,VERSION_LATEST));
+        .withKbaseId(SemanticIdentifier.newIdAsPointer(UUID.randomUUID(),VERSION_LATEST));
   }
 
   /**
@@ -180,6 +184,10 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   public void shutdown() {
     this.model.close();
     this.store.close();
+  }
+
+  public void reset() {
+    this.model.removeAll();
   }
 
   /**
@@ -223,16 +231,15 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
    * @param params
    * @param consumer
    */
-  public void runSparql(String sparql, Map<String, String> params, Consumer<QuerySolution> consumer) {
+  public void runSparql(String sparql, Map<String, URI> params, Map<String, Literal> literalParams, Consumer<QuerySolution> consumer) {
     ParameterizedSparqlString pss = new ParameterizedSparqlString(sparql);
 
-    if (params != null) {
-      params.entrySet().forEach(entry -> pss.setIri(entry.getKey(), entry.getValue()));
-    }
+    params.entrySet().forEach(entry -> pss.setIri(entry.getKey(), entry.getValue().toString()));
+    literalParams.entrySet().forEach(entry -> pss.setLiteral(entry.getKey(), entry.getValue()));
+
 
     try (QueryExecution qexec = QueryExecutionFactory.create(pss.toString(), this.model)) {
       ResultSet rs = qexec.execSelect();
-
       rs.forEachRemaining(consumer);
     }
   }
@@ -250,13 +257,13 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   public List<Resource> readSubjectByPredicateAndObject(URI predicate, URI object) {
     String query = "select ?s where { ?s ?p ?o . }";
 
-    Map<String, String> params = Maps.newHashMap();
-    params.put("?p", predicate.toString());
-    params.put("?o", object.toString());
+    Map<String, URI> params = Maps.newHashMap();
+    params.put("?p", predicate);
+    params.put("?o", object);
 
     List<Resource> resourceList = Lists.newArrayList();
 
-    this.runSparql(query, params, result -> resourceList.add(result.getResource("?s")));
+    this.runSparql(query, params, Collections.emptyMap(), result -> resourceList.add(result.getResource("?s")));
 
     return resourceList;
   }
@@ -274,15 +281,39 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   public List<Resource> readObjectBySubjectAndPredicate(URI subject, URI predicate) {
     String query = "select ?o where { ?s ?p  ?o . }";
 
-    Map<String, String> params = Maps.newHashMap();
-    params.put("?p", predicate.toString());
-    params.put("?s", subject.toString());
+    Map<String, URI> params = Maps.newHashMap();
+    params.put("?p", predicate);
+    params.put("?s", subject);
 
     List<Resource> resourceList = Lists.newArrayList();
 
-    this.runSparql(query, params, result -> resourceList.add(result.getResource("?o")));
+    this.runSparql(query, params, Collections.emptyMap(), result -> resourceList.add(result.getResource("?o")));
 
     return resourceList;
+  }
+
+  /**
+   * Read by Object by Subject and Predicate:
+   *
+   * --> select ?o where { ?s ?p  ?o . }
+   * for given ?s and ?p
+   *
+   * @param subject ?s
+   * @param predicate ?p
+   * @return ?o
+   */
+  public List<Literal> readValueBySubjectAndPredicate(URI subject, URI predicate) {
+    String query = "select ?o where { ?s ?p  ?o . }";
+
+    Map<String, URI> params = Maps.newHashMap();
+    params.put("?p", predicate);
+    params.put("?s", subject);
+
+    List<Literal> valueList = Lists.newArrayList();
+
+    this.runSparql(query, params, Collections.emptyMap(), result -> valueList.add(result.getLiteral("?o")));
+
+    return valueList;
   }
 
   /**
@@ -297,14 +328,24 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   public List<Resource> readSubjectByPredicate(URI predicate) {
     String query = "select ?s where { ?s ?p  ?o . }";
 
-    Map<String, String> params = Maps.newHashMap();
-    params.put("?p", predicate.toString());
+    Map<String, URI> params = Maps.newHashMap();
+    params.put("?p", predicate);
 
     List<Resource> resourceList = Lists.newArrayList();
 
-    this.runSparql(query, params, result -> resourceList.add(result.getResource("?s")));
+    this.runSparql(query, params, Collections.emptyMap(), result -> resourceList.add(result.getResource("?s")));
 
     return resourceList;
+  }
+
+  /**
+   * Returns true if a statement (s,p,o) exists
+   *
+   * @param st The (s,p,o) statement
+   * @return true if (s,p,o) is a statement that is part of the model
+   */
+  public boolean checkStatementExists(Statement st) {
+    return model.contains(st);
   }
   
   /**
@@ -319,12 +360,12 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   public List<Resource> readSubjectByObject(URI object) {
     String query = "select ?s where { ?s ?p  ?o . }";
 
-    Map<String, String> params = Maps.newHashMap();
-    params.put("?o", object.toString());
+    Map<String, URI> params = Maps.newHashMap();
+    params.put("?o", object);
 
     List<Resource> resourceList = Lists.newArrayList();
 
-    this.runSparql(query, params, result -> resourceList.add(result.getResource("?s")));
+    this.runSparql(query, params, Collections.emptyMap(), result -> resourceList.add(result.getResource("?s")));
 
     return resourceList;
   }
@@ -339,10 +380,14 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
 
   @Override
   public Answer<KnowledgeBase> getKnowledgeBase(UUID kbaseId, String versionTag) {
-    if (KB_UUID.equals(kbaseId)) {
-      return Answer.of(kBase);
+    if (this.getKnowledgeBase().getKbaseId().getUuid().equals(kbaseId)) {
+      return Answer.of(getKnowledgeBase());
     }
     return Answer.notFound();
+  }
+
+  public KnowledgeBase getKnowledgeBase() {
+    return kBase;
   }
 
 }

@@ -20,6 +20,9 @@ import edu.mayo.kmdp.language.TransrepresentationExecutor;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.artifact.jcr.JcrKnowledgeArtifactRepository;
+import java.sql.SQLException;
+import javax.jcr.Repository;
+import javax.sql.DataSource;
 import org.apache.jackrabbit.oak.Oak;
 import org.apache.jackrabbit.oak.jcr.Jcr;
 import org.apache.jackrabbit.oak.plugins.document.DocumentNodeStore;
@@ -35,10 +38,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.jdbc.support.JdbcUtils;
 import org.springframework.jdbc.support.MetaDataAccessException;
-
-import javax.jcr.Repository;
-import javax.sql.DataSource;
-import java.sql.SQLException;
 
 @Configuration
 @ComponentScan(basePackageClasses = {
@@ -70,7 +69,7 @@ public class KnowledgeAssetRepositoryComponentConfig {
    */
   @Bean
   @KPServer
-  public KnowledgeArtifactRepositoryService jdbcRepository(DataSource dataSource) throws SQLException {
+  public KnowledgeArtifactRepositoryService jdbcRepository(DataSource dataSource)  {
 
     try {
       String url = (String) JdbcUtils.extractDatabaseMetaData(dataSource, databaseMetaData -> databaseMetaData.getURL());

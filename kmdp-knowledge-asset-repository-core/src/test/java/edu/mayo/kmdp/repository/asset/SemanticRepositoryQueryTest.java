@@ -16,19 +16,32 @@ package edu.mayo.kmdp.repository.asset;
 import static edu.mayo.kmdp.util.Util.uuid;
 import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Care_Process_Model;
 import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.TXT;
+import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.OWL_2;
 import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.SPARQL_1_1;
+import static edu.mayo.ontology.taxonomies.krserialization.KnowledgeRepresentationLanguageSerializationSeries.RDF_XML_Syntax;
+import static edu.mayo.ontology.taxonomies.krserialization.KnowledgeRepresentationLanguageSerializationSeries.Turtle;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 
 import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
+import edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguage;
+import edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries;
+import edu.mayo.ontology.taxonomies.krserialization.KnowledgeRepresentationLanguageSerializationSeries;
+import edu.mayo.ontology.taxonomies.krserialization.snapshot.KnowledgeRepresentationLanguageSerialization;
+import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.List;
+import org.apache.jena.rdf.model.Model;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.AbstractCarrier;
+import org.omg.spec.api4kp._1_0.Answer;
 import org.omg.spec.api4kp._1_0.datatypes.Bindings;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
+import org.omg.spec.api4kp._1_0.services.tranx.ModelMIMECoder;
 
 
 class SemanticRepositoryQueryTest extends RepositoryTestBase {
@@ -41,10 +54,10 @@ class SemanticRepositoryQueryTest extends RepositoryTestBase {
   @BeforeEach
   void prepopulate() {
     assertNotNull(semanticRepository
-        .setVersionedKnowledgeAsset(uuid("foo"), "1",
+        .setKnowledgeAssetVersion(uuid("foo"), "1",
             new KnowledgeAsset().withFormalType(Care_Process_Model)));
     assertNotNull(semanticRepository
-        .setVersionedKnowledgeAsset(uuid("foo2"), "1",
+        .setKnowledgeAssetVersion(uuid("foo2"), "1",
             new KnowledgeAsset().withFormalType(Care_Process_Model)));
   }
 
@@ -55,12 +68,41 @@ class SemanticRepositoryQueryTest extends RepositoryTestBase {
         "";
 
     KnowledgeCarrier queryCarrier = AbstractCarrier.of(query)
-        .withRepresentation(rep(SPARQL_1_1, TXT));
+        .withRepresentation(rep(SPARQL_1_1, TXT, Charset.defaultCharset()));
 
-    List<Bindings> binds = semanticRepository.queryKnowledgeAssets(queryCarrier)
+    List<Bindings> binds = semanticRepository.queryKnowledgeAssetGraph(queryCarrier)
         .orElse(Collections.emptyList());
 
     assertEquals(2, binds.size());
+  }
+
+  @Test
+  void testGraph() {
+    Answer<KnowledgeCarrier> graphAns =
+        semanticRepository.getKnowledgeGraph(
+            ModelMIMECoder.encode(rep(OWL_2, RDF_XML_Syntax)));
+    assertTrue(graphAns.isSuccess());
+    KnowledgeCarrier graph = graphAns.get();
+
+    assertTrue(graph.is(String.class));
+    assertTrue(graph.asString().filter(str -> str.startsWith("<rdf:RDF")).isPresent());
+    assertSame(OWL_2,
+        graph.getRepresentation().getLanguage().asEnum());
+    assertSame(RDF_XML_Syntax,
+        graph.getRepresentation().getSerialization().asEnum());
+  }
+
+  @Test
+  void testGraphDefault() {
+    Answer<KnowledgeCarrier> graphAns = semanticRepository.getKnowledgeGraph();
+    assertTrue(graphAns.isSuccess());
+    KnowledgeCarrier graph = graphAns.get();
+
+    assertTrue(graph.is(String.class));
+    assertSame(OWL_2,
+        graph.getRepresentation().getLanguage().asEnum());
+    assertSame(Turtle,
+        graph.getRepresentation().getSerialization().asEnum());
   }
 
 }

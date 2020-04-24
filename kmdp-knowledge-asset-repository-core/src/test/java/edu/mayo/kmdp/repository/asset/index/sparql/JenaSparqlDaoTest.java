@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.collect.Lists;
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
 import org.apache.jena.rdf.model.Resource;
 import org.h2.jdbcx.JdbcDataSource;
@@ -43,7 +44,8 @@ class JenaSparqlDaoTest {
 
     List<Resource> results = Lists.newArrayList();
 
-    dao.runSparql(query, null, (x) -> results.add(x.getResource("?s")));
+    dao.runSparql(query, Collections.emptyMap(), Collections.emptyMap(),
+        x -> results.add(x.getResource("?s")));
 
     assertEquals(1, results.size());
     assertEquals("http://test1", results.get(0).getURI());

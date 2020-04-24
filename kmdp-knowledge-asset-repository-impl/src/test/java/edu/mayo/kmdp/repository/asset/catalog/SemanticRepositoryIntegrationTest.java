@@ -13,6 +13,8 @@
  */
 package edu.mayo.kmdp.repository.asset.catalog;
 
+import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder.assetId;
+import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder.randomAssetId;
 import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Care_Process_Model;
 import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Clinical_Rule;
 import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Decision_Model;
@@ -32,7 +34,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.Answer;
@@ -55,15 +56,14 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
 
   @Test
   void testListKnowledgeAssetsType() {
-    ResourceIdentifier assetId = SemanticIdentifier.newId(UUID.randomUUID(),"1");
-    ckac.setVersionedKnowledgeAsset(assetId.getUuid(), assetId.getVersionTag(),
+    ResourceIdentifier assetId = randomAssetId();
+    ckac.setKnowledgeAssetVersion(assetId.getUuid(), assetId.getVersionTag(),
         new KnowledgeAsset()
             .withAssetId(assetId)
             .withFormalType(Decision_Model));
 
     List<Pointer> pointers = ckac
-        .listKnowledgeAssets(Decision_Model.getTag(),
-            null, null, -1, -1)
+        .listKnowledgeAssets(Decision_Model.getTag(), null, null, -1, -1)
         .orElse(Collections.emptyList());
 
     assertEquals(1, pointers.size());
@@ -72,7 +72,7 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
   @Test
   void testListKnowledgeAssetsBadType() {
     ResourceIdentifier assetId = SemanticIdentifier.newId(strToUUID("1"),"1");
-    ckac.setVersionedKnowledgeAsset(assetId.getUuid(),assetId.getVersionTag(),
+    ckac.setKnowledgeAssetVersion(assetId.getUuid(),assetId.getVersionTag(),
         new KnowledgeAsset()
             .withAssetId(assetId)
             .withFormalType(Care_Process_Model));
@@ -86,49 +86,47 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
 
   @Test
   void testListKnowledgeAssetsNoType() {
-    Answer<List<Pointer>> zero = ckac.listKnowledgeAssets(null, null, null, -1, -1);
+    Answer<List<Pointer>> zero = ckac.listKnowledgeAssets();
     assertTrue(zero.isSuccess());
 
-    ResourceIdentifier rid1 = SemanticIdentifier.newId(strToUUID("98"), "1");
-    ckac.setVersionedKnowledgeAsset(rid1.getUuid(),rid1.getVersionTag(),
+    ResourceIdentifier rid1 = randomAssetId();
+    ckac.setKnowledgeAssetVersion(rid1.getUuid(),rid1.getVersionTag(),
         new KnowledgeAsset()
             .withAssetId(rid1)
             .withFormalType(Care_Process_Model));
 
-    ResourceIdentifier rid2 = SemanticIdentifier.newId(strToUUID("89"), "1");
-    ckac.setVersionedKnowledgeAsset(rid2.getUuid(),rid2.getVersionTag(),
+    ResourceIdentifier rid2 = randomAssetId();
+    ckac.setKnowledgeAssetVersion(rid2.getUuid(),rid2.getVersionTag(),
         new KnowledgeAsset()
             .withAssetId(rid2)
             .withFormalType(Clinical_Rule));
 
-    Answer<List<Pointer>> ans = ckac.listKnowledgeAssets(null,
-        null, null, -1, -1);
+    Answer<List<Pointer>> ans = ckac.listKnowledgeAssets();
     List<Pointer> pointers = ans
         .orElse(Collections.emptyList());
 
     assertTrue(pointers.stream().anyMatch(p -> p.getResourceId().toString()
-        .contains(strToUUID("98").toString())));
+        .contains(rid1.getUuid().toString())));
     assertTrue(pointers.stream().anyMatch(p -> p.getHref().toString()
-        .contains(strToUUID("89").toString())));
+        .contains(rid2.getUuid().toString())));
   }
 
   @Test
   void testGeKnowledgeAssetsVersions() {
-
-    ResourceIdentifier rid1 = SemanticIdentifier.newId(strToUUID("4"), "1");
-    ckac.setVersionedKnowledgeAsset(rid1.getUuid(),rid1.getVersionTag(),
+    UUID uid = UUID.randomUUID();
+    ResourceIdentifier rid1 = assetId(uid,"1.0.0");
+    ckac.setKnowledgeAssetVersion(rid1.getUuid(),rid1.getVersionTag(),
         new KnowledgeAsset().withAssetId(rid1));
 
-    ResourceIdentifier rid2 = SemanticIdentifier.newId(strToUUID("4"), "2");
-    ckac.setVersionedKnowledgeAsset(rid2.getUuid(),rid2.getVersionTag(),
+    ResourceIdentifier rid2 = assetId(uid, "2.0.0");
+    ckac.setKnowledgeAssetVersion(rid2.getUuid(),rid2.getVersionTag(),
         new KnowledgeAsset().withAssetId(rid2));
 
-    List<Pointer> pointers = ckac.listKnowledgeAssets(null,
-        null, null, -1, -1)
+    List<Pointer> pointers = ckac.listKnowledgeAssets()
         .orElse(Collections.emptyList())
         .stream()
-        .filter((p) -> p.getHref().toString()
-            .contains("assets/" + strToUUID("4")))
+        .filter(p -> p.getHref().toString()
+            .contains("assets/" + uid))
         .collect(Collectors.toList());
 
     assertEquals(1, pointers.size());
@@ -136,26 +134,29 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
 
   @Test
   void testGetLatestKnowledgeAsset() {
-    ResourceIdentifier rid1 = SemanticIdentifier.newId(strToUUID("3"), "1");
-    ckac.setVersionedKnowledgeAsset(rid1.getUuid(),rid1.getVersionTag(),
-        new KnowledgeAsset().withAssetId(rid1));
+    UUID uid = UUID.randomUUID();
 
-    ResourceIdentifier rid2 = SemanticIdentifier.newId(strToUUID("3"), "2");
-    ckac.setVersionedKnowledgeAsset(rid2.getUuid(),rid2.getVersionTag(),
+    ResourceIdentifier rid2 = assetId(uid, "2.0.0");
+    ckac.setKnowledgeAssetVersion(rid2.getUuid(),rid2.getVersionTag(),
         new KnowledgeAsset().withAssetId(rid2));
 
-    Assertions.assertTrue(
-        ckac.getKnowledgeAsset(strToUUID("3"), null).isSuccess());
+    ResourceIdentifier rid1 = assetId(uid, "1.0.0");
+    ckac.setKnowledgeAssetVersion(rid1.getUuid(),rid1.getVersionTag(),
+        new KnowledgeAsset().withAssetId(rid1));
+
+    Answer<KnowledgeAsset> axx = ckac.getKnowledgeAsset(uid, null);
+    assertTrue(axx.isSuccess());
+    assertEquals("2.0.0", axx.get().getAssetId().getVersionTag());
   }
 
   @Test
   void testGetLatestKnowledgeAssetHasCorrectId() {
     ResourceIdentifier rid1 = SemanticIdentifier.newId(strToUUID("1"), "1");
-    ckac.setVersionedKnowledgeAsset(rid1.getUuid(),rid1.getVersionTag(),
+    ckac.setKnowledgeAssetVersion(rid1.getUuid(),rid1.getVersionTag(),
         new KnowledgeAsset().withAssetId(rid1));
 
     ResourceIdentifier rid2 = SemanticIdentifier.newId(strToUUID("1"), "2");
-    ckac.setVersionedKnowledgeAsset(rid2.getUuid(),rid2.getVersionTag(),
+    ckac.setKnowledgeAssetVersion(rid2.getUuid(),rid2.getVersionTag(),
         new KnowledgeAsset().withAssetId(rid2));
 
     String id = ckac.getKnowledgeAsset(strToUUID("1"), null)
@@ -168,7 +169,7 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
 
   @Test
   void testSurrogateWithApplicability() {
-    ckac.setVersionedKnowledgeAsset(strToUUID("0099"), "1",
+    ckac.setKnowledgeAssetVersion(strToUUID("0099"), "1",
         new KnowledgeAsset()
             .withApplicableIn(new Applicability()
                 .withSituation(Logic_Based_Technique.asConceptIdentifier()))

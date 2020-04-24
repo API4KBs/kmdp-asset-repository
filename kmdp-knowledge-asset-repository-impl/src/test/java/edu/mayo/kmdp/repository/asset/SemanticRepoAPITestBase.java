@@ -15,14 +15,11 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
-import edu.mayo.kmdp.inference.v4.server.QueryApiInternal._askQuery;
 import edu.mayo.kmdp.kbase.query.sparql.v1_1.JenaQuery;
 import edu.mayo.kmdp.language.TransrepresentationExecutor;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase.IntegrationTestConfig;
 import org.junit.jupiter.api.AfterEach;
-import org.omg.spec.api4kp._1_0.services.KPComponent;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;

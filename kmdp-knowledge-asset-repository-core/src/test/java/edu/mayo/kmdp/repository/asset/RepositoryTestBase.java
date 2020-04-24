@@ -6,13 +6,18 @@ import edu.mayo.kmdp.language.LanguageDeSerializer;
 import edu.mayo.kmdp.language.LanguageDetector;
 import edu.mayo.kmdp.language.LanguageValidator;
 import edu.mayo.kmdp.language.TransrepresentationExecutor;
-import edu.mayo.kmdp.language.parsers.surrogate.v1.SurrogateParser;
+import edu.mayo.kmdp.language.parsers.owl2.JenaOwlParser;
 import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig;
 import edu.mayo.kmdp.repository.artifact.jcr.JcrKnowledgeArtifactRepository;
 import edu.mayo.kmdp.repository.asset.index.Index;
 import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDao;
 import edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.UUID;
+import javax.jcr.Repository;
+import javax.sql.DataSource;
 import org.apache.jackrabbit.oak.Oak;
 import org.apache.jackrabbit.oak.jcr.Jcr;
 import org.apache.jackrabbit.oak.plugins.document.DocumentNodeStore;
@@ -22,11 +27,6 @@ import org.apache.jackrabbit.oak.spi.security.OpenSecurityProvider;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.boot.jdbc.DataSourceBuilder;
-
-import javax.jcr.Repository;
-import javax.sql.DataSource;
-import java.util.Collections;
-import java.util.UUID;
 
 abstract class RepositoryTestBase {
 
@@ -59,17 +59,21 @@ abstract class RepositoryTestBase {
     Repository jcr = new Jcr(new Oak(dns)).with(new OpenSecurityProvider()).createRepository();
 
     repos = new JcrKnowledgeArtifactRepository(
-            jcr,
-            new KnowledgeArtifactRepositoryServerConfig());
+        jcr,
+        new KnowledgeArtifactRepositoryServerConfig());
 
     jenaSparqlDao = new JenaSparqlDao(ds, true);
 
-    Index index = new SparqlIndex(jenaSparqlDao);
+    Index index = new SparqlIndex(jenaSparqlDao) {
+      public void reset() {
+
+      }
+    };
 
     semanticRepository = new SemanticKnowledgeAssetRepository(
         repos,
         new LanguageDeSerializer(
-            Collections.singletonList(new Surrogate2Parser())),
+            Arrays.asList(new Surrogate2Parser(), new JenaOwlParser())),
         new LanguageDetector(Collections.emptyList()),
         new LanguageValidator(Collections.emptyList()),
         new TransrepresentationExecutor(Collections.emptyList()),

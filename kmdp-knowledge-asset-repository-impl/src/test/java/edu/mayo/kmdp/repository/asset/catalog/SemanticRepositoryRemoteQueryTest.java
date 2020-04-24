@@ -13,6 +13,7 @@
  */
 package edu.mayo.kmdp.repository.asset.catalog;
 
+import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder.assetId;
 import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Equation;
 import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.TXT;
 import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.SPARQL_1_1;
@@ -20,13 +21,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 
 import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
-import edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder;
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
 import edu.mayo.kmdp.repository.asset.v4.KnowledgeAssetCatalogApi;
-import edu.mayo.kmdp.repository.asset.v4.KnowledgeAssetRetrievalApi;
 import edu.mayo.kmdp.repository.asset.v4.client.ApiClientFactory;
+import edu.mayo.kmdp.repository.asset.v4.server.KnowledgeAssetCatalogApiInternal;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
 import edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries;
+import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -35,7 +36,6 @@ import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.AbstractCarrier;
 import org.omg.spec.api4kp._1_0.datatypes.Bindings;
 import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
-import org.omg.spec.api4kp._1_0.id.SemanticIdentifier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 
 
@@ -50,8 +50,8 @@ class SemanticRepositoryRemoteQueryTest extends SemanticRepoAPITestBase {
 
     ckac = KnowledgeAssetCatalogApi.newInstance(webClientFactory);
 
-    ResourceIdentifier assetId = SemanticIdentifier.newId(UUID.nameUUIDFromBytes("aaa000".getBytes()), "1");
-    ckac.setVersionedKnowledgeAsset(assetId.getUuid(),assetId.getVersionTag(),
+    ResourceIdentifier assetId = assetId(UUID.nameUUIDFromBytes("aaa000".getBytes()),"1.0.0");
+    ckac.setKnowledgeAssetVersion(assetId.getUuid(),assetId.getVersionTag(),
         new KnowledgeAsset()
             .withAssetId(assetId)
             .withFormalType(Equation));
@@ -61,22 +61,22 @@ class SemanticRepositoryRemoteQueryTest extends SemanticRepoAPITestBase {
   void testQuery() {
     ApiClientFactory webClientFactory = new ApiClientFactory("http://localhost:" + port,
         WithFHIR.NONE);
-    KnowledgeAssetRetrievalApi qryPoint = KnowledgeAssetRetrievalApi.newInstance(webClientFactory);
+    KnowledgeAssetCatalogApiInternal qryPoint = KnowledgeAssetCatalogApi.newInstance(webClientFactory);
 
     String query = "" +
         "select ?s where { ?s a <" + KnowledgeAssetTypeSeries.Equation.getRef() + "> }" +
         "";
 
     KnowledgeCarrier queryCarrier = AbstractCarrier.of(query)
-        .withRepresentation(rep(SPARQL_1_1, TXT));
+        .withRepresentation(rep(SPARQL_1_1, TXT, Charset.defaultCharset()));
 
-    List<Bindings> binds = qryPoint.queryKnowledgeAssets(queryCarrier)
+    List<Bindings> binds = qryPoint.queryKnowledgeAssetGraph(queryCarrier)
         .orElse(Collections.emptyList());
 
     assertEquals(1, binds.size());
     Object assetId = binds.get(0).get("s");
     assertEquals(
-        SurrogateBuilder.assetId(UUID.nameUUIDFromBytes("aaa000".getBytes()),"1")
+        assetId(UUID.nameUUIDFromBytes("aaa000".getBytes()),"1.0.0")
             .getVersionId().toString(),
         assetId);
   }

@@ -13,6 +13,7 @@
  */
 package edu.mayo.kmdp.repository.asset.catalog;
 
+import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder.randomArtifactId;
 import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Rules_Policies_And_Guidelines;
 import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Terminology_Ontology_And_Assertional_KBs;
 import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Clinical_Rule;
@@ -44,10 +45,8 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.Answer;
-import org.omg.spec.api4kp._1_0.id.IdentifierConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -87,20 +86,19 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
 
     populateRepositoryWithRedirectables(pockId, rulId);
 
-    CloseableHttpClient httpClient = HttpClients.createDefault();
+    try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+      HttpGet request =
+          new HttpGet("http://localhost:" + port + "/cat/assets/" + pockId);
+      request.addHeader(HttpHeaders.USER_AGENT, "Colorless/42");
+      request.addHeader(HttpHeaders.ACCEPT,
+          "text/html, application/xhtml+xml, application/xml;q=0.9, image/webp, */*;q=0.8");
+      request.addHeader(HttpHeaders.ACCEPT_LANGUAGE,
+          "fr; q=1.0, en; q=0.5");
 
-    HttpGet request =
-        new HttpGet("http://localhost:" + port + "/cat/assets/" + pockId);
-    request.addHeader(HttpHeaders.USER_AGENT, "Colorless/42");
-    request.addHeader(HttpHeaders.ACCEPT,
-        "text/html, application/xhtml+xml, application/xml;q=0.9, image/webp, */*;q=0.8");
-    request.addHeader(HttpHeaders.ACCEPT_LANGUAGE,
-        "fr; q=1.0, en; q=0.5");
-
-    try {
-      CloseableHttpResponse resp = httpClient.execute(request);
-      String out = EntityUtils.toString(resp.getEntity());
-      assertEquals("306 Unused", out);
+      try (CloseableHttpResponse resp = httpClient.execute(request)) {
+        String out = EntityUtils.toString(resp.getEntity());
+        assertEquals("306 Unused", out);
+      }
     } catch (IOException e) {
       assertTrue(e.getMessage().contains(REDIRECT_URL.getPath()));
     }
@@ -108,13 +106,13 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
   }
 
   private void populateRepositoryWithRedirectables(UUID pockId, UUID rulId) {
-    Answer<Void> ans1 = rpo.setVersionedKnowledgeAsset(
+    Answer<Void> ans1 = rpo.setKnowledgeAssetVersion(
         pockId,
         VERSION_LATEST,
         pocSurrogate(pockId, VERSION_LATEST));
     assertTrue(ans1.isSuccess());
 
-    Answer<Void> ans2 = rpo.setVersionedKnowledgeAsset(
+    Answer<Void> ans2 = rpo.setKnowledgeAssetVersion(
         rulId,
         VERSION_LATEST,
         rulSurrogate(rulId, VERSION_LATEST));
@@ -130,16 +128,20 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
         .withName("Test rule")
         .withSurrogate(
             new ComputableKnowledgeArtifact()
+                .withArtifactId(randomArtifactId())
                 .withLocator(REDIRECT_URL)
                 .withRepresentation(rep(HTML,TXT)),
             new ComputableKnowledgeArtifact()
+                .withArtifactId(randomArtifactId())
                 .withRepresentation(rep(Knowledge_Asset_Surrogate_2_0,JSON))
         )
         .withCarriers(
             new ComputableKnowledgeArtifact()
+                .withArtifactId(randomArtifactId())
                 .withLocator(URI.create("http://www.myrepo/rule0/carrier?format=xml"))
                 .withRepresentation(rep(KNART_1_3,XML_1_1)),
             new ComputableKnowledgeArtifact()
+                .withArtifactId(randomArtifactId())
                 .withLocator(URI.create("http://www.myrepo/rule0/carrier"))
                 .withRepresentation(rep(HTML))
         );
@@ -153,11 +155,13 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
         .withName("Test section of content")
         .withSurrogate(
             new ComputableKnowledgeArtifact()
+                .withArtifactId(randomArtifactId())
                 .withLocator(REDIRECT_URL)
                 .withRepresentation(rep(HTML,TXT))
         )
         .withCarriers(
             new ComputableKnowledgeArtifact()
+                .withArtifactId(randomArtifactId())
                 .withLocator(URI.create("http://www.myrepo/section0/carrier"))
                 .withRepresentation(rep(HTML,TXT))
         );

@@ -89,7 +89,7 @@ public class ContentNegotiationTest extends SemanticRepoAPITestBase {
 
     KnowledgeAsset asset = buildComputableAsset(assetId,versionTag,knartXML);
 
-    ckac.setVersionedKnowledgeAsset(assetId,versionTag,asset);
+    ckac.setKnowledgeAssetVersion(assetId,versionTag,asset);
 
     Answer<KnowledgeCarrier> ans = repo.getCanonicalKnowledgeAssetCarrier(
         assetId,
@@ -120,7 +120,7 @@ public class ContentNegotiationTest extends SemanticRepoAPITestBase {
     URI redirect = ((ComputableKnowledgeArtifact) asset.getCarriers().get(0)).getLocator();
     assertNotNull(redirect);
 
-    ckac.setVersionedKnowledgeAsset(assetId,versionTag,asset);
+    ckac.setKnowledgeAssetVersion(assetId,versionTag,asset);
 
     Answer<KnowledgeCarrier> ans = repo.getCanonicalKnowledgeAssetCarrier(
         assetId,
@@ -141,7 +141,7 @@ public class ContentNegotiationTest extends SemanticRepoAPITestBase {
         .withCarriers(new ComputableKnowledgeArtifact()
             .withArtifactId(SurrogateBuilder.randomArtifactId())
             .withLocalization(English)
-            .withName("Mock Rule - KNAR version")
+            .withName("Mock Rule - KNART version")
             .withRepresentation(rep(KNART_1_3,XML_1_1))
             .withInlinedExpression(inlined)
         );

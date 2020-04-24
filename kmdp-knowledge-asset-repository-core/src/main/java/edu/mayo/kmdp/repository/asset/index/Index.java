@@ -16,14 +16,19 @@
 package edu.mayo.kmdp.repository.asset.index;
 
 
+import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.metadata.v2.surrogate.Link;
 import edu.mayo.kmdp.metadata.v2.surrogate.annotations.Annotation;
 import edu.mayo.ontology.taxonomies.kao.knowledgeassetrole.KnowledgeAssetRole;
 import edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetType;
 import java.net.URI;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
+import org.omg.spec.api4kp._1_0.id.ConceptIdentifier;
 import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
+import org.omg.spec.api4kp._1_0.services.KnowledgeBase;
 
 /**
  * An interface to index Assets and their relationships.
@@ -31,15 +36,39 @@ import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
 public interface Index {
 
   /**
+   * Registers an Asset, using the information contained in the canonical Surrogate
+   * @see Index#registerAsset(ResourceIdentifier, String, ResourceIdentifier, List, List, List, List)
+   *
+   * @param assetSurrogate
+   * @param surrogateId
+   * @param index
+   */
+  static void registerAssetByCanonicalSurrogate(KnowledgeAsset assetSurrogate, ResourceIdentifier surrogateId, Index index) {
+    index.registerAsset(
+        assetSurrogate.getAssetId(),
+        assetSurrogate.getName(),
+        surrogateId,
+        assetSurrogate.getFormalType(),
+        assetSurrogate.getRole(),
+        assetSurrogate.getAnnotation(),
+        assetSurrogate.getLinks());
+    assetSurrogate.getCarriers().forEach(ka -> index.registerArtifactToAsset(assetSurrogate.getAssetId(),ka.getArtifactId()));
+    // exclude the canonical surrogate, which is processed by 'registerAsset'
+    assetSurrogate.getSurrogate().stream()
+        .filter(surr -> ! surr.getArtifactId().sameAs(surrogateId))
+        .forEach(surr -> index.registerSurrogateToAsset(assetSurrogate.getAssetId(),surr.getArtifactId()));
+  }
+
+  /**
    * Register an Asset and its initial metadata.
-   *  @param asset
-   * @param surrogate
+   * @param assetId
+   * @param surrogateId
    * @param types
    * @param roles
    * @param annotations
    * @param related
    */
-  void registerAsset(ResourceIdentifier asset, ResourceIdentifier surrogate, List<KnowledgeAssetType> types,
+  void registerAsset(ResourceIdentifier assetId, String assetName, ResourceIdentifier surrogateId, List<KnowledgeAssetType> types,
                      List<KnowledgeAssetRole> roles, List<Annotation> annotations, List<Link> related);
 
   /**
@@ -49,6 +78,14 @@ public interface Index {
    * @param artifact
    */
   void registerArtifactToAsset(ResourceIdentifier assetPointer, ResourceIdentifier artifact);
+
+
+  /**
+   * Returns true if the given UUID is associated to an Asset
+   * @param assetId
+   * @return
+   */
+  boolean isKnownAsset(ResourceIdentifier assetId);
 
   /**
    * Get all related Assets, regardless our how they are related.
@@ -75,7 +112,8 @@ public interface Index {
    * @param assetPointer
    * @param surrogate
    */
-  void registerSurrogateToAsset(ResourceIdentifier assetPointer, ResourceIdentifier surrogate);
+  void registerSurrogateToAsset(ResourceIdentifier assetPointer,
+      ResourceIdentifier surrogate);
 
   /**
    * Retrieve a pointer to the Surrogate given an Asset.
@@ -83,7 +121,7 @@ public interface Index {
    * @param assetPointer
    * @return
    */
-  ResourceIdentifier getSurrogateForAsset(ResourceIdentifier assetPointer);
+  Optional<ResourceIdentifier> getCanonicalSurrogateForAsset(ResourceIdentifier assetPointer);
 
   /**
    * Get the storage location of an Asset/Artifact.
@@ -135,10 +173,55 @@ public interface Index {
 
   /**
    * Get the list of all Artifacts (carriers) for an Asset.
-   * @param artifact
+   * @param assetId
    * @return
    */
-  Set<ResourceIdentifier> getArtifactsForAsset(ResourceIdentifier artifact);
+  Set<ResourceIdentifier> getArtifactsForAsset(ResourceIdentifier assetId);
+
+  /**
+   * Get the list of all Surrogates (carriers) for an Asset.
+   * @param assetId
+   * @return
+   */
+  Set<ResourceIdentifier> getSurrogatesForAsset(ResourceIdentifier assetId);
+
+  /**
+   * Retrieves the name of an Asset
+   * @param assetId
+   * @return
+   */
+  Optional<String> getAssetName(ResourceIdentifier assetId);
+
+  /**
+   * Retrieves the types and roles of an Asset
+   * @param assetId
+   * @return
+   */
+  List<ConceptIdentifier> getAssetTypes(ResourceIdentifier assetId);
+
+  /**
+   * Returns the known Versions of a given KnowledgeAsset,
+   * sorted by timestamp
+   *
+   * @param assetSeriesId the UUID of the Asset series, common to all versions
+   */
+  List<ResourceIdentifier> getAssetVersions(UUID assetSeriesId);
+
+  /**
+   * Returns the known Versions of a Canonical Surrogate
+   * sorted by timestamp
+   *
+   * @param surrogateSeriesId the identifier of a Surrogate series
+   */
+  List<ResourceIdentifier> getSurrogateVersions(UUID surrogateSeriesId);
+
+  /**
+   * Returns the known Versions of a Knowledge Artifact
+   * sorted by timestamp
+   *
+   * @param carrierSeriesId the identifier of a Surrogate series
+   */
+  List<ResourceIdentifier> getCarrierVersions(UUID carrierSeriesId);
 
   /**
    * Reset and clear the store.
@@ -147,5 +230,18 @@ public interface Index {
    * there is a very specific need to reset the store.
    */
   void reset();
+
+  /**
+   * Returns the KnowledgeGraph underlying this index
+   *
+   * @return
+   */
+  KnowledgeBase asKnowledgeBase();
+
+  /**
+   * Returns the ID of the KnowledgeGraph underlying this index
+   * @return
+   */
+  ResourceIdentifier getKnowledgeBaseId();
 
 }

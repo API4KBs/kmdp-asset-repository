@@ -20,13 +20,14 @@ import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 import com.google.common.collect.Lists;
 import edu.mayo.kmdp.metadata.v2.surrogate.ComputableKnowledgeArtifact;
 import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
+import edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder;
 import edu.mayo.kmdp.repository.asset.SemanticKnowledgeAssetRepository;
 import edu.mayo.kmdp.repository.asset.index.Index;
-import edu.mayo.kmdp.repository.asset.v4.server.KnowledgeAssetRetrievalApiInternal;
 import edu.mayo.kmdp.util.FileUtil;
 import edu.mayo.kmdp.util.StreamUtil;
 import edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguage;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -38,7 +39,7 @@ import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class DefaultArtifactBundler implements KnowledgeAssetRetrievalApiInternal._getKnowledgeArtifactBundle {
+public class DefaultArtifactBundler {
 
   private static final Logger logger = LoggerFactory
           .getLogger(DefaultArtifactBundler.class);
@@ -52,11 +53,28 @@ public class DefaultArtifactBundler implements KnowledgeAssetRetrievalApiInterna
     this.index = index;
   }
 
-  @Override
+  public Answer<List<KnowledgeAsset>> getKnowledgeAssetBundle(UUID assetId, String versionTag,
+      String assetRelationshipTag, Integer depth) {
+
+    ResourceIdentifier uriId = SurrogateBuilder.assetId(assetId,versionTag);
+
+    Set<KnowledgeAsset> dependencies =
+        this.index.getRelatedAssets(uriId).stream()
+            .map(pointer ->
+                assetRepository.getKnowledgeAssetVersion(
+                    pointer.getUuid(), pointer.getVersionTag()))
+            .filter(Answer::isSuccess)
+            .map(Answer::get)
+            .collect(Collectors.toSet());
+
+    return Answer.of(new ArrayList<>(dependencies));
+  }
+
+
   public Answer<List<KnowledgeCarrier>> getKnowledgeArtifactBundle(UUID assetId, String versionTag,
       String assetRelationship, Integer depth, String xAccept) {
 
-    KnowledgeAsset asset = this.assetRepository.getVersionedKnowledgeAsset(assetId, versionTag)
+    KnowledgeAsset asset = this.assetRepository.getKnowledgeAssetVersion(assetId, versionTag)
         .orElseThrow(IllegalStateException::new);
 
     ResourceIdentifier uriId = asset.getAssetId();
@@ -65,7 +83,7 @@ public class DefaultArtifactBundler implements KnowledgeAssetRetrievalApiInterna
             this.index.getRelatedAssets(uriId).stream()
             .map(pointer -> {
               Answer<KnowledgeAsset> foundRelation
-                  = assetRepository.getVersionedKnowledgeAsset(pointer.getUuid(), pointer.getVersionTag());
+                  = assetRepository.getKnowledgeAssetVersion(pointer.getUuid(), pointer.getVersionTag());
 
               // TODO: We want to be smarter about this and fail if important dependencies are missing.
               if (! foundRelation.isSuccess()) {

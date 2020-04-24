@@ -16,10 +16,14 @@
 package edu.mayo.kmdp.repository.asset;
 
 import edu.mayo.kmdp.kbase.query.sparql.v1_1.JenaQuery;
+import edu.mayo.kmdp.language.DeserializeApiOperator;
+import edu.mayo.kmdp.language.DetectApiOperator;
 import edu.mayo.kmdp.language.LanguageDeSerializer;
 import edu.mayo.kmdp.language.LanguageDetector;
 import edu.mayo.kmdp.language.LanguageValidator;
+import edu.mayo.kmdp.language.TransionApiOperator;
 import edu.mayo.kmdp.language.TransrepresentationExecutor;
+import edu.mayo.kmdp.language.ValidateApiOperator;
 import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
 import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
@@ -27,19 +31,13 @@ import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDao;
 import edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex;
 import edu.mayo.kmdp.repository.asset.v4.server.KnowledgeAssetCatalogApiInternal;
 import edu.mayo.kmdp.repository.asset.v4.server.KnowledgeAssetRepositoryApiInternal;
-import edu.mayo.kmdp.repository.asset.v4.server.KnowledgeAssetRetrievalApiInternal;
-import edu.mayo.kmdp.tranx.v4.server.DeserializeApiInternal;
-import edu.mayo.kmdp.tranx.v4.server.DetectApiInternal;
-import edu.mayo.kmdp.tranx.v4.server.TransxionApiInternal;
-import edu.mayo.kmdp.tranx.v4.server.ValidateApiInternal;
 import java.util.Collections;
 import java.util.List;
 import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
 import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
-import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
 
 public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogApiInternal,
-    KnowledgeAssetRepositoryApiInternal, KnowledgeAssetRetrievalApiInternal {
+    KnowledgeAssetRepositoryApiInternal {
 
   static KnowledgeAssetRepositoryService selfContainedRepository() {
     JenaSparqlDao dao = JenaSparqlDao.inMemoryDao();
@@ -56,10 +54,10 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
   }
 
   static KnowledgeAssetRepositoryService selfContainedRepository(
-      List<DeserializeApiInternal> parsers,
-      List<DetectApiInternal> detectors,
-      List<ValidateApiInternal> validators,
-      List<TransxionApiInternal> translators
+      List<DeserializeApiOperator> parsers,
+      List<DetectApiOperator> detectors,
+      List<ValidateApiOperator> validators,
+      List<TransionApiOperator> translators
   ) {
     JenaSparqlDao dao = JenaSparqlDao.inMemoryDao();
     return new SemanticKnowledgeAssetRepository(
@@ -80,7 +78,7 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
 
     ResourceIdentifier surrogateId = surrogate.getAssetId();
 
-    this.setVersionedKnowledgeAsset(
+    this.setKnowledgeAssetVersion(
         surrogateId.getUuid(),
         surrogateId.getVersionTag(),
         surrogate);
