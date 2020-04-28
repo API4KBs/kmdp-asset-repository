@@ -162,13 +162,6 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
 
     this.model = SDBFactory.connectDefaultModel(store);
 
-    this.kBase = new KnowledgeBase()
-        .withManifestation(AbstractCarrier.ofTree(model)
-            .withAssetId(SurrogateBuilder.randomAssetId())
-            .withArtifactId(SurrogateBuilder.randomArtifactId())
-            .withRepresentation(rep(OWL_2))
-        )
-        .withKbaseId(SemanticIdentifier.newIdAsPointer(UUID.randomUUID(),VERSION_LATEST));
   }
 
   /**
@@ -387,7 +380,20 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   }
 
   public KnowledgeBase getKnowledgeBase() {
+    if (this.kBase == null ) {
+      lazyInitializeKnowledgeBase();
+    }
     return kBase;
+  }
+
+  private void lazyInitializeKnowledgeBase() {
+    this.kBase = new KnowledgeBase()
+        .withManifestation(AbstractCarrier.ofTree(model)
+            .withAssetId(SurrogateBuilder.randomAssetId())
+            .withArtifactId(SurrogateBuilder.randomArtifactId())
+            .withRepresentation(rep(OWL_2))
+        )
+        .withKbaseId(SemanticIdentifier.newIdAsPointer(UUID.randomUUID(), VERSION_LATEST));
   }
 
 }

@@ -13,6 +13,7 @@ import edu.mayo.kmdp.metadata.v2.surrogate.Link;
 import edu.mayo.kmdp.metadata.v2.surrogate.annotations.Annotation;
 import edu.mayo.kmdp.repository.asset.index.Index;
 import edu.mayo.kmdp.terms.ConceptTerm;
+import edu.mayo.kmdp.terms.impl.model.ConceptDescriptor;
 import edu.mayo.kmdp.util.DateTimeUtil;
 import edu.mayo.kmdp.util.StreamUtil;
 import edu.mayo.kmdp.util.Util;
@@ -32,6 +33,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
@@ -121,26 +123,19 @@ public class SparqlIndex implements Index {
     // related
     statements.addAll(related.stream()
         .flatMap(StreamUtil.filterAs(Dependency.class))
-        .map(dependency -> this.toStatement(
-            assetVersionId,
-            dependency.getRel().asConcept().getRef(),
-            dependency.getHref().getVersionId()))
+        .flatMap(dependency -> toDependencyStatements(assetVersionId,dependency))
         .collect(Collectors.toList()));
+
     // composites
     statements.addAll(related.stream()
         .flatMap(StreamUtil.filterAs(edu.mayo.kmdp.metadata.v2.surrogate.Component.class))
-        .map(comp -> this.toStatement(
-            assetVersionId,
-            comp.getRel().asConcept().getRef(),
-            comp.getHref().getVersionId()))
+        .flatMap(part -> toParthoodStatements(assetVersionId,part))
         .collect(Collectors.toList()));
+
     // derivation
     statements.addAll(related.stream()
         .flatMap(StreamUtil.filterAs(Derivative.class))
-        .map(deriv -> this.toStatement(
-            assetVersionId,
-            deriv.getRel().asConcept().getRef(),
-            deriv.getHref().getVersionId()))
+        .flatMap(derivative -> toDerivationStatements(assetVersionId,derivative))
         .collect(Collectors.toList()));
 
     // type of Asset
@@ -217,6 +212,35 @@ public class SparqlIndex implements Index {
     }
 
     return statements;
+  }
+
+  private Stream<Statement> toDependencyStatements(URI subj, Dependency dependency) {
+    ConceptDescriptor dependencyType = ConceptDescriptor.toConceptDescriptor(dependency.getRel());
+    URI tgt = dependency.getHref().getVersionId();
+
+    return toRelatedStatements(subj,dependencyType,tgt);
+  }
+
+  private Stream<Statement> toDerivationStatements(URI subj, Derivative derivative) {
+    ConceptDescriptor derivationType = ConceptDescriptor.toConceptDescriptor(derivative.getRel());
+    URI tgt = derivative.getHref().getVersionId();
+
+    return toRelatedStatements(subj,derivationType,tgt);
+  }
+
+  private Stream<Statement> toParthoodStatements(URI subj, edu.mayo.kmdp.metadata.v2.surrogate.Component part) {
+    ConceptDescriptor partType = ConceptDescriptor.toConceptDescriptor(part.getRel());
+    URI tgt = part.getHref().getVersionId();
+
+    return toRelatedStatements(subj,partType,tgt);
+  }
+
+  private Stream<Statement> toRelatedStatements(URI subj, ConceptDescriptor rel, URI tgt) {
+    return Stream.concat(
+        Arrays.stream(rel.getClosure())
+            .map(anc -> toStatement(subj, anc.getRef(), tgt)),
+        Stream.of(this.toStatement(subj, rel.getReferentId(), tgt))
+    );
   }
 
   public Statement toStatement(URI subject, URI predicate, URI object) {

@@ -935,55 +935,6 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         retrievedSurr.get().asString().orElse(""));
   }
 
-  @Test
-  void testPublishMultiple() {
-    ResourceIdentifier id1 = randomAssetId();
-    ResourceIdentifier id2 = randomAssetId();
-
-    KnowledgeAsset a1 = new KnowledgeAsset()
-        .withAssetId(id1)
-        .withCarriers(new ComputableKnowledgeArtifact()
-            .withArtifactId(randomArtifactId())
-            .withRepresentation(rep(HTML)));
-    KnowledgeAsset a2 = new KnowledgeAsset()
-        .withAssetId(id2)
-        .withCarriers(new ComputableKnowledgeArtifact()
-            .withArtifactId(randomArtifactId())
-            .withRepresentation(rep(HL7_ELM)));
-
-    KnowledgeCarrier ckc = AbstractCarrier.ofIdentifiableSet(
-        rep(Knowledge_Asset_Surrogate_2_0),
-        KnowledgeAsset::getAssetId,
-        ka -> getSurrogateId(ka,Knowledge_Asset_Surrogate_2_0,null)
-            .orElse(randomArtifactId()),
-        Arrays.asList(a1, a2));
-
-    Answer<Void> result = semanticRepository.addCanonicalKnowledgeAssetSurrogate(
-        ckc.getAssetId().getUuid(), ckc.getAssetId().getVersionTag(),ckc);
-    assertTrue(result.isSuccess());
-
-    assertEquals(3,
-        semanticRepository.listKnowledgeAssets().orElse(Collections.emptyList()).size());
-
-    assertTrue(semanticRepository.getKnowledgeAsset(id1.getUuid()).isSuccess());
-    assertTrue(semanticRepository.getKnowledgeAsset(id2.getUuid()).isSuccess());
-
-    String query = "" +
-        "select ?o where { ?s <" + StructuralPartTypeSeries.Has_Part.getRef() + "> ?o . }";
-
-    KnowledgeCarrier queryCarrier = AbstractCarrier.of(query)
-        .withRepresentation(rep(SPARQL_1_1, TXT, Charset.defaultCharset()));
-
-    List<Bindings> binds = semanticRepository.queryKnowledgeAssetGraph(queryCarrier)
-        .orElse(Collections.emptyList());
-    assertEquals(2, binds.size());
-
-    assertEquals(
-        new HashSet<>(Arrays.asList(id1.getVersionId(),id2.getVersionId())),
-        binds.stream().map(b -> b.get("o")).map(x -> URI.create(x.toString())).collect(
-            Collectors.toSet()));
-  }
-
 
   @Test
   void testDetectConflictOnOverrideSurrogate() {

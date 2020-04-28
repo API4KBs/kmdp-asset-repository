@@ -23,7 +23,11 @@ import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLan
 import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.KNART_1_3;
 import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 
+import edu.mayo.kmdp.language.translators.AbstractSimpleTranslator;
 import edu.mayo.kmdp.tranx.v4.server.TransxionApiInternal;
+import edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguage;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import javax.inject.Named;
 import org.omg.spec.api4kp._1_0.Answer;
@@ -35,14 +39,14 @@ import org.omg.spec.api4kp._1_0.services.tranx.TransrepresentationOperator;
 
 @Named
 @KPOperation(Translation_Task)
-public class MockTranslator implements TransxionApiInternal {
+public class MockTranslator extends AbstractSimpleTranslator<String,String> {
 
   public static final UUID kpIdentifier = UUID.fromString("41c9758e-00d1-4348-bf05-73aae9c5e43e");
 
-  protected static final TransrepresentationOperator op = new TransrepresentationOperator()
+  protected TransrepresentationOperator op = new TransrepresentationOperator()
       .withOperatorId(SemanticIdentifier.newId(kpIdentifier))
       .withFrom(getFrom())
-      .withInto(getTo());
+      .withInto(getInto());
 
   @Override
   public Answer<KnowledgeCarrier> applyTransrepresent(KnowledgeCarrier sourceArtifact,
@@ -50,16 +54,28 @@ public class MockTranslator implements TransxionApiInternal {
     return Answer.of(translate(sourceArtifact));
   }
 
-  protected static SyntacticRepresentation getFrom() {
-    return rep(KNART_1_3,XML_1_1);
+
+  @Override
+  public List<SyntacticRepresentation> getFrom() {
+    return Collections.singletonList(rep(KNART_1_3,XML_1_1));
   }
 
-  protected static SyntacticRepresentation getTo() {
-    return rep(HTML,TXT);
+  @Override
+  public List<SyntacticRepresentation> getInto() {
+    return Collections.singletonList(rep(HTML,TXT));
+  }
+
+  @Override
+  public KnowledgeRepresentationLanguage getTargetLanguage() {
+    return HTML;
   }
 
   public KnowledgeCarrier translate(KnowledgeCarrier source) {
     return source;
   }
 
+  @Override
+  public KnowledgeRepresentationLanguage getSupportedLanguage() {
+    return KNART_1_3;
+  }
 }

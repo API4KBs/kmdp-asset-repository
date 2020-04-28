@@ -77,6 +77,7 @@ import edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSer
 import edu.mayo.ontology.taxonomies.kmdo.annotationreltype.AnnotationRelTypeSeries;
 import edu.mayo.ontology.taxonomies.krformat.SerializationFormat;
 import edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguage;
+import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collection;
@@ -512,7 +513,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
                       assetId,
                       versionTag,
                       artf.getArtifactId().getUuid(),
-                      artf.getArtifactId().getVersionTag()))
+                      artf.getArtifactId().getVersionTag(),
+                      xAccept))
                   : tryConstructEphemeral(surrogate, preferences);
             }
         );
@@ -803,14 +805,19 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
           .reduce(Answer::merge)
           .orElse(Answer.failed());
 
-      Answer<Void> compositeAns =
-          compositeStructIntrospector.introspect(
-              CompositeAssetMetadataIntrospector.operatorId, ckc, null)
-              .flatOpt(kc -> kc.as(KnowledgeAsset.class))
-              .flatMap(ax -> setKnowledgeAssetVersion(
-                  ax.getAssetId().getUuid(),ax.getAssetId().getVersionTag(), ax));
+      // TODO define a struct type for Anonymous composites
+      if (ckc.getStructType() != null) {
+        Answer<Void> compositeAns =
+            compositeStructIntrospector.introspect(
+                CompositeAssetMetadataIntrospector.operatorId, ckc, null)
+                .flatOpt(kc -> kc.as(KnowledgeAsset.class))
+                .flatMap(ax -> setKnowledgeAssetVersion(
+                    ax.getAssetId().getUuid(), ax.getAssetId().getVersionTag(), ax));
+        return Answer.merge(ans, compositeAns);
+      } else {
+        return ans;
+      }
 
-      return Answer.merge(ans, compositeAns);
     } else {
       return liftCanonicalSurrogate(assetSurrogateCarrier)
           .flatMap(ax -> setKnowledgeAssetVersion(
@@ -819,6 +826,59 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
 
+  /**
+   * Constructs an Anonymous Composite Knowledge Asset (Surrogate),
+   * using a given Asset as a seed, by means of a query that traverses the relationships
+   * between that Asset and other Assets, which will be considered the Components.
+   *
+   * @param assetId The id of the seed Asset
+   * @param versionTag The version of the seed Asset
+   * @param query The query that selects the Components
+   * @param xAccept A content negotiation parameter to control the format
+   *                in which the Components are returned(NOT IMPLEMENTED)
+   * @return a Composite Knowledge Carrier that includes the Canonical Surrogates (in AST form)
+   */
+  @Override
+  public Answer<CompositeKnowledgeCarrier> getAnonymousCompositeKnowledgeAssetSurrogate(
+      UUID assetId, String versionTag, KnowledgeCarrier query, String xAccept) {
+    return getComponentIds(query)
+        .flatMap(componentIds -> {
+
+          Answer<Set<KnowledgeAsset>> componentSurrogates = componentIds.stream()
+              .map(comp -> getKnowledgeAssetVersion(comp.getUuid(), comp.getVersionTag(), xAccept))
+              .collect(Answer.toSet());
+
+          return componentSurrogates.map(components ->
+              AbstractCarrier.ofAnonymousComposite(
+                  rep(defaultSurrogateModel),
+                  KnowledgeAsset::getAssetId,
+                  ax -> SurrogateHelper
+                      .getSurrogateId(ax, defaultSurrogateModel, defaultSurrogateFormat)
+                      .orElseThrow(),
+                  components)
+                  .withLevel(Abstract_Knowledge_Expression)
+                  .withRootId(assetId(assetId,versionTag))
+                  .withRepresentation(rep(defaultSurrogateModel))
+          );
+        });
+  }
+
+
+  @Override
+  public Answer<CompositeKnowledgeCarrier> getAnonymousCompositeKnowledgeAssetCarrier(
+      UUID assetId, String versionTag,
+      KnowledgeCarrier query, String xAccept) {
+    return getComponentIds(query)
+        .flatMap(componentIds -> {
+
+          Answer<Set<KnowledgeCarrier>> componentSurrogates = componentIds.stream()
+              .map(comp -> getCanonicalKnowledgeAssetCarrier(comp.getUuid(), comp.getVersionTag(), xAccept))
+              .collect(Answer.toSet());
+
+          return componentSurrogates
+              .map(AbstractCarrier::ofHeterogeneousComposite);
+        });
+  }
 
   //*****************************************************************************************/
   //* Not yet implemented
@@ -835,7 +895,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   @Override
-  public Answer<KnowledgeCarrier> getCompositeKnowledgeAssetCarrier(UUID assetId, String versionTag,
+  public Answer<CompositeKnowledgeCarrier> getCompositeKnowledgeAssetCarrier(UUID assetId, String versionTag,
       Boolean flat, String xAccept) {
     return Answer.unsupported();
   }
@@ -854,7 +914,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   @Override
-  public Answer<KnowledgeCarrier> getCompositeKnowledgeAssetSurrogate(UUID assetId,
+  public Answer<CompositeKnowledgeCarrier> getCompositeKnowledgeAssetSurrogate(UUID assetId,
       String versionTag, Boolean flat, String xAccept) {
     return Answer.unsupported();
   }
@@ -865,6 +925,14 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       KnowledgeCarrier assetCarrier) {
     return Answer.unsupported();
   }
+
+  @Override
+  public Answer<Void> addKnowledgeAssetSurrogate(UUID uuid, String s,
+      KnowledgeCarrier knowledgeCarrier) {
+    return Answer.unsupported();
+  }
+
+
 
 
   @Override
@@ -894,6 +962,20 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 // Internal functions and helpers
 // ****************************************************************************************************/
 
+
+  /**
+   * Queries the Knowledge Graph to select a set of Knowledge Asset's version identifiers
+   * @param query The query
+   * @return The set of Asset version identifiers selected by the query
+   */
+  private Answer<Set<ResourceIdentifier>> getComponentIds(KnowledgeCarrier query) {
+    return this.queryKnowledgeAssetGraph(query)
+        .map(binds -> binds.stream()
+            // assume there is only one binding, and the binding is an asset Id
+            .map(bind -> URI.create(bind.values().iterator().next().toString()))
+            .map(SemanticIdentifier::newVersionId)
+            .collect(Collectors.toSet()));
+  }
 
   /**
    * Ensures that minimal metadata about a carrier KnowledgeArtifact appear in the Canonical Surrogate's Carriers section
