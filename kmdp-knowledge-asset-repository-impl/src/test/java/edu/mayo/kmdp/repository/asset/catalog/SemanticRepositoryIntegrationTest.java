@@ -23,6 +23,7 @@ import static edu.mayo.ontology.taxonomies.kao.knowledgeprocessingtechnique.Know
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.omg.spec.api4kp._1_0.id.SemanticIdentifier.newId;
 
 import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.metadata.v2.surrogate.annotations.Applicability;
@@ -34,6 +35,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._1_0.Answer;
@@ -71,7 +73,7 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
 
   @Test
   void testListKnowledgeAssetsBadType() {
-    ResourceIdentifier assetId = SemanticIdentifier.newId(strToUUID("1"),"1");
+    ResourceIdentifier assetId = randomAssetId();
     ckac.setKnowledgeAssetVersion(assetId.getUuid(),assetId.getVersionTag(),
         new KnowledgeAsset()
             .withAssetId(assetId)
@@ -151,30 +153,34 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
 
   @Test
   void testGetLatestKnowledgeAssetHasCorrectId() {
-    ResourceIdentifier rid1 = SemanticIdentifier.newId(strToUUID("1"), "1");
+    UUID uid = UUID.randomUUID();
+    ResourceIdentifier rid1 = newId(uid, "1.0.0");
     ckac.setKnowledgeAssetVersion(rid1.getUuid(),rid1.getVersionTag(),
         new KnowledgeAsset().withAssetId(rid1));
 
-    ResourceIdentifier rid2 = SemanticIdentifier.newId(strToUUID("1"), "2");
+    ResourceIdentifier rid2 = newId(uid,"2.0.0");
     ckac.setKnowledgeAssetVersion(rid2.getUuid(),rid2.getVersionTag(),
         new KnowledgeAsset().withAssetId(rid2));
 
-    String id = ckac.getKnowledgeAsset(strToUUID("1"), null)
+    String id = ckac.getKnowledgeAsset(uid)
         .map(KnowledgeAsset::getAssetId)
         .map(ResourceIdentifier::getTag)
-        .orElse(null);
+        .orElseGet(Assertions::fail);
 
-    assertEquals(strToUUID("1").toString(), id);
+    assertEquals(uid.toString(), id);
   }
 
   @Test
   void testSurrogateWithApplicability() {
-    ckac.setKnowledgeAssetVersion(strToUUID("0099"), "1",
+    ResourceIdentifier assetId = randomAssetId();
+    ckac.setKnowledgeAssetVersion(assetId.getUuid(),assetId.getVersionTag(),
         new KnowledgeAsset()
+            .withAssetId(assetId)
             .withApplicableIn(new Applicability()
                 .withSituation(Logic_Based_Technique.asConceptIdentifier()))
     );
-    KnowledgeAsset ax = ckac.getKnowledgeAsset(strToUUID("0099"), null).orElse(null);
+    KnowledgeAsset ax = ckac.getKnowledgeAsset(assetId.getUuid())
+        .orElseGet(Assertions::fail);
 
     assertNotNull(ax);
     assertNotNull(ax.getApplicableIn());
@@ -184,8 +190,4 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
     assertEquals(Logic_Based_Technique.getConceptUUID(),t.getUuid());
   }
 
-
-  private UUID strToUUID(String s) {
-    return UUID.nameUUIDFromBytes(s.getBytes());
-  }
 }
