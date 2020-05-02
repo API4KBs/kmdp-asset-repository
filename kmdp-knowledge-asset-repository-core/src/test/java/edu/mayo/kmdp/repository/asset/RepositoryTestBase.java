@@ -1,5 +1,7 @@
 package edu.mayo.kmdp.repository.asset;
 
+import static java.util.Collections.singletonList;
+
 import com.google.common.util.concurrent.MoreExecutors;
 import edu.mayo.kmdp.kbase.query.sparql.v1_1.JenaQuery;
 import edu.mayo.kmdp.language.LanguageDeSerializer;
@@ -8,6 +10,7 @@ import edu.mayo.kmdp.language.LanguageValidator;
 import edu.mayo.kmdp.language.TransrepresentationExecutor;
 import edu.mayo.kmdp.language.parsers.owl2.JenaOwlParser;
 import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
+import edu.mayo.kmdp.language.translators.surrogate.v2.SurrogateV2toSurrogateV1Translator;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig;
 import edu.mayo.kmdp.repository.artifact.jcr.JcrKnowledgeArtifactRepository;
 import edu.mayo.kmdp.repository.asset.index.Index;
@@ -76,7 +79,7 @@ abstract class RepositoryTestBase {
             Arrays.asList(new Surrogate2Parser(), new JenaOwlParser())),
         new LanguageDetector(Collections.emptyList()),
         new LanguageValidator(Collections.emptyList()),
-        new TransrepresentationExecutor(Collections.emptyList()),
+        new TransrepresentationExecutor(singletonList(new SurrogateV2toSurrogateV1Translator())),
         new JenaQuery(jenaSparqlDao),
         index,
         new KnowledgeAssetRepositoryServerConfig());

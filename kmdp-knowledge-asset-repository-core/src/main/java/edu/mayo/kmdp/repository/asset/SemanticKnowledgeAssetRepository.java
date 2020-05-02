@@ -44,6 +44,7 @@ import static java.util.stream.Collectors.toList;
 import static org.omg.spec.api4kp._1_0.AbstractCarrier.ofAst;
 import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
 import static org.omg.spec.api4kp._1_0.id.SemanticIdentifier.timedSemverComparator;
+import static org.omg.spec.api4kp._1_0.id.VersionIdentifier.toSemVer;
 import static org.omg.spec.api4kp._1_0.services.tranx.ModelMIMECoder.encode;
 
 import edu.mayo.kmdp.inference.v4.server.IntrospectionApiInternal._introspect;
@@ -685,7 +686,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<KnowledgeCarrier> getCanonicalKnowledgeAssetSurrogate(UUID assetId,
       String versionTag, String xAccept) {
-    boolean withNegotiation = Util.isEmpty(xAccept);
+    boolean withNegotiation = ! Util.isEmpty(xAccept);
     return getKnowledgeAssetVersion(assetId, versionTag)
         .flatMap(asset -> {
               ComputableKnowledgeArtifact self = getCanonicalSurrogateMetadata(asset)
@@ -1371,7 +1372,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       String versionTag) {
     //checks that assetId and versionTag provided in surrogate match those provided as parameters
     return (assetSurrogate.getAssetId().getUuid().equals(assetId)
-        && assetSurrogate.getAssetId().getVersionTag().equals(VersionIdentifier.toSemVer(versionTag)));
+        && toSemVer(assetSurrogate.getAssetId().getVersionTag()).equals(toSemVer(versionTag)));
   }
 
   /**
