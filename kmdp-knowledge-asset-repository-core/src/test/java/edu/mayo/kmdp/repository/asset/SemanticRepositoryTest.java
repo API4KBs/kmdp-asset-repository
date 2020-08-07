@@ -448,7 +448,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         .orElse(null);
     assertNotNull(assetResult);
 
-    assertEquals(Predictive_Model, assetResult.getFormalType().get(0));
+    assertTrue(Predictive_Model.sameAs(assetResult.getFormalType().get(0)));
   }
 
 
