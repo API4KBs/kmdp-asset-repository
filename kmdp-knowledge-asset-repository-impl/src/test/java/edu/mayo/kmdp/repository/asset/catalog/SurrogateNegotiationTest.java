@@ -13,28 +13,23 @@
  */
 package edu.mayo.kmdp.repository.asset.catalog;
 
-import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder.randomArtifactId;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Rules_Policies_And_Guidelines;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassetcategory.KnowledgeAssetCategorySeries.Terminology_Ontology_And_Assertional_KBs;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Clinical_Rule;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Factual_Knowledge;
-import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.JSON;
-import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.TXT;
-import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.XML_1_1;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.KNART_1_3;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate_2_0;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
-import static org.omg.spec.api4kp._1_0.id.IdentifierConstants.VERSION_LATEST;
+import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
+import static org.omg.spec.api4kp._20200801.id.IdentifierConstants.VERSION_LATEST;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomArtifactId;
+import static org.omg.spec.api4kp.taxonomy.knowledgeassetcategory.KnowledgeAssetCategorySeries.Rules_Policies_And_Guidelines;
+import static org.omg.spec.api4kp.taxonomy.knowledgeassetcategory.KnowledgeAssetCategorySeries.Terminology_Ontology_And_Assertional_KBs;
+import static org.omg.spec.api4kp.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Clinical_Rule;
+import static org.omg.spec.api4kp.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Factual_Knowledge;
+import static org.omg.spec.api4kp.taxonomy.krformat.SerializationFormatSeries.JSON;
+import static org.omg.spec.api4kp.taxonomy.krformat.SerializationFormatSeries.TXT;
+import static org.omg.spec.api4kp.taxonomy.krformat.SerializationFormatSeries.XML_1_1;
+import static org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
+import static org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.KNART_1_3;
+import static org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate_2_0;
 
-import edu.mayo.kmdp.metadata.v2.surrogate.ComputableKnowledgeArtifact;
-import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
-import edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder;
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
-import edu.mayo.kmdp.repository.asset.v4.KnowledgeAssetCatalogApi;
-import edu.mayo.kmdp.repository.asset.v4.client.ApiClientFactory;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
 import java.io.IOException;
 import java.net.URI;
@@ -46,7 +41,12 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.omg.spec.api4kp._1_0.Answer;
+import org.omg.spec.api4kp._20200801.Answer;
+import org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetCatalogApi;
+import org.omg.spec.api4kp._20200801.api.repository.asset.v4.client.ApiClientFactory;
+import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
+import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
+import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -127,20 +127,20 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
         .withFormalType(Clinical_Rule)
         .withName("Test rule")
         .withSurrogate(
-            new ComputableKnowledgeArtifact()
+            new KnowledgeArtifact()
                 .withArtifactId(randomArtifactId())
                 .withLocator(REDIRECT_URL)
                 .withRepresentation(rep(HTML,TXT)),
-            new ComputableKnowledgeArtifact()
+            new KnowledgeArtifact()
                 .withArtifactId(randomArtifactId())
                 .withRepresentation(rep(Knowledge_Asset_Surrogate_2_0,JSON))
         )
         .withCarriers(
-            new ComputableKnowledgeArtifact()
+            new KnowledgeArtifact()
                 .withArtifactId(randomArtifactId())
                 .withLocator(URI.create("http://www.myrepo/rule0/carrier?format=xml"))
                 .withRepresentation(rep(KNART_1_3,XML_1_1)),
-            new ComputableKnowledgeArtifact()
+            new KnowledgeArtifact()
                 .withArtifactId(randomArtifactId())
                 .withLocator(URI.create("http://www.myrepo/rule0/carrier"))
                 .withRepresentation(rep(HTML))
@@ -154,13 +154,13 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
         .withFormalType(Factual_Knowledge)
         .withName("Test section of content")
         .withSurrogate(
-            new ComputableKnowledgeArtifact()
+            new KnowledgeArtifact()
                 .withArtifactId(randomArtifactId())
                 .withLocator(REDIRECT_URL)
                 .withRepresentation(rep(HTML,TXT))
         )
         .withCarriers(
-            new ComputableKnowledgeArtifact()
+            new KnowledgeArtifact()
                 .withArtifactId(randomArtifactId())
                 .withLocator(URI.create("http://www.myrepo/section0/carrier"))
                 .withRepresentation(rep(HTML,TXT))

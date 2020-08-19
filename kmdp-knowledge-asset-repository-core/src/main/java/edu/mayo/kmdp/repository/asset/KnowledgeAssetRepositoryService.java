@@ -15,10 +15,6 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
-import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.TXT;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.SPARQL_1_1;
-import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
-
 import edu.mayo.kmdp.kbase.query.sparql.v1_1.JenaQuery;
 import edu.mayo.kmdp.language.DeserializeApiOperator;
 import edu.mayo.kmdp.language.DetectApiOperator;
@@ -29,19 +25,17 @@ import edu.mayo.kmdp.language.TransionApiOperator;
 import edu.mayo.kmdp.language.TransrepresentationExecutor;
 import edu.mayo.kmdp.language.ValidateApiOperator;
 import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
-import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDao;
 import edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex;
-import edu.mayo.kmdp.repository.asset.v4.server.KnowledgeAssetCatalogApiInternal;
-import edu.mayo.kmdp.repository.asset.v4.server.KnowledgeAssetRepositoryApiInternal;
-import edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype.DependencyTypeSeries;
-import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.List;
-import org.omg.spec.api4kp._1_0.AbstractCarrier;
-import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
-import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
+import org.omg.spec.api4kp._20200801.api.repository.asset.v4.server.KnowledgeAssetCatalogApiInternal;
+import org.omg.spec.api4kp._20200801.api.repository.asset.v4.server.KnowledgeAssetRepositoryApiInternal;
+import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
+import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
+import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
+import org.omg.spec.api4kp.taxonomy.dependencyreltype.DependencyTypeSeries;
 
 public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogApiInternal,
     KnowledgeAssetRepositoryApiInternal {
@@ -80,7 +74,7 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
   }
 
   static KnowledgeCarrier transitiveDependencies(ResourceIdentifier seedAsset) {
-    return JenaQuery.transitiveClosure(seedAsset.getVersionId(),DependencyTypeSeries.Depends_On.getReferentId());
+    return JenaQuery.transitiveClosure(seedAsset.getVersionId(), DependencyTypeSeries.Depends_On.getReferentId());
   }
 
   default void publish(

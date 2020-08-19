@@ -1,17 +1,17 @@
 package edu.mayo.kmdp.repository.asset.index;
 
 import com.google.common.collect.Sets;
-import edu.mayo.kmdp.terms.ConceptTerm;
 import edu.mayo.kmdp.util.URIUtil;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassetrole.KnowledgeAssetRole;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassetrole.KnowledgeAssetRoleSeries;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetType;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries;
-import edu.mayo.ontology.taxonomies.kmdo.annotationreltype.AnnotationRelTypeSeries;
+import edu.mayo.ontology.taxonomies.kmdo.semanticannotationreltype.SemanticAnnotationRelTypeSeries;
 import java.net.URI;
 import java.util.Optional;
 import java.util.Set;
-import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
+import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
+import org.omg.spec.api4kp._20200801.terms.ConceptTerm;
+import org.omg.spec.api4kp.taxonomy.knowledgeassetrole.KnowledgeAssetRole;
+import org.omg.spec.api4kp.taxonomy.knowledgeassetrole.KnowledgeAssetRoleSeries;
+import org.omg.spec.api4kp.taxonomy.knowledgeassettype.KnowledgeAssetType;
+import org.omg.spec.api4kp.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,19 +102,19 @@ public class StaticFilter {
   private static Optional<URI> resolveTypeTag(String assetTypeTag) {
     Optional<KnowledgeAssetType> type = KnowledgeAssetTypeSeries.resolve(assetTypeTag);
     if (type.isPresent()) {
-      return type.map(ConceptTerm::getRef);
+      return type.map(ConceptTerm::getReferentId);
     }
     Optional<KnowledgeAssetRole> role = KnowledgeAssetRoleSeries.resolve(assetTypeTag);
     if (role.isPresent()) {
-      return role.map(ConceptTerm::getRef);
+      return role.map(ConceptTerm::getReferentId);
     }
     logger.warn("Unable to resolve {} to a known type or role", assetTypeTag);
     return Optional.empty();
   }
 
   private static Optional<URI> resolveAnnotationTag(String annotationTag) {
-    return AnnotationRelTypeSeries.resolve(annotationTag)
-        .map(ConceptTerm::getRef);
+    return SemanticAnnotationRelTypeSeries.resolve(annotationTag)
+        .map(ConceptTerm::getReferentId);
   }
 
 }

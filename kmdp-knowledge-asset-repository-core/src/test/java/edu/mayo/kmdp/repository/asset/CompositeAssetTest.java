@@ -13,24 +13,19 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
-import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder.randomArtifactId;
-import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder.randomAssetId;
-import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateHelper.getSurrogateId;
 import static edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryService.transitiveDependencies;
-import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.TXT;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HL7_ELM;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate_2_0;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.SPARQL_1_1;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
+import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomArtifactId;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomAssetId;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getSurrogateId;
+import static org.omg.spec.api4kp.taxonomy.krformat.SerializationFormatSeries.TXT;
+import static org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HL7_ELM;
+import static org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
+import static org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate_2_0;
+import static org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.SPARQL_1_1;
 
-import edu.mayo.kmdp.metadata.v2.surrogate.ComputableKnowledgeArtifact;
-import edu.mayo.kmdp.metadata.v2.surrogate.Dependency;
-import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
-import edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype.DependencyTypeSeries;
-import edu.mayo.ontology.taxonomies.kao.rel.structuralreltype.StructuralPartTypeSeries;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.Arrays;
@@ -39,13 +34,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
-import org.omg.spec.api4kp._1_0.AbstractCarrier;
-import org.omg.spec.api4kp._1_0.Answer;
-import org.omg.spec.api4kp._1_0.Composite;
-import org.omg.spec.api4kp._1_0.datatypes.Bindings;
-import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
-import org.omg.spec.api4kp._1_0.services.CompositeKnowledgeCarrier;
-import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
+import org.omg.spec.api4kp._20200801.AbstractCarrier;
+import org.omg.spec.api4kp._20200801.Answer;
+import org.omg.spec.api4kp._20200801.datatypes.Bindings;
+import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
+import org.omg.spec.api4kp._20200801.services.CompositeKnowledgeCarrier;
+import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
+import org.omg.spec.api4kp._20200801.surrogate.Dependency;
+import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
+import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
+import org.omg.spec.api4kp.taxonomy.dependencyreltype.DependencyTypeSeries;
+import org.omg.spec.api4kp.taxonomy.structuralreltype.StructuralPartTypeSeries;
 
 
 class CompositeAssetTest extends RepositoryTestBase {
@@ -57,12 +56,12 @@ class CompositeAssetTest extends RepositoryTestBase {
 
     KnowledgeAsset a1 = new KnowledgeAsset()
         .withAssetId(id1)
-        .withCarriers(new ComputableKnowledgeArtifact()
+        .withCarriers(new KnowledgeArtifact()
             .withArtifactId(randomArtifactId())
             .withRepresentation(rep(HTML)));
     KnowledgeAsset a2 = new KnowledgeAsset()
         .withAssetId(id2)
-        .withCarriers(new ComputableKnowledgeArtifact()
+        .withCarriers(new KnowledgeArtifact()
             .withArtifactId(randomArtifactId())
             .withRepresentation(rep(HL7_ELM)));
 
@@ -84,7 +83,7 @@ class CompositeAssetTest extends RepositoryTestBase {
     assertTrue(semanticRepository.getKnowledgeAsset(id2.getUuid()).isSuccess());
 
     String query = "" +
-        "select ?o where { ?s <" + StructuralPartTypeSeries.Has_Part.getRef() + "> ?o . }";
+        "select ?o where { ?s <" + StructuralPartTypeSeries.Has_Structural_Component.getReferentId() + "> ?o . }";
 
     KnowledgeCarrier queryCarrier = AbstractCarrier.of(query)
         .withRepresentation(rep(SPARQL_1_1, TXT, Charset.defaultCharset()));
@@ -106,12 +105,12 @@ class CompositeAssetTest extends RepositoryTestBase {
 
     KnowledgeAsset a1 = new KnowledgeAsset()
         .withAssetId(id1)
-        .withCarriers(new ComputableKnowledgeArtifact()
+        .withCarriers(new KnowledgeArtifact()
             .withArtifactId(randomArtifactId())
             .withRepresentation(rep(HTML)));
     KnowledgeAsset a2 = new KnowledgeAsset()
         .withAssetId(id2)
-        .withCarriers(new ComputableKnowledgeArtifact()
+        .withCarriers(new KnowledgeArtifact()
             .withArtifactId(randomArtifactId())
             .withRepresentation(rep(HL7_ELM)));
 
@@ -134,7 +133,7 @@ class CompositeAssetTest extends RepositoryTestBase {
     assertTrue(semanticRepository.getKnowledgeAsset(ckc.getAssetId().getUuid()).isFailure());
 
     String query = "" +
-        "select ?o where { ?s <" + StructuralPartTypeSeries.Has_Part.getRef() + "> ?o . }";
+        "select ?o where { ?s <" + StructuralPartTypeSeries.Has_Structural_Component.getReferentId() + "> ?o . }";
     KnowledgeCarrier queryCarrier = AbstractCarrier.of(query)
         .withRepresentation(rep(SPARQL_1_1, TXT, Charset.defaultCharset()));
 
@@ -182,13 +181,13 @@ class CompositeAssetTest extends RepositoryTestBase {
     KnowledgeAsset a1 = new KnowledgeAsset()
         .withAssetId(id1)
         .withLinks(new Dependency().withRel(DependencyTypeSeries.Depends_On).withHref(id2))
-        .withCarriers(new ComputableKnowledgeArtifact()
+        .withCarriers(new KnowledgeArtifact()
             .withArtifactId(randomArtifactId())
             .withRepresentation(rep(HTML))
             .withInlinedExpression("AAA"));
     KnowledgeAsset a2 = new KnowledgeAsset()
         .withAssetId(id2)
-        .withCarriers(new ComputableKnowledgeArtifact()
+        .withCarriers(new KnowledgeArtifact()
             .withArtifactId(randomArtifactId())
             .withRepresentation(rep(HTML))
             .withInlinedExpression("BBB"));

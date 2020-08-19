@@ -13,23 +13,19 @@
  */
 package edu.mayo.kmdp.repository.asset.catalog;
 
-import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder.assetId;
-import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder.randomAssetId;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Care_Process_Model;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Clinical_Rule;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Decision_Model;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Predictive_Model;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeprocessingtechnique.KnowledgeProcessingTechniqueSeries.Logic_Based_Technique;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.omg.spec.api4kp._1_0.id.SemanticIdentifier.newId;
+import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.assetId;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomAssetId;
+import static org.omg.spec.api4kp.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Care_Process_Model;
+import static org.omg.spec.api4kp.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Clinical_Rule;
+import static org.omg.spec.api4kp.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Decision_Model;
+import static org.omg.spec.api4kp.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Predictive_Model;
+import static org.omg.spec.api4kp.taxonomy.knowledgeprocessingtechnique.KnowledgeProcessingTechniqueSeries.Qualitative_Technique;
 
-import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
-import edu.mayo.kmdp.metadata.v2.surrogate.annotations.Applicability;
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
-import edu.mayo.kmdp.repository.asset.v4.KnowledgeAssetCatalogApi;
-import edu.mayo.kmdp.repository.asset.v4.client.ApiClientFactory;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
 import java.util.Collections;
 import java.util.List;
@@ -38,11 +34,14 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.omg.spec.api4kp._1_0.Answer;
-import org.omg.spec.api4kp._1_0.id.Pointer;
-import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
-import org.omg.spec.api4kp._1_0.id.SemanticIdentifier;
-import org.omg.spec.api4kp._1_0.id.Term;
+import org.omg.spec.api4kp._20200801.Answer;
+import org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetCatalogApi;
+import org.omg.spec.api4kp._20200801.api.repository.asset.v4.client.ApiClientFactory;
+import org.omg.spec.api4kp._20200801.id.Pointer;
+import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
+import org.omg.spec.api4kp._20200801.id.Term;
+import org.omg.spec.api4kp._20200801.surrogate.Applicability;
+import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 
 class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
 
@@ -177,7 +176,7 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
         new KnowledgeAsset()
             .withAssetId(assetId)
             .withApplicableIn(new Applicability()
-                .withSituation(Logic_Based_Technique.asConceptIdentifier()))
+                .withSituation(Qualitative_Technique.asConceptIdentifier()))
     );
     KnowledgeAsset ax = ckac.getKnowledgeAsset(assetId.getUuid())
         .orElseGet(Assertions::fail);
@@ -187,7 +186,7 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
 
     Term t = ax.getApplicableIn().getSituation().get(0);
     assertNotNull(t);
-    assertEquals(Logic_Based_Technique.getConceptUUID(),t.getUuid());
+    assertEquals(Qualitative_Technique.getUuid(),t.getUuid());
   }
 
 }

@@ -1,27 +1,16 @@
 package edu.mayo.kmdp.repository.asset.index.sparql;
 
-import static edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype.DependencyTypeSeries.Depends_On;
-import static edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype.DependencyTypeSeries.Imports;
-import static edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype.DependencyTypeSeries.Includes;
+import static org.omg.spec.api4kp.taxonomy.dependencyreltype.DependencyTypeSeries.Depends_On;
+import static org.omg.spec.api4kp.taxonomy.dependencyreltype.DependencyTypeSeries.Imports;
+import static org.omg.spec.api4kp.taxonomy.dependencyreltype.DependencyTypeSeries.Includes_By_Reference;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import edu.mayo.kmdp.metadata.v2.surrogate.Dependency;
-import edu.mayo.kmdp.metadata.v2.surrogate.Derivative;
-import edu.mayo.kmdp.metadata.v2.surrogate.Link;
-import edu.mayo.kmdp.metadata.v2.surrogate.annotations.Annotation;
 import edu.mayo.kmdp.repository.asset.index.Index;
-import edu.mayo.kmdp.terms.ConceptTerm;
-import edu.mayo.kmdp.terms.impl.model.ConceptDescriptor;
 import edu.mayo.kmdp.util.DateTimeUtil;
 import edu.mayo.kmdp.util.StreamUtil;
 import edu.mayo.kmdp.util.Util;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassetrole.KnowledgeAssetRole;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassetrole.KnowledgeAssetRoleSeries;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetType;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries;
-import edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype.DependencyTypeSeries;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,11 +29,22 @@ import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
-import org.omg.spec.api4kp._1_0.id.ConceptIdentifier;
-import org.omg.spec.api4kp._1_0.id.Pointer;
-import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
-import org.omg.spec.api4kp._1_0.id.SemanticIdentifier;
-import org.omg.spec.api4kp._1_0.services.KnowledgeBase;
+import org.omg.spec.api4kp._20200801.id.ConceptIdentifier;
+import org.omg.spec.api4kp._20200801.id.Pointer;
+import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
+import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
+import org.omg.spec.api4kp._20200801.services.KnowledgeBase;
+import org.omg.spec.api4kp._20200801.surrogate.Annotation;
+import org.omg.spec.api4kp._20200801.surrogate.Dependency;
+import org.omg.spec.api4kp._20200801.surrogate.Derivative;
+import org.omg.spec.api4kp._20200801.surrogate.Link;
+import org.omg.spec.api4kp._20200801.terms.ConceptTerm;
+import org.omg.spec.api4kp._20200801.terms.model.ConceptDescriptor;
+import org.omg.spec.api4kp.taxonomy.dependencyreltype.DependencyTypeSeries;
+import org.omg.spec.api4kp.taxonomy.knowledgeassetrole.KnowledgeAssetRole;
+import org.omg.spec.api4kp.taxonomy.knowledgeassetrole.KnowledgeAssetRoleSeries;
+import org.omg.spec.api4kp.taxonomy.knowledgeassettype.KnowledgeAssetType;
+import org.omg.spec.api4kp.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -55,7 +55,7 @@ import org.springframework.stereotype.Component;
 public class SparqlIndex implements Index {
 
   private static final Set<DependencyTypeSeries> TRAVERSE_DEPS =
-      Util.newEnumSet(Arrays.asList(Imports, Includes, Depends_On), DependencyTypeSeries.class);
+      Util.newEnumSet(Arrays.asList(Imports, Includes_By_Reference, Depends_On), DependencyTypeSeries.class);
 
   private static final String TRAVERSE_DEPS_SPARQL;
 
@@ -63,7 +63,7 @@ public class SparqlIndex implements Index {
   // compute the SPARQL query string for all related predicates
   static {
     TRAVERSE_DEPS_SPARQL =
-        "(" + TRAVERSE_DEPS.stream().map(c -> "<" + c.getRef().toString() + ">")
+        "(" + TRAVERSE_DEPS.stream().map(c -> "<" + c.getReferentId().toString() + ">")
             .collect(Collectors.joining("|")) + ")";
   }
 
@@ -128,7 +128,7 @@ public class SparqlIndex implements Index {
 
     // composites
     statements.addAll(related.stream()
-        .flatMap(StreamUtil.filterAs(edu.mayo.kmdp.metadata.v2.surrogate.Component.class))
+        .flatMap(StreamUtil.filterAs(org.omg.spec.api4kp._20200801.surrogate.Component.class))
         .flatMap(part -> toParthoodStatements(assetVersionId,part))
         .collect(Collectors.toList()));
 
@@ -194,7 +194,7 @@ public class SparqlIndex implements Index {
         this.toStatement(
             assetVersionId,
             URI.create(RDF.type.getURI()),
-            type.getRef())
+            type.getReferentId())
     ).collect(Collectors.toList()));
 
     // Asset roles
@@ -202,7 +202,7 @@ public class SparqlIndex implements Index {
         this.toStatement(
             assetVersionId,
             URI.create(RDF.type.getURI()),
-            role.getRef())
+            role.getReferentId())
     ).collect(Collectors.toList()));
 
     // Asset name
@@ -228,7 +228,7 @@ public class SparqlIndex implements Index {
     return toRelatedStatements(subj,derivationType,tgt);
   }
 
-  private Stream<Statement> toParthoodStatements(URI subj, edu.mayo.kmdp.metadata.v2.surrogate.Component part) {
+  private Stream<Statement> toParthoodStatements(URI subj, org.omg.spec.api4kp._20200801.surrogate.Component part) {
     ConceptDescriptor partType = ConceptDescriptor.toConceptDescriptor(part.getRel());
     URI tgt = part.getHref().getVersionId();
 
@@ -238,7 +238,7 @@ public class SparqlIndex implements Index {
   private Stream<Statement> toRelatedStatements(URI subj, ConceptDescriptor rel, URI tgt) {
     return Stream.concat(
         Arrays.stream(rel.getClosure())
-            .map(anc -> toStatement(subj, anc.getRef(), tgt)),
+            .map(anc -> toStatement(subj, anc.getReferentId(), tgt)),
         Stream.of(this.toStatement(subj, rel.getReferentId(), tgt))
     );
   }

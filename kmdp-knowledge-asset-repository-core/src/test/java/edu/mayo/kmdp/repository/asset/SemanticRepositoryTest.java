@@ -13,63 +13,58 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
-import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder.artifactId;
-import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder.assetId;
-import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder.randomArtifactId;
-import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder.randomAssetId;
-import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateHelper.getSurrogateId;
 import static edu.mayo.kmdp.util.Util.isEmpty;
 import static edu.mayo.kmdp.util.Util.uuid;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassetrole.KnowledgeAssetRoleSeries.Operational_Concept_Definition;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Care_Process_Model;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Formal_Ontology;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Predictive_Model;
-import static edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype.DependencyTypeSeries.Depends_On;
-import static edu.mayo.ontology.taxonomies.kmdo.annotationreltype.AnnotationRelTypeSeries.Defines;
-import static edu.mayo.ontology.taxonomies.kmdo.annotationreltype.AnnotationRelTypeSeries.In_Terms_Of;
-import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.JSON;
-import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.TXT;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HL7_ELM;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate_2_0;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.SPARQL_1_1;
+import static edu.mayo.ontology.taxonomies.kmdo.semanticannotationreltype.SemanticAnnotationRelTypeSeries.In_Terms_Of;
+import static edu.mayo.ontology.taxonomies.kmdo.semanticannotationreltype.snapshot.SemanticAnnotationRelType.Defines;
+import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.Conflict;
+import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.Created;
+import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.NoContent;
+import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.NotFound;
 import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
+import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.artifactId;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.assetId;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomArtifactId;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomAssetId;
+import static org.omg.spec.api4kp.taxonomy.dependencyreltype.DependencyTypeSeries.Depends_On;
+import static org.omg.spec.api4kp.taxonomy.knowledgeassetrole.KnowledgeAssetRoleSeries.Operational_Concept_Definition;
+import static org.omg.spec.api4kp.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Care_Process_Model;
+import static org.omg.spec.api4kp.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Formal_Ontology;
+import static org.omg.spec.api4kp.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Predictive_Model;
+import static org.omg.spec.api4kp.taxonomy.krformat.SerializationFormatSeries.JSON;
+import static org.omg.spec.api4kp.taxonomy.krformat.SerializationFormatSeries.TXT;
+import static org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HL7_ELM;
+import static org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
+import static org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate_2_0;
 
-import edu.mayo.kmdp.metadata.v2.surrogate.ComputableKnowledgeArtifact;
-import edu.mayo.kmdp.metadata.v2.surrogate.Dependency;
-import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
-import edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder;
-import edu.mayo.kmdp.metadata.v2.surrogate.SurrogateHelper;
-import edu.mayo.kmdp.metadata.v2.surrogate.annotations.Annotation;
 import edu.mayo.kmdp.registry.Registry;
 import edu.mayo.kmdp.util.DateTimeUtil;
-import edu.mayo.ontology.taxonomies.api4kp.responsecodes.ResponseCodeSeries;
-import edu.mayo.ontology.taxonomies.kao.rel.structuralreltype.StructuralPartTypeSeries;
+import edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries;
 import java.net.URI;
-import java.nio.charset.Charset;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
-import org.omg.spec.api4kp._1_0.AbstractCarrier;
-import org.omg.spec.api4kp._1_0.Answer;
-import org.omg.spec.api4kp._1_0.datatypes.Bindings;
-import org.omg.spec.api4kp._1_0.id.ConceptIdentifier;
-import org.omg.spec.api4kp._1_0.id.IdentifierConstants;
-import org.omg.spec.api4kp._1_0.id.Pointer;
-import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
-import org.omg.spec.api4kp._1_0.id.SemanticIdentifier;
-import org.omg.spec.api4kp._1_0.id.Term;
-import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
-import org.omg.spec.api4kp._1_0.services.repository.KnowledgeAssetCatalog;
+import org.omg.spec.api4kp._20200801.AbstractCarrier;
+import org.omg.spec.api4kp._20200801.Answer;
+import org.omg.spec.api4kp._20200801.id.ConceptIdentifier;
+import org.omg.spec.api4kp._20200801.id.IdentifierConstants;
+import org.omg.spec.api4kp._20200801.id.Pointer;
+import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
+import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
+import org.omg.spec.api4kp._20200801.id.Term;
+import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
+import org.omg.spec.api4kp._20200801.services.repository.KnowledgeAssetCatalog;
+import org.omg.spec.api4kp._20200801.surrogate.Annotation;
+import org.omg.spec.api4kp._20200801.surrogate.Dependency;
+import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
+import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
+import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
 
 
 class SemanticRepositoryTest extends RepositoryTestBase {
@@ -111,7 +106,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     assertNotNull(assets);
     assertEquals(2, assets.size());
 
-    assertTrue(assets.stream().allMatch(p -> Care_Process_Model.getRef().equals(p.getType())));
+    assertTrue(assets.stream().allMatch(p -> Care_Process_Model.getReferentId().equals(p.getType())));
     assertTrue(assets.stream().anyMatch(p -> uuid("foo2").equals(p.getUuid())));
     assertTrue(assets.stream().anyMatch(p -> "Example A".equals(p.getName())));
   }
@@ -205,7 +200,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     assertNotNull(assets);
     assertEquals(1, assets.size());
 
-    assertEquals(Care_Process_Model.getRef(), assets.get(0).getType());
+    assertEquals(Care_Process_Model.getReferentId(), assets.get(0).getType());
   }
 
   // initKnowledgeAsset
@@ -213,7 +208,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
   void testInitAssetReturnsUUIDAndIsCreated() {
     Answer<UUID> responseEntity =
         semanticRepository.initKnowledgeAsset();
-    assertEquals(ResponseCodeSeries.Created, responseEntity.getOutcomeType());
+    assertEquals(Created, responseEntity.getOutcomeType());
     assertTrue(responseEntity.isSuccess());
     UUID newAssetId = responseEntity.get();
     assertNotNull(newAssetId);
@@ -284,7 +279,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     Answer<KnowledgeAsset> response =
         semanticRepository.getKnowledgeAsset(uuid("fooDoesNotExist"));
 
-    assertEquals(ResponseCodeSeries.NotFound, response.getOutcomeType());
+    assertEquals(NotFound, response.getOutcomeType());
   }
 
   // listKnowledgeAssetVersions
@@ -328,7 +323,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     Answer<List<Pointer>> assetVersions = semanticRepository
             .listKnowledgeAssetVersions(uuid("fooNotFound"));
     assertFalse(assetVersions.isSuccess());
-    assertEquals(ResponseCodeSeries.NotFound,assetVersions.getOutcomeType());
+    assertEquals(NotFound,assetVersions.getOutcomeType());
   }
 
   //getVersionedKnowledgeAsset
@@ -363,7 +358,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
                 .withFormalType(Care_Process_Model)));
     Answer<KnowledgeAsset> response =
         semanticRepository.getKnowledgeAssetVersion(uuid("fooDoeNotExist"), "5");
-    assertEquals(ResponseCodeSeries.NotFound, response.getOutcomeType());
+    assertEquals(NotFound, response.getOutcomeType());
   }
 
   @Test
@@ -378,7 +373,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
                 .withFormalType(Care_Process_Model)));
     Answer<KnowledgeAsset> response =
         semanticRepository.getKnowledgeAssetVersion(uuid("foo"), "12345");
-    assertEquals(ResponseCodeSeries.NotFound, response.getOutcomeType());
+    assertEquals(NotFound, response.getOutcomeType());
   }
 
   // setKnowledgeAssetVersion
@@ -393,7 +388,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     Answer<Void> response = semanticRepository
         .setKnowledgeAssetVersion(assetId.getUuid(), assetId.getVersionTag(), asset);
 
-    assertEquals(ResponseCodeSeries.NoContent, response.getOutcomeType());
+    assertEquals(NoContent, response.getOutcomeType());
   }
 
   @Test
@@ -409,7 +404,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     Answer<Void> response = semanticRepository
         .setKnowledgeAssetVersion(UUID.fromString("45a81582-1b1d-3439-9400-6e2fee0c3f52"), "2",
             asset);
-    assertEquals(ResponseCodeSeries.NoContent, response.getOutcomeType());
+    assertEquals(NoContent, response.getOutcomeType());
 
     List<Pointer> versions = semanticRepository
         .listKnowledgeAssetVersions(UUID.fromString("45a81582-1b1d-3439-9400-6e2fee0c3f52"))
@@ -433,7 +428,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
 
     Answer<Void> response = semanticRepository
         .setKnowledgeAssetVersion(assetId.getUuid(),assetId.getVersionTag(),changedAsset);
-    assertEquals(ResponseCodeSeries.Conflict, response.getOutcomeType());
+    assertEquals(Conflict, response.getOutcomeType());
 
     ResourceIdentifier newAssetId =
         assetId(assetId.getUuid(),assetId.getSemanticVersionTag().incrementMinorVersion().toString());
@@ -441,7 +436,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
 
     Answer<Void> response2 = semanticRepository
         .setKnowledgeAssetVersion(newAssetId.getUuid(),newAssetId.getVersionTag(),changedAsset);
-    assertEquals(ResponseCodeSeries.NoContent, response2.getOutcomeType());
+    assertEquals(NoContent, response2.getOutcomeType());
 
     KnowledgeAsset assetResult = semanticRepository
         .getKnowledgeAssetVersion(newAssetId.getUuid(),newAssetId.getVersionTag())
@@ -461,7 +456,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     Answer<Void> response = semanticRepository
         .setKnowledgeAssetVersion(UUID.fromString("45a81582-1b1d-3439-9400-6e2fee0c3f52"), "2",
             asset);
-    assertEquals(ResponseCodeSeries.Conflict, response.getOutcomeType());
+    assertEquals(Conflict, response.getOutcomeType());
   }
 
 
@@ -474,7 +469,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     Answer<Void> response = semanticRepository
         .setKnowledgeAssetVersion(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1",
             asset);
-    assertEquals(ResponseCodeSeries.Conflict, response.getOutcomeType());
+    assertEquals(Conflict, response.getOutcomeType());
   }
 
   @Test
@@ -484,7 +479,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     Answer<Void> response = semanticRepository
         .setKnowledgeAssetVersion(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1",
             asset);
-    assertEquals(ResponseCodeSeries.NoContent, response.getOutcomeType());
+    assertEquals(NoContent, response.getOutcomeType());
     String expectedAssetId = BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52";
     String expectedVersionId = BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52/versions/1.0.0";
     KnowledgeAsset ka = semanticRepository
@@ -505,7 +500,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     Answer<Void> response = semanticRepository
         .setKnowledgeAssetVersion(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1.0.0",
             asset);
-    assertEquals(ResponseCodeSeries.NoContent, response.getOutcomeType());
+    assertEquals(NoContent, response.getOutcomeType());
 
     String expectedAssetId = BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52";
     String expectedVersionId = BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52/versions/1.0.0";
@@ -528,7 +523,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     Answer<Void> response = semanticRepository
         .setKnowledgeAssetVersion(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1.0.0",
             asset);
-    assertEquals(ResponseCodeSeries.NoContent, response.getOutcomeType());
+    assertEquals(NoContent, response.getOutcomeType());
     String expectedAssetId = BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52";
     String expectedVersionId = BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52/versions/1.0.0";
     KnowledgeAsset ka = semanticRepository
@@ -847,7 +842,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
             new KnowledgeAsset()
                 .withAssetId(assetId)
                 .withName("Test")
-                .withCarriers(new ComputableKnowledgeArtifact()
+                .withCarriers(new KnowledgeArtifact()
                     .withArtifactId(artifactId)
                     .withRepresentation(rep(HTML))
                 )
@@ -879,7 +874,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     UUID u2 = UUID.nameUUIDFromBytes("2".getBytes());
 
     semanticRepository.setKnowledgeAssetVersion(u1, "1", new KnowledgeAsset()
-        .withCarriers(new ComputableKnowledgeArtifact()
+        .withCarriers(new KnowledgeArtifact()
             .withArtifactId(SurrogateBuilder.randomArtifactId())
             .withRepresentation(rep(HL7_ELM))));
     semanticRepository.setKnowledgeAssetCarrierVersion(
@@ -890,7 +885,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
 
     semanticRepository.setKnowledgeAssetVersion(u2, "1", new KnowledgeAsset()
         .withLinks(new Dependency().withRel(Depends_On).withHref(asset1.getAssetId()))
-        .withCarriers(new ComputableKnowledgeArtifact()
+        .withCarriers(new KnowledgeArtifact()
             .withArtifactId(SurrogateBuilder.randomArtifactId())
             .withRepresentation(rep(HL7_ELM))));
     semanticRepository.setKnowledgeAssetCarrierVersion(
@@ -910,11 +905,11 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     ResourceIdentifier extraSurrogateId = SurrogateBuilder.randomArtifactId();
 
     KnowledgeAsset surrogate = new KnowledgeAsset()
-        .withCarriers(new ComputableKnowledgeArtifact()
+        .withCarriers(new KnowledgeArtifact()
             .withArtifactId(randomArtifactId())
             .withRepresentation(rep(HL7_ELM)))
         .withSurrogate(
-            new ComputableKnowledgeArtifact()
+            new KnowledgeArtifact()
                 .withArtifactId(extraSurrogateId)
                 .withRepresentation(rep(HTML,TXT))
                 .withInlinedExpression("<p>Metadata</p>"));
@@ -944,7 +939,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     KnowledgeAsset a1 = new KnowledgeAsset()
         .withAssetId(assetId)
         .withName("AAAA")
-        .withSurrogate(new ComputableKnowledgeArtifact()
+        .withSurrogate(new KnowledgeArtifact()
             .withArtifactId(surrogateId)
             .withRepresentation(rep(Knowledge_Asset_Surrogate_2_0,JSON)));
 
@@ -963,7 +958,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     KnowledgeAsset a2 = new KnowledgeAsset()
         .withAssetId(assetId)
         .withName("BBBB")
-        .withSurrogate(new ComputableKnowledgeArtifact()
+        .withSurrogate(new KnowledgeArtifact()
             .withArtifactId(surrogateId)
             .withRepresentation(rep(Knowledge_Asset_Surrogate_2_0,JSON)));
 
@@ -974,7 +969,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     KnowledgeAsset a3 = new KnowledgeAsset()
         .withAssetId(assetId)
         .withName("BBBB")
-        .withSurrogate(new ComputableKnowledgeArtifact()
+        .withSurrogate(new KnowledgeArtifact()
             .withArtifactId(artifactId(surrogateId.getUuid(),"0.0.1"))
             .withRepresentation(rep(Knowledge_Asset_Surrogate_2_0,JSON)));
 

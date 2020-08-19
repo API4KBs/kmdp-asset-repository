@@ -13,12 +13,6 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
-import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder.artifactId;
-import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder.assetId;
-import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder.randomArtifactId;
-import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateHelper.getComputableSurrogateMetadata;
-import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateHelper.getSurrogateId;
-import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateHelper.getSurrogateMetadata;
 import static edu.mayo.kmdp.repository.asset.negotiation.ContentNegotiationHelper.anyCarrier;
 import static edu.mayo.kmdp.repository.asset.negotiation.ContentNegotiationHelper.decodePreferences;
 import static edu.mayo.kmdp.repository.asset.negotiation.ContentNegotiationHelper.isAcceptable;
@@ -28,56 +22,47 @@ import static edu.mayo.kmdp.util.StreamUtil.filterAs;
 import static edu.mayo.kmdp.util.Util.coalesce;
 import static edu.mayo.kmdp.util.Util.isEmpty;
 import static edu.mayo.kmdp.util.Util.paginate;
-import static edu.mayo.ontology.taxonomies.api4kp.parsinglevel.ParsingLevelSeries.Abstract_Knowledge_Expression;
-import static edu.mayo.ontology.taxonomies.api4kp.parsinglevel.ParsingLevelSeries.Encoded_Knowledge_Expression;
-import static edu.mayo.ontology.taxonomies.api4kp.responsecodes.ResponseCodeSeries.NotAcceptable;
-import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.JSON;
-import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.RDF_1_1;
-import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.TXT;
-import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.XML_1_1;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.FHIR_STU3;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate_2_0;
+import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.Conflict;
+import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.Created;
+import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.NoContent;
+import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.NotAcceptable;
+import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.OK;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
-import static org.omg.spec.api4kp._1_0.AbstractCarrier.ofAst;
-import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
-import static org.omg.spec.api4kp._1_0.id.SemanticIdentifier.timedSemverComparator;
-import static org.omg.spec.api4kp._1_0.id.VersionIdentifier.toSemVer;
-import static org.omg.spec.api4kp._1_0.services.tranx.ModelMIMECoder.encode;
+import static org.omg.spec.api4kp._20200801.AbstractCarrier.ofAst;
+import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
+import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.timedSemverComparator;
+import static org.omg.spec.api4kp._20200801.id.VersionIdentifier.toSemVer;
+import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.encode;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.artifactId;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.assetId;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomArtifactId;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getComputableSurrogateMetadata;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getSurrogateId;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getSurrogateMetadata;
+import static org.omg.spec.api4kp.taxonomy.krformat.SerializationFormatSeries.JSON;
+import static org.omg.spec.api4kp.taxonomy.krformat.SerializationFormatSeries.RDF_1_1;
+import static org.omg.spec.api4kp.taxonomy.krformat.SerializationFormatSeries.TXT;
+import static org.omg.spec.api4kp.taxonomy.krformat.SerializationFormatSeries.XML_1_1;
+import static org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.FHIR_STU3;
+import static org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
+import static org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate;
+import static org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate_2_0;
+import static org.omg.spec.api4kp.taxonomy.parsinglevel.ParsingLevelSeries.Abstract_Knowledge_Expression;
+import static org.omg.spec.api4kp.taxonomy.parsinglevel.ParsingLevelSeries.Encoded_Knowledge_Expression;
+import static org.omg.spec.api4kp.taxonomy.parsinglevel.ParsingLevelSeries.Serialized_Knowledge_Expression;
 
-import edu.mayo.kmdp.inference.v4.server.IntrospectionApiInternal._introspect;
-import edu.mayo.kmdp.inference.v4.server.QueryApiInternal;
-import edu.mayo.kmdp.inference.v4.server.QueryApiInternal._askQuery;
 import edu.mayo.kmdp.kbase.introspection.struct.CompositeAssetMetadataIntrospector;
-import edu.mayo.kmdp.metadata.v2.surrogate.ComputableKnowledgeArtifact;
-import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeArtifact;
-import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
-import edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder;
-import edu.mayo.kmdp.metadata.v2.surrogate.SurrogateDiffer;
-import edu.mayo.kmdp.metadata.v2.surrogate.SurrogateHelper;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.artifact.exceptions.ResourceNotFoundException;
-import edu.mayo.kmdp.repository.artifact.v4.server.KnowledgeArtifactApiInternal;
-import edu.mayo.kmdp.repository.artifact.v4.server.KnowledgeArtifactSeriesApiInternal;
 import edu.mayo.kmdp.repository.asset.HrefBuilder.HrefType;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.repository.asset.index.Index;
 import edu.mayo.kmdp.repository.asset.index.StaticFilter;
-import edu.mayo.kmdp.repository.asset.v4.server.KnowledgeAssetRepositoryApiInternal;
-import edu.mayo.kmdp.tranx.v4.server.DeserializeApiInternal;
-import edu.mayo.kmdp.tranx.v4.server.DetectApiInternal;
-import edu.mayo.kmdp.tranx.v4.server.TransxionApiInternal;
-import edu.mayo.kmdp.tranx.v4.server.ValidateApiInternal;
 import edu.mayo.kmdp.util.FileUtil;
 import edu.mayo.kmdp.util.Util;
-import edu.mayo.ontology.taxonomies.api4kp.parsinglevel.ParsingLevelSeries;
 import edu.mayo.ontology.taxonomies.api4kp.responsecodes.ResponseCodeSeries;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries;
-import edu.mayo.ontology.taxonomies.kmdo.annotationreltype.AnnotationRelTypeSeries;
-import edu.mayo.ontology.taxonomies.krformat.SerializationFormat;
-import edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguage;
+import edu.mayo.ontology.taxonomies.kmdo.semanticannotationreltype.SemanticAnnotationRelTypeSeries;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.Arrays;
@@ -89,23 +74,41 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.inject.Named;
-import org.omg.spec.api4kp._1_0.AbstractCarrier;
-import org.omg.spec.api4kp._1_0.AbstractCarrier.Encodings;
-import org.omg.spec.api4kp._1_0.Answer;
-import org.omg.spec.api4kp._1_0.datatypes.Bindings;
-import org.omg.spec.api4kp._1_0.id.Pointer;
-import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
-import org.omg.spec.api4kp._1_0.id.SemanticIdentifier;
-import org.omg.spec.api4kp._1_0.id.VersionIdentifier;
-import org.omg.spec.api4kp._1_0.services.CompositeKnowledgeCarrier;
-import org.omg.spec.api4kp._1_0.services.KPComponent;
-import org.omg.spec.api4kp._1_0.services.KPServer;
-import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
-import org.omg.spec.api4kp._1_0.services.SyntacticRepresentation;
-import org.omg.spec.api4kp._1_0.services.repository.KnowledgeAssetCatalog;
+import org.omg.spec.api4kp._20200801.AbstractCarrier;
+import org.omg.spec.api4kp._20200801.AbstractCarrier.Encodings;
+import org.omg.spec.api4kp._20200801.Answer;
+import org.omg.spec.api4kp._20200801.api.inference.v4.server.IntrospectionApiInternal._introspect;
+import org.omg.spec.api4kp._20200801.api.inference.v4.server.QueryApiInternal;
+import org.omg.spec.api4kp._20200801.api.inference.v4.server.QueryApiInternal._askQuery;
+import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactApiInternal;
+import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactSeriesApiInternal;
+import org.omg.spec.api4kp._20200801.api.repository.asset.v4.server.KnowledgeAssetRepositoryApiInternal;
+import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.DeserializeApiInternal;
+import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.DetectApiInternal;
+import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.TransxionApiInternal;
+import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.ValidateApiInternal;
+import org.omg.spec.api4kp._20200801.datatypes.Bindings;
+import org.omg.spec.api4kp._20200801.id.Pointer;
+import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
+import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
+import org.omg.spec.api4kp._20200801.services.CompositeKnowledgeCarrier;
+import org.omg.spec.api4kp._20200801.services.KPComponent;
+import org.omg.spec.api4kp._20200801.services.KPServer;
+import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
+import org.omg.spec.api4kp._20200801.services.SyntacticRepresentation;
+import org.omg.spec.api4kp._20200801.services.repository.KnowledgeAssetCatalog;
+import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
+import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
+import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
+import org.omg.spec.api4kp._20200801.surrogate.SurrogateDiffer;
+import org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper;
+import org.omg.spec.api4kp.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries;
+import org.omg.spec.api4kp.taxonomy.krformat.SerializationFormat;
+import org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+
 
 /**
  * An {@link KnowledgeAssetRepositoryService} implementation
@@ -233,7 +236,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .withSupportedAssetTypes(
             KnowledgeAssetTypeSeries.values())
         .withSupportedAnnotations(
-            Arrays.stream(AnnotationRelTypeSeries.values())
+            Arrays.stream(SemanticAnnotationRelTypeSeries.values())
                 .map(Enum::name)
                 .collect(Collectors.joining(","))
         ).withSurrogateModels(
@@ -277,7 +280,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   public Answer<KnowledgeCarrier> getKnowledgeGraph(String xAccept) {
     return parser.applyLower(
         index.asKnowledgeBase().getManifestation(),
-        ParsingLevelSeries.Concrete_Knowledge_Expression,
+        Serialized_Knowledge_Expression,
         xAccept,
         null);
   }
@@ -341,7 +344,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     this.setKnowledgeAssetVersion(newId.getUuid(), newId.getVersionTag(), surrogate);
 
-    return Answer.of(ResponseCodeSeries.Created, newId.getUuid());
+    return Answer.of(Created, newId.getUuid());
   }
 
   /**
@@ -447,18 +450,18 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     setIdAndVersionIfMissing(assetSurrogate, assetId, versionTag);
 
     if (!testIdentifiersConsistency(assetSurrogate, assetId, versionTag)) {
-      return Answer.of(ResponseCodeSeries.Conflict);
+      return Answer.of(Conflict);
     }
 
     ResourceIdentifier assetIdentifier = assetId(assetId,versionTag);
     ResourceIdentifier surrogateIdentifier = ensureHasCanonicalSurrogateManifestation(assetSurrogate);
     if (detectCanonicalSurrogateConflict(assetIdentifier,surrogateIdentifier,assetSurrogate)) {
-      return Answer.of(ResponseCodeSeries.Conflict);
+      return Answer.of(Conflict);
     }
 
     persistCanonicalKnowledgeAssetVersion(assetIdentifier,surrogateIdentifier,assetSurrogate);
 
-    return Answer.of(ResponseCodeSeries.NoContent);
+    return Answer.of(NoContent);
   }
 
 
@@ -504,7 +507,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
                   : Collections.emptyList();
               // tries to honor the client's preferences,
               // or returns one of the artifacts non-deterministically (usually the first)
-              Answer<ComputableKnowledgeArtifact> bestAvailableCarrier = withNegotiation
+              Answer<KnowledgeArtifact> bestAvailableCarrier = withNegotiation
                   ? negotiate(surrogate.getCarriers(), preferences)
                   : anyCarrier(surrogate.getCarriers());
 
@@ -609,7 +612,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       String xAccept) {
 
     Answer<KnowledgeAsset> assetMetadata = getKnowledgeAssetVersion(assetId, versionTag);
-    Answer<ComputableKnowledgeArtifact> artifactMetadata = assetMetadata
+    Answer<KnowledgeArtifact> artifactMetadata = assetMetadata
         .flatOpt(surr -> SurrogateHelper
             .getComputableCarrierMetadata(artifactId, artifactVersionTag, surr));
 
@@ -660,7 +663,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     logger.debug("Artifact has been set on asset {}", asset.getAssetId());
 
-    return Answer.of(ResponseCodeSeries.OK);
+    return Answer.of(OK);
   }
 
 
@@ -689,7 +692,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     boolean withNegotiation = ! Util.isEmpty(xAccept);
     return getKnowledgeAssetVersion(assetId, versionTag)
         .flatMap(asset -> {
-              ComputableKnowledgeArtifact self = getCanonicalSurrogateMetadata(asset)
+              KnowledgeArtifact self = getCanonicalSurrogateMetadata(asset)
                   .orElseThrow(
                       () -> new IllegalStateException(
                           "Surrogates should have self-referential metadata"));
@@ -753,7 +756,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       UUID assetId, String versionTag, UUID surrogateId, String surrogateVersionTag, String xAccept) {
 
     Answer<KnowledgeAsset> assetMetadata = getKnowledgeAssetVersion(assetId, versionTag);
-    Answer<ComputableKnowledgeArtifact> surrogateMetadata = assetMetadata
+    Answer<KnowledgeArtifact> surrogateMetadata = assetMetadata
         .flatOpt(surr -> getComputableSurrogateMetadata(surrogateId, surrogateVersionTag, surr));
 
     if (!surrogateMetadata.isSuccess()) {
@@ -1010,7 +1013,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   private ResourceIdentifier attachCarrier(
       KnowledgeAsset asset, ResourceIdentifier artifactId, byte[] exemplar) {
     asset.withCarriers(
-        new ComputableKnowledgeArtifact()
+        new KnowledgeArtifact()
             .withArtifactId(artifactId)
             .withRepresentation(
                 detector.applyDetect(AbstractCarrier.of(exemplar))
@@ -1056,9 +1059,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     if (translator == null) {
       return Answer.unacceptable();
     }
-    List<ComputableKnowledgeArtifact> computableCarriers =
+    List<KnowledgeArtifact> computableCarriers =
         asset.getCarriers().stream()
-            .flatMap(filterAs(ComputableKnowledgeArtifact.class))
+            .flatMap(filterAs(KnowledgeArtifact.class))
             .collect(toList());
 
     return Answer.anyDo(computableCarriers,
@@ -1077,7 +1080,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @return The result of a transrepresentation the Artifact into an ephemeral Knowledge Artifact
    */
   private Answer<KnowledgeCarrier> attemptTranslation(KnowledgeAsset asset,
-      ComputableKnowledgeArtifact carrier, SyntacticRepresentation targetRepresentation) {
+      KnowledgeArtifact carrier, SyntacticRepresentation targetRepresentation) {
     if (translator == null) {
       return Answer.unacceptable();
     }
@@ -1182,7 +1185,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @param carrier The Knowledge Artifact Metadata
    * @return a byte-encoded copy of the artifact
    */
-  private Answer<KnowledgeCarrier> retrieveWrappedBinaryArtifact(KnowledgeAsset asset, ComputableKnowledgeArtifact carrier) {
+  private Answer<KnowledgeCarrier> retrieveWrappedBinaryArtifact(KnowledgeAsset asset, KnowledgeArtifact carrier) {
     return retrieveBinaryArtifact(carrier)
         .map(bytes -> buildKnowledgeCarrier(
             asset.getAssetId().getUuid(),asset.getAssetId().getVersionTag(),
@@ -1203,7 +1206,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   private Answer<? extends byte[]> retrieveArtifactFromExternalLocation(
       KnowledgeArtifact artifact) {
     return Answer.of(artifact)
-        .cast(ComputableKnowledgeArtifact.class)
+        .cast(KnowledgeArtifact.class)
         .filter(cka -> cka.getLocator() != null)
         .flatOpt(cka -> FileUtil.readBytes(cka.getLocator()));
   }
@@ -1215,10 +1218,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    */
   private Optional<byte[]> extractInlinedArtifact(KnowledgeArtifact artifact) {
     return Optional.of(artifact)
-        .flatMap(Util.as(ComputableKnowledgeArtifact.class))
+        .flatMap(Util.as(KnowledgeArtifact.class))
         // && carrier has the right artifactId
         .filter(c -> !Util.isEmpty(c.getInlinedExpression()))
-        .map(ComputableKnowledgeArtifact::getInlinedExpression)
+        .map(KnowledgeArtifact::getInlinedExpression)
         .map(String::getBytes);
   }
 
@@ -1317,7 +1320,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .orElseGet(() -> {
           ResourceIdentifier rid = randomArtifactId();
           assetSurrogate.withSurrogate(
-              new ComputableKnowledgeArtifact()
+              new KnowledgeArtifact()
                   .withArtifactId(rid)
                   .withRepresentation(rep(defaultSurrogateModel, defaultSurrogateFormat,
                       Charset.defaultCharset(), Encodings.DEFAULT)));
@@ -1331,7 +1334,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @param assetSurrogate The Surrogate to extract the self-referential metadata from
    * @return The id of the Surrogate it'self'
    */
-  private Optional<ComputableKnowledgeArtifact> getCanonicalSurrogateMetadata(KnowledgeAsset assetSurrogate) {
+  private Optional<KnowledgeArtifact> getCanonicalSurrogateMetadata(KnowledgeAsset assetSurrogate) {
     return getSurrogateMetadata(
         assetSurrogate,defaultSurrogateModel,defaultSurrogateFormat);
   }

@@ -13,30 +13,29 @@
  */
 package edu.mayo.kmdp.repository.asset.catalog;
 
-import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder.assetId;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Equation;
-import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.TXT;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.SPARQL_1_1;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
+import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.assetId;
+import static org.omg.spec.api4kp.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Equation;
+import static org.omg.spec.api4kp.taxonomy.krformat.SerializationFormatSeries.TXT;
+import static org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.SPARQL_1_1;
 
-import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
-import edu.mayo.kmdp.repository.asset.v4.KnowledgeAssetCatalogApi;
-import edu.mayo.kmdp.repository.asset.v4.client.ApiClientFactory;
-import edu.mayo.kmdp.repository.asset.v4.server.KnowledgeAssetCatalogApiInternal;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries;
 import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.omg.spec.api4kp._1_0.AbstractCarrier;
-import org.omg.spec.api4kp._1_0.datatypes.Bindings;
-import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
-import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
+import org.omg.spec.api4kp._20200801.AbstractCarrier;
+import org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetCatalogApi;
+import org.omg.spec.api4kp._20200801.api.repository.asset.v4.client.ApiClientFactory;
+import org.omg.spec.api4kp._20200801.api.repository.asset.v4.server.KnowledgeAssetCatalogApiInternal;
+import org.omg.spec.api4kp._20200801.datatypes.Bindings;
+import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
+import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
+import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 
 
 class SemanticRepositoryRemoteQueryTest extends SemanticRepoAPITestBase {
@@ -64,7 +63,7 @@ class SemanticRepositoryRemoteQueryTest extends SemanticRepoAPITestBase {
     KnowledgeAssetCatalogApiInternal qryPoint = KnowledgeAssetCatalogApi.newInstance(webClientFactory);
 
     String query = "" +
-        "select ?s where { ?s a <" + KnowledgeAssetTypeSeries.Equation.getRef() + "> }" +
+        "select ?s where { ?s a <" + Equation.getReferentId() + "> }" +
         "";
 
     KnowledgeCarrier queryCarrier = AbstractCarrier.of(query)

@@ -13,23 +13,23 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
-import static edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder.assetId;
 import static edu.mayo.kmdp.util.Util.uuid;
-import static edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetTypeSeries.Care_Process_Model;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
-import static org.omg.spec.api4kp._1_0.services.tranx.ModelMIMECoder.encode;
+import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
+import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.encode;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.assetId;
+import static org.omg.spec.api4kp.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Care_Process_Model;
+import static org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate;
 
-import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
 import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.omg.spec.api4kp._1_0.Answer;
-import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
-import org.omg.spec.api4kp._1_0.services.KnowledgeCarrier;
+import org.omg.spec.api4kp._20200801.Answer;
+import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
+import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
+import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 
 
 class SurrogatesTest extends RepositoryTestBase {

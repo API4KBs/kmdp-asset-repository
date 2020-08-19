@@ -16,19 +16,19 @@
 package edu.mayo.kmdp.repository.asset.index;
 
 
-import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
-import edu.mayo.kmdp.metadata.v2.surrogate.Link;
-import edu.mayo.kmdp.metadata.v2.surrogate.annotations.Annotation;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassetrole.KnowledgeAssetRole;
-import edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetType;
 import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import org.omg.spec.api4kp._1_0.id.ConceptIdentifier;
-import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
-import org.omg.spec.api4kp._1_0.services.KnowledgeBase;
+import org.omg.spec.api4kp._20200801.id.ConceptIdentifier;
+import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
+import org.omg.spec.api4kp._20200801.services.KnowledgeBase;
+import org.omg.spec.api4kp._20200801.surrogate.Annotation;
+import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
+import org.omg.spec.api4kp._20200801.surrogate.Link;
+import org.omg.spec.api4kp.taxonomy.knowledgeassetrole.KnowledgeAssetRole;
+import org.omg.spec.api4kp.taxonomy.knowledgeassettype.KnowledgeAssetType;
 
 /**
  * An interface to index Assets and their relationships.

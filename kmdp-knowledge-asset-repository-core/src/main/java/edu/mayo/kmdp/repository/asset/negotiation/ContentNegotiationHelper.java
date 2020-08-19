@@ -1,25 +1,25 @@
 package edu.mayo.kmdp.repository.asset.negotiation;
 
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
+import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.NotAcceptable;
 import static java.util.Collections.singletonList;
-import static org.omg.spec.api4kp._1_0.contrastors.SyntacticRepresentationContrastor.theRepContrastor;
+import static org.omg.spec.api4kp._20200801.contrastors.SyntacticRepresentationContrastor.theRepContrastor;
+import static org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
 
-import edu.mayo.kmdp.metadata.v2.surrogate.ComputableKnowledgeArtifact;
-import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeArtifact;
-import edu.mayo.kmdp.metadata.v2.surrogate.KnowledgeAsset;
 import edu.mayo.kmdp.util.StreamUtil;
 import edu.mayo.kmdp.util.Util;
-import edu.mayo.ontology.taxonomies.api4kp.responsecodes._2011.ResponseCode;
+import edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import org.omg.spec.api4kp._1_0.Answer;
-import org.omg.spec.api4kp._1_0.services.SyntacticRepresentation;
-import org.omg.spec.api4kp._1_0.services.tranx.ModelMIMECoder;
-import org.omg.spec.api4kp._1_0.services.tranx.ModelMIMECoder.WeightedRepresentation;
+import org.omg.spec.api4kp._20200801.Answer;
+import org.omg.spec.api4kp._20200801.services.SyntacticRepresentation;
+import org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder;
+import org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.WeightedRepresentation;
+import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
+import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 
 public class ContentNegotiationHelper {
 
@@ -40,12 +40,12 @@ public class ContentNegotiationHelper {
             .collect(Collectors.toList());
 
     if (acceptable.isEmpty()) {
-      return Answer.of(ResponseCode.NotAcceptable, null);
+      return Answer.of(NotAcceptable, null);
     }
 
     Optional<URI> redirectUri =
         negotiate(surrogate.getSurrogate(), acceptable)
-            .map(ComputableKnowledgeArtifact::getLocator)
+            .map(KnowledgeArtifact::getLocator)
             .getOptionalValue();
 
     if (redirectUri.isPresent()) {
@@ -66,10 +66,10 @@ public class ContentNegotiationHelper {
    * @return The first artifact that matches a representation that is first in order of preference,
    * or an artifact chosen non-deterministically
    */
-  public static Answer<ComputableKnowledgeArtifact> negotiateOrDefault(
+  public static Answer<KnowledgeArtifact> negotiateOrDefault(
       List<KnowledgeArtifact> artifacts,
       List<SyntacticRepresentation> reps) {
-    Answer<ComputableKnowledgeArtifact> chosen = Answer.of(reps.stream()
+    Answer<KnowledgeArtifact> chosen = Answer.of(reps.stream()
         .map(rep -> getBestCandidateForRepresentation(artifacts, rep))
         .flatMap(StreamUtil::trimStream)
         .findFirst());
@@ -83,9 +83,9 @@ public class ContentNegotiationHelper {
    * @param artifacts The list of candidates
    * @return One of the carriers
    */
-  public static Answer<ComputableKnowledgeArtifact> anyCarrier(List<KnowledgeArtifact> artifacts) {
+  public static Answer<KnowledgeArtifact> anyCarrier(List<KnowledgeArtifact> artifacts) {
     return Answer.of(artifacts.stream()
-        .flatMap(StreamUtil.filterAs(ComputableKnowledgeArtifact.class))
+        .flatMap(StreamUtil.filterAs(KnowledgeArtifact.class))
         .findFirst());
   }
 
@@ -99,7 +99,7 @@ public class ContentNegotiationHelper {
    * @param reps The preferred representations, in order of preference
    * @return The first artifact that matches a representation that is first in order of preference
    */
-  public static Answer<ComputableKnowledgeArtifact> negotiate(
+  public static Answer<KnowledgeArtifact> negotiate(
       List<KnowledgeArtifact> artifacts,
       List<SyntacticRepresentation> reps) {
     return Answer.of(reps.stream()
@@ -117,11 +117,11 @@ public class ContentNegotiationHelper {
    * @param rep The preferred representation
    * @return The first artifact that matches the given representation
    */
-  public static Optional<ComputableKnowledgeArtifact> getBestCandidateForRepresentation(
+  public static Optional<KnowledgeArtifact> getBestCandidateForRepresentation(
       List<KnowledgeArtifact> artifacts,
       SyntacticRepresentation rep) {
     return artifacts.stream()
-        .flatMap(StreamUtil.filterAs(ComputableKnowledgeArtifact.class))
+        .flatMap(StreamUtil.filterAs(KnowledgeArtifact.class))
         .filter(x -> theRepContrastor.isBroaderOrEqual(rep, x.getRepresentation()))
         .findAny();
   }
@@ -177,9 +177,9 @@ public class ContentNegotiationHelper {
    * @return true if the Artifact's representation is narrower or equal than
    * at least one of the preferences
    */
-  public static boolean isAcceptable(ComputableKnowledgeArtifact descriptor, String xAccept) {
+  public static boolean isAcceptable(KnowledgeArtifact descriptor, String xAccept) {
     if (! Util.isEmpty(xAccept)) {
-      Answer<ComputableKnowledgeArtifact> negotiatedCarrier =
+      Answer<KnowledgeArtifact> negotiatedCarrier =
           negotiate(singletonList(descriptor),decodePreferences(xAccept));
       return negotiatedCarrier.isSuccess();
     }

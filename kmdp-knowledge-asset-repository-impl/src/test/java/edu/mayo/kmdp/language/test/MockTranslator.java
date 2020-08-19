@@ -14,31 +14,31 @@
 package edu.mayo.kmdp.language.test;
 
 
-import static edu.mayo.ontology.taxonomies.api4kp.knowledgeoperations.KnowledgeProcessingOperationSeries.Translation_Task;
-import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.TXT;
-import static edu.mayo.ontology.taxonomies.krformat.SerializationFormatSeries.XML_1_1;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.KNART_1_3;
+import static org.omg.spec.api4kp.taxonomy.krformat.SerializationFormatSeries.TXT;
+import static org.omg.spec.api4kp.taxonomy.krformat.SerializationFormatSeries.XML_1_1;
+import static org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
+import static org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.KNART_1_3;
 import static java.util.Collections.singletonList;
-import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
+import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
 
 import edu.mayo.kmdp.language.translators.AbstractSimpleTranslator;
-import edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguage;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
 import javax.inject.Named;
-import org.omg.spec.api4kp._1_0.AbstractCarrier.Encodings;
-import org.omg.spec.api4kp._1_0.id.IdentifierConstants;
-import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
-import org.omg.spec.api4kp._1_0.id.SemanticIdentifier;
-import org.omg.spec.api4kp._1_0.services.KPOperation;
-import org.omg.spec.api4kp._1_0.services.SyntacticRepresentation;
+import org.omg.spec.api4kp._20200801.AbstractCarrier.Encodings;
+import org.omg.spec.api4kp._20200801.id.IdentifierConstants;
+import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
+import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
+import org.omg.spec.api4kp._20200801.services.KPOperation;
+import org.omg.spec.api4kp._20200801.services.SyntacticRepresentation;
+import org.omg.spec.api4kp.taxonomy.knowledgeoperation.KnowledgeProcessingOperationSeries;
+import org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguage;
 
 @Named
-@KPOperation(Translation_Task)
+@KPOperation(KnowledgeProcessingOperationSeries.Syntactic_Translation_Task)
 public class MockTranslator extends AbstractSimpleTranslator<byte[],String> {
 
   public static final UUID kpIdentifier = UUID.fromString("41c9758e-00d1-4348-bf05-73aae9c5e43e");

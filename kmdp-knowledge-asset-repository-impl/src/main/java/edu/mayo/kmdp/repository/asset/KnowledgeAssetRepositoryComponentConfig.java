@@ -28,7 +28,7 @@ import org.apache.jackrabbit.oak.jcr.Jcr;
 import org.apache.jackrabbit.oak.plugins.document.DocumentNodeStore;
 import org.apache.jackrabbit.oak.plugins.document.rdb.RDBDocumentNodeStoreBuilder;
 import org.apache.jackrabbit.oak.plugins.document.rdb.RDBOptions;
-import org.omg.spec.api4kp._1_0.services.KPServer;
+import org.omg.spec.api4kp._20200801.services.KPServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;

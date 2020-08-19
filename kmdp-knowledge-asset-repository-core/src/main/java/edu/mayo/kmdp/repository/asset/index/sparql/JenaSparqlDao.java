@@ -1,13 +1,11 @@
 package edu.mayo.kmdp.repository.asset.index.sparql;
 
-import static edu.mayo.ontology.taxonomies.krlanguage.KnowledgeRepresentationLanguageSeries.OWL_2;
-import static org.omg.spec.api4kp._1_0.AbstractCarrier.rep;
-import static org.omg.spec.api4kp._1_0.id.IdentifierConstants.VERSION_LATEST;
+import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
+import static org.omg.spec.api4kp._20200801.id.IdentifierConstants.VERSION_LATEST;
+import static org.omg.spec.api4kp.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.OWL_2;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import edu.mayo.kmdp.knowledgebase.v4.server.KnowledgeBaseApiInternal;
-import edu.mayo.kmdp.metadata.v2.surrogate.SurrogateBuilder;
 import java.net.URI;
 import java.sql.SQLException;
 import java.util.Collections;
@@ -37,10 +35,12 @@ import org.apache.jena.sdb.StoreDesc;
 import org.apache.jena.sdb.sql.SDBConnection;
 import org.apache.jena.sdb.store.DatabaseType;
 import org.apache.jena.sdb.store.LayoutType;
-import org.omg.spec.api4kp._1_0.AbstractCarrier;
-import org.omg.spec.api4kp._1_0.Answer;
-import org.omg.spec.api4kp._1_0.id.SemanticIdentifier;
-import org.omg.spec.api4kp._1_0.services.KnowledgeBase;
+import org.omg.spec.api4kp._20200801.AbstractCarrier;
+import org.omg.spec.api4kp._20200801.Answer;
+import org.omg.spec.api4kp._20200801.api.knowledgebase.v4.server.KnowledgeBaseApiInternal;
+import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
+import org.omg.spec.api4kp._20200801.services.KnowledgeBase;
+import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanInitializationException;

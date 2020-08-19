@@ -2,13 +2,13 @@ package edu.mayo.kmdp.repository.asset.index.sparql;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import edu.mayo.ontology.taxonomies.kao.rel.dependencyreltype.DependencyTypeSeries;
 import java.net.URI;
 import java.util.Set;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.Test;
-import org.omg.spec.api4kp._1_0.id.ResourceIdentifier;
-import org.omg.spec.api4kp._1_0.id.SemanticIdentifier;
+import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
+import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
+import org.omg.spec.api4kp.taxonomy.dependencyreltype.DependencyTypeSeries;
 
 class SparqlIndexTest {
 
@@ -36,9 +36,9 @@ class SparqlIndexTest {
     URI uri3 = URI.create("https://clinicalknowledgemanagement.mayo.edu/assets/3/versions/1");
     URI uri4 = URI.create("https://clinicalknowledgemanagement.mayo.edu/assets/4/versions/1");
 
-    dao.store(uri1, DependencyTypeSeries.Depends_On.getRef(), uri2);
-    dao.store(uri2, DependencyTypeSeries.Depends_On.getRef(), uri3);
-    dao.store(uri3, DependencyTypeSeries.Depends_On.getRef(), uri4);
+    dao.store(uri1, DependencyTypeSeries.Depends_On.getReferentId(), uri2);
+    dao.store(uri2, DependencyTypeSeries.Depends_On.getReferentId(), uri3);
+    dao.store(uri3, DependencyTypeSeries.Depends_On.getReferentId(), uri4);
 
     ResourceIdentifier pointer = SemanticIdentifier.newVersionId(uri1);
 
@@ -56,13 +56,13 @@ class SparqlIndexTest {
     URI uri3 = URI.create("https://clinicalknowledgemanagement.mayo.edu/assets/3/versions/1");
     URI uri4 = URI.create("https://clinicalknowledgemanagement.mayo.edu/assets/4/versions/1");
 
-    dao.store(uri1, DependencyTypeSeries.Depends_On.getRef(), uri2);
-    dao.store(uri2, DependencyTypeSeries.Depends_On.getRef(), uri3);
-    dao.store(uri3, DependencyTypeSeries.Depends_On.getRef(), uri4);
+    dao.store(uri1, DependencyTypeSeries.Depends_On.getReferentId(), uri2);
+    dao.store(uri2, DependencyTypeSeries.Depends_On.getReferentId(), uri3);
+    dao.store(uri3, DependencyTypeSeries.Depends_On.getReferentId(), uri4);
 
     ResourceIdentifier pointer = SemanticIdentifier.newVersionId(uri1);
 
-    Set<ResourceIdentifier> related = index.getRelatedAssets(pointer, DependencyTypeSeries.Depends_On.getRef());
+    Set<ResourceIdentifier> related = index.getRelatedAssets(pointer, DependencyTypeSeries.Depends_On.getReferentId());
 
     assertEquals(4, related.size());
   }
@@ -76,9 +76,9 @@ class SparqlIndexTest {
     URI uri3 = URI.create("https://clinicalknowledgemanagement.mayo.edu/assets/3/versions/1");
     URI uri4 = URI.create("https://clinicalknowledgemanagement.mayo.edu/assets/4/versions/1");
 
-    dao.store(uri1, DependencyTypeSeries.Depends_On.getRef(), uri2);
-    dao.store(uri2, DependencyTypeSeries.Imports.getRef(), uri3);
-    dao.store(uri3, DependencyTypeSeries.Depends_On.getRef(), uri4);
+    dao.store(uri1, DependencyTypeSeries.Depends_On.getReferentId(), uri2);
+    dao.store(uri2, DependencyTypeSeries.Imports.getReferentId(), uri3);
+    dao.store(uri3, DependencyTypeSeries.Depends_On.getReferentId(), uri4);
 
     ResourceIdentifier pointer = SemanticIdentifier.newVersionId(uri1);
 

@@ -20,6 +20,7 @@ import edu.mayo.kmdp.language.TransrepresentationExecutor;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase.IntegrationTestConfig;
 import org.junit.jupiter.api.AfterEach;
+import org.omg.spec.api4kp._20200801.api.repository.asset.v4.server.Swagger2SpringBoot;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
@@ -31,7 +32,7 @@ import org.springframework.test.context.ContextConfiguration;
 
 @SpringBootTest(
     webEnvironment = WebEnvironment.RANDOM_PORT,
-    classes = edu.mayo.kmdp.repository.asset.v4.server.Swagger2SpringBoot.class)
+    classes = Swagger2SpringBoot.class)
 @ContextConfiguration(classes = IntegrationTestConfig.class)
 public abstract class SemanticRepoAPITestBase {
 
