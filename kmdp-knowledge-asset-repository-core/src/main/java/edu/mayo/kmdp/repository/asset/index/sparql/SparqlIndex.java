@@ -1,8 +1,8 @@
 package edu.mayo.kmdp.repository.asset.index.sparql;
 
-import static org.omg.spec.api4kp.taxonomy.dependencyreltype.DependencyTypeSeries.Depends_On;
-import static org.omg.spec.api4kp.taxonomy.dependencyreltype.DependencyTypeSeries.Imports;
-import static org.omg.spec.api4kp.taxonomy.dependencyreltype.DependencyTypeSeries.Includes_By_Reference;
+import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Depends_On;
+import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Imports;
+import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Includes_By_Reference;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -40,11 +40,11 @@ import org.omg.spec.api4kp._20200801.surrogate.Derivative;
 import org.omg.spec.api4kp._20200801.surrogate.Link;
 import org.omg.spec.api4kp._20200801.terms.ConceptTerm;
 import org.omg.spec.api4kp._20200801.terms.model.ConceptDescriptor;
-import org.omg.spec.api4kp.taxonomy.dependencyreltype.DependencyTypeSeries;
-import org.omg.spec.api4kp.taxonomy.knowledgeassetrole.KnowledgeAssetRole;
-import org.omg.spec.api4kp.taxonomy.knowledgeassetrole.KnowledgeAssetRoleSeries;
-import org.omg.spec.api4kp.taxonomy.knowledgeassettype.KnowledgeAssetType;
-import org.omg.spec.api4kp.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries;
+import org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries;
+import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRole;
+import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRoleSeries;
+import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetType;
+import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 

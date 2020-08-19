@@ -8,10 +8,10 @@ import java.util.Optional;
 import java.util.Set;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.terms.ConceptTerm;
-import org.omg.spec.api4kp.taxonomy.knowledgeassetrole.KnowledgeAssetRole;
-import org.omg.spec.api4kp.taxonomy.knowledgeassetrole.KnowledgeAssetRoleSeries;
-import org.omg.spec.api4kp.taxonomy.knowledgeassettype.KnowledgeAssetType;
-import org.omg.spec.api4kp.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries;
+import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRole;
+import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRoleSeries;
+import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetType;
+import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
