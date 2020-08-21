@@ -41,6 +41,10 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
     KnowledgeAssetRepositoryApiInternal {
 
   static KnowledgeAssetRepositoryService selfContainedRepository() {
+    return selfContainedRepository(new KnowledgeAssetRepositoryServerConfig());
+  }
+
+  static KnowledgeAssetRepositoryService selfContainedRepository(KnowledgeAssetRepositoryServerConfig cfg) {
     JenaSparqlDao dao = JenaSparqlDao.inMemoryDao();
     return new SemanticKnowledgeAssetRepository(
         KnowledgeArtifactRepositoryService.inMemoryArtifactRepository(),
@@ -50,7 +54,7 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
         new TransrepresentationExecutor(Collections.emptyList()),
         new JenaQuery(dao),
         new SparqlIndex(dao),
-        new KnowledgeAssetRepositoryServerConfig()
+        cfg
     );
   }
 

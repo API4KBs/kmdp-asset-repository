@@ -18,6 +18,7 @@ package edu.mayo.kmdp.repository.asset;
 import edu.mayo.kmdp.ConfigProperties;
 import edu.mayo.kmdp.Opt;
 import edu.mayo.kmdp.Option;
+import edu.mayo.kmdp.registry.Registry;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig.KnowledgeArtifactRepositoryOptions;
 import edu.mayo.kmdp.util.Util;
@@ -47,6 +48,20 @@ public class KnowledgeAssetRepositoryServerConfig extends
         Opt.of("http://edu.mayo.kmdp/assetRepository/artifactRepositoryIdentifier",
             getDefaultRepositoryId(),
             "ID of the default Artifact Repository that the Asset Repository will link to",
+            String.class,
+            false)),
+
+    ASSET_NAMESPACE(
+        Opt.of("http://edu.mayo.kmdp/assetRepository/assetNamespace",
+            Registry.MAYO_ASSETS_BASE_URI,
+            "Base namespace used for Assets",
+            String.class,
+            false)),
+
+    ARTIFACT_NAMESPACE(
+        Opt.of("http://edu.mayo.kmdp/assetRepository/artifactNamespace",
+            Registry.MAYO_ARTIFACTS_BASE_URI,
+            "Base namespace used for Assets",
             String.class,
             false)),
 
