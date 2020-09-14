@@ -729,21 +729,21 @@ class SemanticRepositoryTest extends RepositoryTestBase {
 
 
   private ConceptIdentifier dizziness = Term.newTerm(
-      URI.create("uri:urn:dizzy"),
+      URI.create("urn:foo:dizzy"),
       "dizzy",
       UUID.randomUUID(),
-      Registry.BASE_UUID_URN_URI,
-      URI.create("uri:urn:dizzy"),
+      URI.create("urn:foo"),
+      URI.create("urn:foo:dizzy"),
       IdentifierConstants.VERSION_LATEST,
       "Dizzy",
       DateTimeUtil.today()).asConceptIdentifier();
 
   private ConceptIdentifier sleep_apnea = Term.newTerm(
-      URI.create("uri:urn:dizzy"),
+      URI.create("urn:foo:sleepApnea"),
       "sleepApnea",
       UUID.randomUUID(),
-      Registry.BASE_UUID_URN_URI,
-      URI.create("uri:urn:sleepApnea"),
+      URI.create("urn:foo"),
+      URI.create("urn:foo:sleepApnea"),
       IdentifierConstants.VERSION_LATEST,
       "Sleep Apnea",
       DateTimeUtil.today()).asConceptIdentifier();

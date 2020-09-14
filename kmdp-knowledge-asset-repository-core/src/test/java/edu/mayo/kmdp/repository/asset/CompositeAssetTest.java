@@ -68,8 +68,10 @@ class CompositeAssetTest extends RepositoryTestBase {
     KnowledgeCarrier ckc = AbstractCarrier.ofIdentifiableSet(
         rep(Knowledge_Asset_Surrogate_2_0),
         KnowledgeAsset::getAssetId,
-        ka -> getSurrogateId(ka,Knowledge_Asset_Surrogate_2_0,null)
+        ka -> getSurrogateId(
+            ka,Knowledge_Asset_Surrogate_2_0,null)
             .orElse(randomArtifactId()),
+        KnowledgeAsset::getName,
         Arrays.asList(a1, a2));
 
     Answer<Void> result = semanticRepository.addCanonicalKnowledgeAssetSurrogate(

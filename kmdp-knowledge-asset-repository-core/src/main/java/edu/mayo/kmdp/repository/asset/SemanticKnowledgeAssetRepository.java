@@ -13,6 +13,7 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
+import static edu.mayo.kmdp.id.helper.DatatypeHelper.getDefaultVersionId;
 import static edu.mayo.kmdp.repository.asset.negotiation.ContentNegotiationHelper.anyCarrier;
 import static edu.mayo.kmdp.repository.asset.negotiation.ContentNegotiationHelper.decodePreferences;
 import static edu.mayo.kmdp.repository.asset.negotiation.ContentNegotiationHelper.isAcceptable;
@@ -1417,7 +1418,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       assetSurrogate.setAssetId(toAssetId(assetId, versionTag));
     } else if (surrogateId.getVersionTag() == null) {
       //If the version tag is missing, set it based on parameter
-      assetSurrogate.getAssetId().setVersionTag(versionTag);
+      assetSurrogate.getAssetId()
+          .withVersionTag(versionTag)
+          .withVersionId(
+              getDefaultVersionId(assetSurrogate.getAssetId().getResourceId(), versionTag));
     }
   }
 
