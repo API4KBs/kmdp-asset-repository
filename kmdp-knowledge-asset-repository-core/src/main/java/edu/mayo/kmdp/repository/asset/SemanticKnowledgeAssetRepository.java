@@ -75,9 +75,8 @@ import javax.inject.Named;
 import org.omg.spec.api4kp._20200801.AbstractCarrier;
 import org.omg.spec.api4kp._20200801.AbstractCarrier.Encodings;
 import org.omg.spec.api4kp._20200801.Answer;
-import org.omg.spec.api4kp._20200801.api.inference.v4.server.IntrospectionApiInternal._introspect;
-import org.omg.spec.api4kp._20200801.api.inference.v4.server.QueryApiInternal;
-import org.omg.spec.api4kp._20200801.api.inference.v4.server.QueryApiInternal._askQuery;
+import org.omg.spec.api4kp._20200801.api.inference.v4.server.ReasoningApiInternal._askQuery;
+import org.omg.spec.api4kp._20200801.api.knowledgebase.v4.server.TranscreateApiInternal._applyNamedIntrospectDirect;
 import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactApiInternal;
 import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactSeriesApiInternal;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.server.KnowledgeAssetRepositoryApiInternal;
@@ -158,9 +157,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   private TransxionApiInternal translator;
 
-  private QueryApiInternal._askQuery queryExecutor;
+  private _askQuery queryExecutor;
 
-  private _introspect compositeStructIntrospector;
+  private _applyNamedIntrospectDirect compositeStructIntrospector;
 
   /* Internal helpers */
   private Index index;
@@ -835,8 +834,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       // TODO define a struct type for Anonymous composites
       if (ckc.getStructType() != null) {
         Answer<Void> compositeAns =
-            compositeStructIntrospector.introspect(
-                CompositeAssetMetadataIntrospector.operatorId, ckc, null)
+            compositeStructIntrospector.applyNamedIntrospectDirect(
+                CompositeAssetMetadataIntrospector.id, ckc, null)
                 .flatOpt(kc -> kc.as(KnowledgeAsset.class))
                 .flatMap(ax -> setKnowledgeAssetVersion(
                     ax.getAssetId().getUuid(), ax.getAssetId().getVersionTag(), ax));

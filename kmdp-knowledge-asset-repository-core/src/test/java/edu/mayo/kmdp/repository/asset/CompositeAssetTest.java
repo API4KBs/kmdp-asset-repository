@@ -75,7 +75,7 @@ class CompositeAssetTest extends RepositoryTestBase {
         Arrays.asList(a1, a2));
 
     Answer<Void> result = semanticRepository.addCanonicalKnowledgeAssetSurrogate(
-        ckc.getAssetId().getUuid(), ckc.getAssetId().getVersionTag(),ckc);
+        ckc.getAssetId().getUuid(), ckc.getAssetId().getVersionTag(), ckc);
     assertTrue(result.isSuccess());
 
     assertEquals(3,
