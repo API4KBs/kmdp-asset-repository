@@ -27,28 +27,37 @@ import org.apache.jackrabbit.oak.plugins.document.DocumentNodeStore;
 import org.apache.jackrabbit.oak.plugins.document.rdb.RDBDocumentNodeStoreBuilder;
 import org.apache.jackrabbit.oak.plugins.document.rdb.RDBOptions;
 import org.apache.jackrabbit.oak.spi.security.OpenSecurityProvider;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 
 abstract class RepositoryTestBase {
 
-  SemanticKnowledgeAssetRepository semanticRepository;
+  static SemanticKnowledgeAssetRepository semanticRepository;
 
-  private JcrKnowledgeArtifactRepository repos;
+  static private JcrKnowledgeArtifactRepository repos;
 
-  private JenaSparqlDao jenaSparqlDao;
+  static Index index;
 
-  private DataSource ds;
+  static private JenaSparqlDao jenaSparqlDao;
 
-  @AfterEach
-  void tearDownRepos() {
+  static private DataSource ds;
+
+  @BeforeEach
+  void reset() {
+    jenaSparqlDao.reset();
+  }
+
+  @AfterAll
+  static void tearDownRepos() {
     jenaSparqlDao.shutdown();
   }
 
-  @BeforeEach
-  void setUpRepos() {
-    ds = this.getDataSource();
+  @BeforeAll
+  static void setUpRepos() {
+    ds = getDataSource();
 
     RDBOptions options = new RDBOptions().tablePrefix("pre");
 
@@ -67,11 +76,7 @@ abstract class RepositoryTestBase {
 
     jenaSparqlDao = new JenaSparqlDao(ds, true);
 
-    Index index = new SparqlIndex(jenaSparqlDao) {
-      public void reset() {
-
-      }
-    };
+    index = new SparqlIndex(jenaSparqlDao);
 
     semanticRepository = new SemanticKnowledgeAssetRepository(
         repos,
@@ -85,7 +90,7 @@ abstract class RepositoryTestBase {
         new KnowledgeAssetRepositoryServerConfig());
   }
 
-  public DataSource getDataSource() {
+  public static DataSource getDataSource() {
     String dbName = UUID.randomUUID().toString();
 
     DataSourceBuilder<?> dataSourceBuilder = DataSourceBuilder.create();

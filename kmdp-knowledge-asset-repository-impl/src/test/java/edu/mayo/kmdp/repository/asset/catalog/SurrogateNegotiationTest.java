@@ -13,8 +13,8 @@
  */
 package edu.mayo.kmdp.repository.asset.catalog;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
 import static org.omg.spec.api4kp._20200801.id.IdentifierConstants.VERSION_LATEST;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomArtifactId;
@@ -55,14 +55,16 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
 
   private static Logger logger = LoggerFactory.getLogger(SurrogateNegotiationTest.class);
 
-  private static final URI REDIRECT_URL = URI.create("https://httpstat.us/306");
+  private URI redirectUrl;
 
   private KnowledgeAssetCatalogApi rpo;
 
   @BeforeEach
   void init() {
-    ApiClientFactory apiClientFactory = new ApiClientFactory("http://localhost:" + port,
-        WithFHIR.NONE);
+    redirectUrl = URI.create("http://localhost:" + port + "/cat");
+
+    ApiClientFactory apiClientFactory
+        = new ApiClientFactory("http://localhost:" + port, WithFHIR.NONE);
 
     rpo = KnowledgeAssetCatalogApi.newInstance(apiClientFactory);
   }
@@ -97,10 +99,10 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
 
       try (CloseableHttpResponse resp = httpClient.execute(request)) {
         String out = EntityUtils.toString(resp.getEntity());
-        assertEquals("306 Unused", out);
+        assertTrue(out.contains("KnowledgeAssetCatalog"));
       }
     } catch (IOException e) {
-      assertTrue(e.getMessage().contains(REDIRECT_URL.getPath()));
+      fail(e.getMessage());
     }
 
   }
@@ -129,7 +131,7 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
         .withSurrogate(
             new KnowledgeArtifact()
                 .withArtifactId(randomArtifactId())
-                .withLocator(REDIRECT_URL)
+                .withLocator(redirectUrl)
                 .withRepresentation(rep(HTML,TXT)),
             new KnowledgeArtifact()
                 .withArtifactId(randomArtifactId())
@@ -156,7 +158,7 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
         .withSurrogate(
             new KnowledgeArtifact()
                 .withArtifactId(randomArtifactId())
-                .withLocator(REDIRECT_URL)
+                .withLocator(redirectUrl)
                 .withRepresentation(rep(HTML,TXT))
         )
         .withCarriers(
