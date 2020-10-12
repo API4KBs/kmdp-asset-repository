@@ -33,6 +33,7 @@ import org.apache.jena.sdb.SDBFactory;
 import org.apache.jena.sdb.Store;
 import org.apache.jena.sdb.StoreDesc;
 import org.apache.jena.sdb.sql.SDBConnection;
+import org.apache.jena.sdb.sql.SDBExceptionSQL;
 import org.apache.jena.sdb.store.DatabaseType;
 import org.apache.jena.sdb.store.LayoutType;
 import org.omg.spec.api4kp._20200801.AbstractCarrier;
@@ -155,9 +156,22 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
 
     this.store = SDBFactory.connectStore(conn, storeDesc);
 
+
     if (this.clearAndCreateTables) {
       logger.warn("!!! Clearing and recreating all RDF tables. !!!");
       this.clearAndCreateTables();
+    } else {
+      try {
+        long n = store.getSize();
+        logger.info("TRIPLE store detected, with {} triples", n);
+      } catch (SDBExceptionSQL sqle) {
+        logger.warn(sqle.getMessage());
+        logger.warn("Please check that your DB is setup properly, "
+            + "and that the environment configuration variable "
+            + "'clearAndCreateTables' is set properly");
+        logger.warn("The TRIPLES tables and indexes will be (re)created.");
+        this.clearAndCreateTables();
+      }
     }
 
     this.model = SDBFactory.connectDefaultModel(store);
