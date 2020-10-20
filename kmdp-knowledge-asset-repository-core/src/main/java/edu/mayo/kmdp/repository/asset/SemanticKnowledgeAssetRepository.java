@@ -533,6 +533,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
                   ? negotiate(surrogate.getCarriers(), preferences)
                   : anyCarrier(surrogate.getCarriers());
 
+              if (bestAvailableCarrier.map(this::isRedirectable).orElse(false)) {
+                return bestAvailableCarrier.flatMap(ka -> Answer.referTo(ka.getLocator(), false));
+              }
+
               return bestAvailableCarrier.isSuccess()
                   ? bestAvailableCarrier
                   .flatMap(artf -> getKnowledgeAssetCarrierVersion(
@@ -1198,6 +1202,19 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     return Answer.of(extractInlinedArtifact(artifact))
         .or(() -> retrieveBinaryArtifactFromRepository(artifact.getArtifactId()))
         .or(() -> retrieveArtifactFromExternalLocation(artifact));
+  }
+
+  /**
+   * Determines whether a given Artifact should be preferentially resolved
+   * by means of redirecting the client to an external URL, as opposed to retrieving
+   * the data from an underlying Artifact Repository
+   * @param artifactSurrogate the metadata about the Artifact
+   * @return true if the client should be redirected (vs the server retrieving a copy of the Artifact)
+   */
+  private boolean isRedirectable(KnowledgeArtifact artifactSurrogate) {
+    return HTML.sameAs(artifactSurrogate.getRepresentation().getLanguage())
+        && Util.isEmpty(artifactSurrogate.getInlinedExpression())
+        && artifactSurrogate.getLocator() != null;
   }
 
   /**
