@@ -616,7 +616,7 @@ public class SparqlIndex implements Index {
 
   @Override
   public void reset() {
-    throw new UnsupportedOperationException("\"reset\" is now disabled.");
+    this.jenaSparqlDao.truncate();
   }
 
   /**

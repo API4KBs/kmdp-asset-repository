@@ -126,6 +126,10 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
     this.store.getTableFormatter().create();
   }
 
+  protected void truncate() {
+    this.store.getTableFormatter().truncate();
+  }
+
   /**
    * Initialize the data store. This will create tables/indexes if necessary.
    */

@@ -52,6 +52,7 @@ import static org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevelSe
 import static org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevelSeries.Serialized_Knowledge_Expression;
 
 import edu.mayo.kmdp.kbase.introspection.struct.CompositeAssetMetadataIntrospector;
+import edu.mayo.kmdp.repository.artifact.ClearableKnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.artifact.exceptions.ResourceNotFoundException;
 import edu.mayo.kmdp.repository.asset.HrefBuilder.HrefType;
@@ -146,8 +147,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   /* Knowledge Artifact Repository Service Client*/
   private KnowledgeArtifactApiInternal knowledgeArtifactApi;
 
-  private KnowledgeArtifactSeriesApiInternal knowledgeArtifactSeriesApi;
-
   /* Language Service Client */
   private DeserializeApiInternal parser;
 
@@ -196,7 +195,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     super();
 
     this.knowledgeArtifactApi = artifactRepo;
-    this.knowledgeArtifactSeriesApi = artifactRepo;
 
     this.index = index;
     this.hrefBuilder = new HrefBuilder(cfg);
@@ -1639,8 +1637,13 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     );
   }
 
-
-
-
+  public void clear() {
+    if (this.knowledgeArtifactApi instanceof ClearableKnowledgeArtifactRepositoryService) {
+      ((ClearableKnowledgeArtifactRepositoryService) (this.knowledgeArtifactApi)).clear();
+      this.index.reset();
+    } else {
+      logger.warn("Clear requested, but clearable Artifact Repository instance was not found,.");
+    }
+  }
 
 }

@@ -99,4 +99,19 @@ class JenaSparqlDaoTest {
     assertEquals("http://test1", results.get(0).getURI());
   }
 
+  @Test
+  void testTruncate() {
+    JenaSparqlDao dao = this.getDao();
+
+    assertEquals(0, dao.getModel().size());
+
+    dao.store(URI.create("http://test1"), URI.create("http://test2"), URI.create("http://test3"));
+
+    assertEquals(1, dao.getModel().size());
+
+    dao.truncate();
+
+    assertEquals(0, dao.getModel().size());
+  }
+
 }

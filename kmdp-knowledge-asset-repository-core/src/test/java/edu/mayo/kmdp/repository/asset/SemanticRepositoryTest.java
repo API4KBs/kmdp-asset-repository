@@ -112,6 +112,36 @@ class SemanticRepositoryTest extends RepositoryTestBase {
   }
 
   @Test
+  void testClear() {
+    assertNotNull(semanticRepository
+        .setKnowledgeAssetVersion(uuid("foo"), "1",
+            new KnowledgeAsset()
+                .withName("Example A")
+                .withFormalType(Care_Process_Model)));
+    assertNotNull(semanticRepository
+        .setKnowledgeAssetVersion(uuid("foo2"), "1",
+            new KnowledgeAsset()
+                .withName("Example B")
+                .withFormalType(Care_Process_Model)));
+    List<Pointer> assets = semanticRepository
+        .listKnowledgeAssets().orElse(emptyList());
+
+    assertNotNull(assets);
+    assertEquals(2, assets.size());
+
+    assertTrue(assets.stream().allMatch(p -> Care_Process_Model.getReferentId().equals(p.getType())));
+    assertTrue(assets.stream().anyMatch(p -> uuid("foo2").equals(p.getUuid())));
+    assertTrue(assets.stream().anyMatch(p -> "Example A".equals(p.getName())));
+
+    semanticRepository.clear();
+
+    assets = semanticRepository
+        .listKnowledgeAssets().orElse(emptyList());
+    assertNotNull(assets);
+    assertEquals(0, assets.size());
+  }
+
+  @Test
   void testListAllInMemoryHelperMethod() {
     KnowledgeAssetRepositoryService repo = KnowledgeAssetRepositoryService
         .selfContainedRepository();
