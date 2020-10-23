@@ -142,6 +142,13 @@ class SemanticRepositoryTest extends RepositoryTestBase {
   }
 
   @Test
+  void testPopulateClearAndPopulate() {
+    // make sure we can repeat this process and re-populate
+    this.testClear();
+    this.testClear();
+  }
+
+  @Test
   void testListAllInMemoryHelperMethod() {
     KnowledgeAssetRepositoryService repo = KnowledgeAssetRepositoryService
         .selfContainedRepository();
