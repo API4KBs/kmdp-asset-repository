@@ -15,6 +15,7 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
+import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -24,7 +25,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
+@Component
 public class HrefBuilder {
 
   private static Logger logger = LoggerFactory.getLogger(HrefBuilder.class);
@@ -38,12 +41,16 @@ public class HrefBuilder {
     ASSET_SURROGATE_VERSION
   }
 
-  private String host;
+  private KnowledgeAssetRepositoryServerConfig cfg;
 
   public HrefBuilder(KnowledgeAssetRepositoryServerConfig cfg) {
-    this.host = StringUtils
+    this.cfg = cfg;
+  }
+
+  protected String getHost() {
+    return StringUtils
         .removeEnd(cfg.getTyped(
-            KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions.SERVER_HOST)
+            KnowledgeAssetRepositoryOptions.SERVER_HOST)
             .toString(), "/");
   }
 
@@ -88,7 +95,7 @@ public class HrefBuilder {
 
   public URL getAssetHref(UUID id) {
     try {
-      return URI.create(String.format("%s/cat/assets/%s", this.host, id)).toURL();
+      return URI.create(String.format("%s/cat/assets/%s", getHost(), id)).toURL();
     } catch (MalformedURLException e) {
       logger.error(e.getMessage(),e);
       return null;
@@ -97,7 +104,7 @@ public class HrefBuilder {
 
   public URL getAssetVersionHref(UUID id, String version) {
     try {
-      return URI.create(String.format("%s/cat/assets/%s/versions/%s", this.host, id, version)).toURL();
+      return URI.create(String.format("%s/cat/assets/%s/versions/%s", getHost(), id, version)).toURL();
     } catch (MalformedURLException e) {
       logger.error(e.getMessage(),e);
       return null;
@@ -107,7 +114,7 @@ public class HrefBuilder {
   public URL getAssetCarrierHref(UUID assetId, String assetVersion, UUID carrierId) {
     try {
       return URI.create(String
-          .format("%s/cat/assets/%s/versions/%s/carriers/%s", this.host, assetId,
+          .format("%s/cat/assets/%s/versions/%s/carriers/%s", getHost(), assetId,
               assetVersion, carrierId)).toURL();
     } catch (MalformedURLException e) {
       logger.error(e.getMessage(),e);
@@ -118,7 +125,7 @@ public class HrefBuilder {
       String carrierVersion) {
     try {
       return URI.create(String
-          .format("%s/cat/assets/%s/versions/%s/carriers/%s/versions/%s", this.host, assetId,
+          .format("%s/cat/assets/%s/versions/%s/carriers/%s/versions/%s", getHost(), assetId,
               assetVersion, carrierId, carrierVersion)).toURL();
     } catch (MalformedURLException e) {
       logger.error(e.getMessage(),e);
@@ -129,7 +136,7 @@ public class HrefBuilder {
   public URL getSurrogateRef(UUID assetId, String versionTag, UUID surrogateId) {
     try {
       return URI.create(String
-          .format("%s/cat/assets/%s/versions/%s/surrogate/%s", this.host, assetId,
+          .format("%s/cat/assets/%s/versions/%s/surrogate/%s", getHost(), assetId,
               versionTag, surrogateId)).toURL();
     } catch (MalformedURLException e) {
       logger.error(e.getMessage(),e);
@@ -139,11 +146,12 @@ public class HrefBuilder {
   public URL getSurrogateVersionRef(UUID assetId, String versionTag, UUID surrogateId, String surrogateVersionTag) {
     try {
       return URI.create(String
-          .format("%s/cat/assets/%s/versions/%s/surrogate/%s/versions/%s", this.host, assetId,
+          .format("%s/cat/assets/%s/versions/%s/surrogate/%s/versions/%s", getHost(), assetId,
               versionTag, surrogateId, surrogateVersionTag)).toURL();
     } catch (MalformedURLException e) {
       logger.error(e.getMessage(),e);
       return null;
     }
   }
+
 }

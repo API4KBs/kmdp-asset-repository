@@ -78,6 +78,7 @@ abstract class RepositoryTestBase {
 
     index = new SparqlIndex(jenaSparqlDao);
 
+    KnowledgeAssetRepositoryServerConfig cfg = new KnowledgeAssetRepositoryServerConfig();
     semanticRepository = new SemanticKnowledgeAssetRepository(
         repos,
         new LanguageDeSerializer(
@@ -87,7 +88,8 @@ abstract class RepositoryTestBase {
         new TransrepresentationExecutor(singletonList(new SurrogateV2toSurrogateV1Translator())),
         new JenaQuery(jenaSparqlDao),
         index,
-        new KnowledgeAssetRepositoryServerConfig());
+        new HrefBuilder(cfg),
+        cfg);
   }
 
   public static DataSource getDataSource() {

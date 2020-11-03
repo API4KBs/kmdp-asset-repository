@@ -20,6 +20,7 @@ import edu.mayo.kmdp.language.TransrepresentationExecutor;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.artifact.jcr.JcrKnowledgeArtifactRepository;
+import edu.mayo.kmdp.repository.asset.server.ServerContextAwareHrefBuilder;
 import java.sql.SQLException;
 import javax.jcr.Repository;
 import javax.sql.DataSource;
@@ -31,10 +32,12 @@ import org.apache.jackrabbit.oak.plugins.document.rdb.RDBOptions;
 import org.omg.spec.api4kp._20200801.services.KPServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.jdbc.support.JdbcUtils;
 import org.springframework.jdbc.support.MetaDataAccessException;
@@ -55,6 +58,13 @@ public class KnowledgeAssetRepositoryComponentConfig {
   @Bean
   public KnowledgeAssetRepositoryServerConfig defaultConfiguration() {
     return new KnowledgeAssetRepositoryServerConfig();
+  }
+
+  @Bean
+  @Primary
+  public HrefBuilder contextAwareHrefBuilder(
+      @Autowired KnowledgeAssetRepositoryServerConfig cfg) {
+    return new ServerContextAwareHrefBuilder(cfg);
   }
 
   /**

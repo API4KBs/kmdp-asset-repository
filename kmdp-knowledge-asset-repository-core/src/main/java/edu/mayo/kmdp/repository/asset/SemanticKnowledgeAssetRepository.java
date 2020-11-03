@@ -28,8 +28,10 @@ import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.C
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.NoContent;
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.NotAcceptable;
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.OK;
+import static java.nio.charset.Charset.defaultCharset;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
+import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.ofAst;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.timedSemverComparator;
@@ -63,7 +65,6 @@ import edu.mayo.kmdp.util.FileUtil;
 import edu.mayo.kmdp.util.Util;
 import edu.mayo.ontology.taxonomies.kmdo.semanticannotationreltype.SemanticAnnotationRelTypeSeries;
 import java.net.URI;
-import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -79,7 +80,6 @@ import org.omg.spec.api4kp._20200801.Answer;
 import org.omg.spec.api4kp._20200801.api.inference.v4.server.ReasoningApiInternal._askQuery;
 import org.omg.spec.api4kp._20200801.api.knowledgebase.v4.server.TranscreateApiInternal._applyNamedIntrospectDirect;
 import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactApiInternal;
-import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactSeriesApiInternal;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.server.KnowledgeAssetRepositoryApiInternal;
 import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.DeserializeApiInternal;
 import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.DetectApiInternal;
@@ -190,6 +190,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       @Autowired(required = false) @KPServer TransxionApiInternal translator,
       @Autowired @KPComponent _askQuery queryExecutor,
       @Autowired Index index,
+      @Autowired(required = false) HrefBuilder hrefBuilder,
       @Autowired KnowledgeAssetRepositoryServerConfig cfg) {
 
     super();
@@ -197,7 +198,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     this.knowledgeArtifactApi = artifactRepo;
 
     this.index = index;
-    this.hrefBuilder = new HrefBuilder(cfg);
+    this.hrefBuilder = hrefBuilder != null
+        ? hrefBuilder : new HrefBuilder(cfg);
 
     this.parser = parser;
     this.detector = detector;
@@ -341,7 +343,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         StaticFilter.filter(assetTypeTag, assetAnnotationTag, assetAnnotationConcept, index);
 
     List<Pointer> pointers = all.stream()
-        .map(id -> this.toKnowledgeAssetPointer(id, HrefType.ASSET))
+        .map(id -> this.toKnowledgeAssetPointer(
+            id,
+            HrefType.ASSET,
+            codedRep(defaultSurrogateRepresentation)))
         .collect(toList());
 
     return Answer.of(
@@ -416,7 +421,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     }
 
     List<Pointer> pointers = index.getAssetVersions(assetId).stream()
-        .map(ax -> toKnowledgeAssetPointer(ax, HrefType.ASSET_VERSION))
+        .map(ax -> toKnowledgeAssetPointer(
+            ax,
+            HrefType.ASSET_VERSION,
+            codedRep(defaultSurrogateRepresentation)))
         .collect(toList());
 
     return Answer.of(
@@ -1042,7 +1050,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
             .withRepresentation(
                 detector.applyDetect(AbstractCarrier.of(exemplar))
                     .map(KnowledgeCarrier::getRepresentation)
-                    .orElse(rep(null, null, Charset.defaultCharset(), Encodings.DEFAULT))
+                    .orElse(rep(null, null, defaultCharset(), Encodings.DEFAULT))
             ));
 
     return getCanonicalSurrogateId(asset)
@@ -1164,7 +1172,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .withHref(hrefBuilder.getHref(axtId,artId,HrefType.ASSET_CARRIER_VERSION))
         .withLabel(label)
         .withRepresentation(rep
-            .withCharset(Charset.defaultCharset().name())
+            .withCharset(defaultCharset().name())
             .withEncoding("default"));
   }
 
@@ -1360,7 +1368,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
               new KnowledgeArtifact()
                   .withArtifactId(rid)
                   .withRepresentation(rep(defaultSurrogateModel, defaultSurrogateFormat,
-                      Charset.defaultCharset(), Encodings.DEFAULT)));
+                      defaultCharset(), Encodings.DEFAULT)));
           return rid;
         });
   }
@@ -1464,9 +1472,13 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    *
    * @param assetId the Id of the Asset to be mapped to a Pointer
    * @param hrefType the type of resource (only ASSET and ASSET_VERSION are supported)
+   * @param mime the MIME type of the resource the Pointer resolves to
    * @return a Pointer that includes a URL to this server
    */
-  private Pointer toKnowledgeAssetPointer(ResourceIdentifier assetId, HrefType hrefType) {
+  private Pointer toKnowledgeAssetPointer(
+      ResourceIdentifier assetId,
+      HrefType hrefType,
+      String mime) {
     Pointer pointer = assetId.toPointer();
 
     // TODO: Assess if the information is worthy the cost of the queries
@@ -1478,7 +1490,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .forEach(ci -> pointer.setType(ci.getReferentId()));
 
     return pointer
-        .withHref(hrefBuilder.getHref(assetId,hrefType));
+        .withHref(hrefBuilder.getHref(assetId,hrefType))
+        .withMimeType(mime);
   }
 
   /**
@@ -1602,7 +1615,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .applyLift(
             AbstractCarrier.of(encodedCanonicalSurrogate)
                 .withRepresentation(rep(defaultSurrogateModel, defaultSurrogateFormat,
-                    Charset.defaultCharset(), Encodings.DEFAULT)),
+                    defaultCharset(), Encodings.DEFAULT)),
             Abstract_Knowledge_Expression)
         .flatOpt(kc -> kc.as(KnowledgeAsset.class));
   }
@@ -1632,7 +1645,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         ofAst(assetSurrogate)
             .withRepresentation(rep(defaultSurrogateModel)),
         Encoded_Knowledge_Expression,
-        encode(rep(defaultSurrogateModel,defaultSurrogateFormat, Charset.defaultCharset(),Encodings.DEFAULT)),
+        encode(rep(defaultSurrogateModel,defaultSurrogateFormat, defaultCharset(),Encodings.DEFAULT)),
         null
     );
   }

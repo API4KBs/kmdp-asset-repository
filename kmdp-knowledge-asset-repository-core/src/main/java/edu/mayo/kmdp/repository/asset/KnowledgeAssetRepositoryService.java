@@ -54,6 +54,7 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
         new TransrepresentationExecutor(Collections.emptyList()),
         new JenaQuery(dao),
         new SparqlIndex(dao),
+        new HrefBuilder(cfg),
         cfg
     );
   }
@@ -65,6 +66,7 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
       List<TransionApiOperator> translators
   ) {
     JenaSparqlDao dao = JenaSparqlDao.inMemoryDao();
+    KnowledgeAssetRepositoryServerConfig cfg = new KnowledgeAssetRepositoryServerConfig();
     return new SemanticKnowledgeAssetRepository(
         KnowledgeArtifactRepositoryService.inMemoryArtifactRepository(),
         new LanguageDeSerializer(parsers),
@@ -73,7 +75,8 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
         new TransrepresentationExecutor(translators),
         new JenaQuery(dao),
         new SparqlIndex(dao),
-        new KnowledgeAssetRepositoryServerConfig()
+        new HrefBuilder(cfg),
+        cfg
     );
   }
 
