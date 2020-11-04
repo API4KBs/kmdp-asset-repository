@@ -36,6 +36,7 @@ import static org.omg.spec.api4kp._20200801.AbstractCarrier.ofAst;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.timedSemverComparator;
 import static org.omg.spec.api4kp._20200801.id.VersionIdentifier.toSemVer;
+import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.decode;
 import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.encode;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomArtifactId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getComputableSurrogateMetadata;
@@ -47,13 +48,15 @@ import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationForma
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.XML_1_1;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.FHIR_STU3;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
-import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate_2_0;
+import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.snapshot.KnowledgeRepresentationLanguage.OWL_2;
+import static org.omg.spec.api4kp._20200801.taxonomy.krserialization.KnowledgeRepresentationLanguageSerializationSeries.RDF_XML_Syntax;
 import static org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevelSeries.Abstract_Knowledge_Expression;
 import static org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevelSeries.Encoded_Knowledge_Expression;
 import static org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevelSeries.Serialized_Knowledge_Expression;
 
 import edu.mayo.kmdp.kbase.introspection.struct.CompositeAssetMetadataIntrospector;
+import edu.mayo.kmdp.language.parsers.owl2.JenaOwlParser;
 import edu.mayo.kmdp.repository.artifact.ClearableKnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.artifact.exceptions.ResourceNotFoundException;
@@ -96,6 +99,7 @@ import org.omg.spec.api4kp._20200801.services.KPServer;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._20200801.services.SyntacticRepresentation;
 import org.omg.spec.api4kp._20200801.services.repository.KnowledgeAssetCatalog;
+import org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
@@ -263,17 +267,25 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
                 .map(Enum::name)
                 .collect(Collectors.joining(","))
         ).withSurrogateModels(
-            rep(Knowledge_Asset_Surrogate_2_0, XML_1_1),
-            rep(Knowledge_Asset_Surrogate_2_0, JSON),
-            rep(Knowledge_Asset_Surrogate_2_0, RDF_1_1),
-            rep(Knowledge_Asset_Surrogate, XML_1_1),
-            rep(Knowledge_Asset_Surrogate, JSON),
-            rep(HTML,TXT),
-            rep(FHIR_STU3, JSON)
+            getAdditionalRepresentations()
         )
     );
   }
 
+  /**
+   * Additional representations of Surrogates supported by this server, either
+   * by storage, redirection, or translation on demand
+   *
+   * @return A collection of supported Representations for Surrogates
+   */
+  public static List<SyntacticRepresentation> getAdditionalRepresentations() {
+    return Arrays.asList(
+        rep(Knowledge_Asset_Surrogate_2_0, XML_1_1),
+        rep(Knowledge_Asset_Surrogate_2_0, JSON),
+        rep(Knowledge_Asset_Surrogate_2_0, RDF_1_1),
+        rep(HTML,TXT),
+        rep(FHIR_STU3, JSON));
+  }
 
   //*****************************************************************************************/
   //* Knowledge Graph
@@ -301,10 +313,20 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    */
   @Override
   public Answer<KnowledgeCarrier> getKnowledgeGraph(String xAccept) {
-    return parser.applyLower(
+    SyntacticRepresentation rep = decode(xAccept)
+        .orElse(rep(OWL_2, RDF_XML_Syntax, XML_1_1));
+    if (rep.getLanguage() == null) {
+      rep.setLanguage(OWL_2);
+    }
+    if (!OWL_2.isSameEntity(rep.getLanguage())) {
+      return Answer.unacceptable();
+    }
+
+    return parser.applyNamedLower(
+        JenaOwlParser.id,
         index.asKnowledgeBase().getManifestation(),
         Serialized_Knowledge_Expression,
-        xAccept,
+        ModelMIMECoder.encode(rep),
         null);
   }
 

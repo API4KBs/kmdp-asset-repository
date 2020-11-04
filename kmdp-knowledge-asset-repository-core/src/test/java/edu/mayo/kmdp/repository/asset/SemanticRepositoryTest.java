@@ -1042,4 +1042,23 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     assertEquals(mockRedirectURL, ans.getMeta("Location").orElse(""));
   }
 
+
+  @Test
+  public void testContentNegotiationSurrogateWithMetaFormats() {
+    UUID assetId = UUID.nameUUIDFromBytes("2".getBytes());
+    String versionTag = "2";
+
+    KnowledgeAsset asset =
+        SurrogateBuilder.newSurrogate(assetId(assetId, versionTag)).get();
+
+    semanticRepository.setKnowledgeAssetVersion(assetId,versionTag,asset);
+
+    Answer<KnowledgeAsset> ans = semanticRepository.getKnowledgeAssetVersion(
+        assetId,
+        versionTag,
+        "application/xml");
+
+    assertTrue(ans.isSuccess());
+  }
+
 }

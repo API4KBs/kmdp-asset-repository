@@ -69,38 +69,38 @@ public class SparqlIndex implements Index {
 
   //TODO: Change this to the official URIs as published in the ontology.
   // All below are likely wrong until changed.
-  private static String LCC = "https://www.omg.org/spec/LCC/Languages/LanguageRepresentation/";
-  private static String API4KP = "https://www.omg.org/spec/API4KP/api4kp/";
-  private static String API4KP_SERIES = "https://www.omg.org/spec/API4KP/api4kp-series/";
-  private static String KMD = "http://ontology.mayo.edu/ontologies/kmdp/";
+  public static final String LCC = "https://www.omg.org/spec/LCC/Languages/LanguageRepresentation/";
+  public static final String API4KP = "https://www.omg.org/spec/API4KP/api4kp/";
+  public static final String API4KP_SERIES = "https://www.omg.org/spec/API4KP/api4kp-series/";
+  public static final String KMD = "http://ontology.mayo.edu/ontologies/kmdp/";
 
 
-  private static final String ASSET = "KnowledgeAsset";
-  private static final URI ASSET_URI = URI.create(API4KP + ASSET);
+  public static final String ASSET = "KnowledgeAsset";
+  public static final URI ASSET_URI = URI.create(API4KP + ASSET);
 
-  private static final String IDENTIFIED_BY = "identifiedBy";
-  private static final URI IDENTIFIED_BY_URI = URI.create(LCC + IDENTIFIED_BY);
-  private static final String HAS_TAG = "hasTag";
-  private static final URI HAS_TAG_URI = URI.create(LCC + HAS_TAG);
+  public static final String IDENTIFIED_BY = "identifiedBy";
+  public static final URI IDENTIFIED_BY_URI = URI.create(LCC + IDENTIFIED_BY);
+  public static final String HAS_TAG = "hasTag";
+  public static final URI HAS_TAG_URI = URI.create(LCC + HAS_TAG);
   // (Asset|Artifact) lcc:identified_by o lcc:hasTag
-  private static final String TAG_ID = "tag";
-  private static final URI TAG_ID_URI = URI.create(KMD + TAG_ID);
+  public static final String TAG_ID = "tag";
+  public static final URI TAG_ID_URI = URI.create(KMD + TAG_ID);
 
-  private static final String HAS_VERSION = "hasVersion";
-  private static final URI HAS_VERSION_URI = URI.create(API4KP_SERIES + HAS_VERSION);
+  public static final String HAS_VERSION = "hasVersion";
+  public static final URI HAS_VERSION_URI = URI.create(API4KP_SERIES + HAS_VERSION);
   // (Version) lcc:identified_by o lcc:hasTag
-  private static final String HAS_VERSION_TAG = "hasVersionTag";
-  private static final URI HAS_VERSION_TAG_URI = URI.create(KMD + HAS_VERSION_TAG);
-  private static final String ESTABLISHED = "hasObservedDateTime";
-  private static final URI ESTABLISHED_URI = URI.create(API4KP_SERIES + ESTABLISHED);
+  public static final String HAS_VERSION_TAG = "hasVersionTag";
+  public static final URI HAS_VERSION_TAG_URI = URI.create(KMD + HAS_VERSION_TAG);
+  public static final String ESTABLISHED = "hasObservedDateTime";
+  public static final URI ESTABLISHED_URI = URI.create(API4KP_SERIES + ESTABLISHED);
 
-  private static final String HAS_CARRIER = "isCarriedBy";
-  private static final URI HAS_CARRIER_URI = URI.create(API4KP + HAS_CARRIER);
-  private static final String HAS_SURROGATE = "hasAssetSurrogate";
-  private static final URI HAS_SURROGATE_URI = URI.create(API4KP + HAS_SURROGATE);
+  public static final String HAS_CARRIER = "isCarriedBy";
+  public static final URI HAS_CARRIER_URI = URI.create(API4KP + HAS_CARRIER);
+  public static final String HAS_SURROGATE = "hasAssetSurrogate";
+  public static final URI HAS_SURROGATE_URI = URI.create(API4KP + HAS_SURROGATE);
   // subProperty of hasAssetSurrogate
-  private static final String HAS_CANONICAL_SURROGATE = "hasCanonicalSurrogate";
-  private static final URI HAS_CANONICAL_SURROGATE_URI = URI.create(KMD + HAS_CANONICAL_SURROGATE);
+  public static final String HAS_CANONICAL_SURROGATE = "hasCanonicalSurrogate";
+  public static final URI HAS_CANONICAL_SURROGATE_URI = URI.create(KMD + HAS_CANONICAL_SURROGATE);
 
   @Autowired
   protected JenaSparqlDao jenaSparqlDao;

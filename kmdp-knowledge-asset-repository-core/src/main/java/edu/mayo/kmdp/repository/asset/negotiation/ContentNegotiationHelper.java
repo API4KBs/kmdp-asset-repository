@@ -8,8 +8,6 @@ import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeReprese
 import edu.mayo.kmdp.util.StreamUtil;
 import edu.mayo.kmdp.util.Util;
 import java.net.URI;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -29,13 +27,12 @@ public class ContentNegotiationHelper {
   public static Answer<KnowledgeAsset> negotiateCanonicalSurrogate(
       KnowledgeAsset surrogate, String xAccept,
       SyntacticRepresentation defaultSurrogateRepresentation) {
-    // only support HTML, or the default surrogate
+    // only support HTML (by redirection), or the default surrogate
     List<SyntacticRepresentation> acceptable =
         decodePreferences(xAccept, defaultSurrogateRepresentation).stream()
             .filter(rep ->
                 HTML.sameAs(rep.getLanguage()) ||
-                    (defaultSurrogateRepresentation.getLanguage().sameAs(rep.getLanguage()) &&
-                        defaultSurrogateRepresentation.getFormat().sameAs(rep.getFormat())))
+                    (defaultSurrogateRepresentation.getLanguage().sameAs(rep.getLanguage())))
             .collect(Collectors.toList());
 
     if (acceptable.isEmpty()) {
@@ -49,6 +46,8 @@ public class ContentNegotiationHelper {
 
     if (redirectUri.isPresent()) {
       return Answer.referTo(redirectUri.get(), false);
+    } if (HTML.sameAs(acceptable.get(0).getLanguage())) {
+      return Answer.of(NotAcceptable, null);
     } else {
       return Answer.of(surrogate);
     }
@@ -137,12 +136,8 @@ public class ContentNegotiationHelper {
   public static List<SyntacticRepresentation> decodePreferences(String xAccept,
       SyntacticRepresentation fallbackRepresentation) {
 
-    List<WeightedRepresentation> acceptableMimes = xAccept != null
-        ? Arrays.stream(xAccept.split(","))
-        .map(code -> ModelMIMECoder.decodeWeighted(code, fallbackRepresentation))
-        .sorted()
-        .collect(Collectors.toList())
-        : Collections.emptyList();
+    List<WeightedRepresentation> acceptableMimes
+        = ModelMIMECoder.decodeAll(xAccept, fallbackRepresentation);
 
     List<SyntacticRepresentation> reps = acceptableMimes.stream()
         .map(WeightedRepresentation::getRep)

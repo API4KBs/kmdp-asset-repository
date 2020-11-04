@@ -96,7 +96,7 @@ class SemanticRepositoryQueryTest extends RepositoryTestBase {
     assertTrue(graph.is(String.class));
     assertSame(OWL_2,
         graph.getRepresentation().getLanguage().asEnum());
-    assertSame(Turtle,
+    assertSame(RDF_XML_Syntax,
         graph.getRepresentation().getSerialization().asEnum());
   }
 
