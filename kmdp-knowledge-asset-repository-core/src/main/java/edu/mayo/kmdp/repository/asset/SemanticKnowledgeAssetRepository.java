@@ -91,6 +91,7 @@ import org.omg.spec.api4kp._20200801.id.Pointer;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
 import org.omg.spec.api4kp._20200801.id.VersionIdentifier;
+import org.omg.spec.api4kp._20200801.id.VersionTagType;
 import org.omg.spec.api4kp._20200801.services.CompositeKnowledgeCarrier;
 import org.omg.spec.api4kp._20200801.services.KPComponent;
 import org.omg.spec.api4kp._20200801.services.KPServer;
@@ -515,10 +516,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       return Answer.of(Conflict);
     }
 
+    ensureSemanticVersionedIdentifiers(assetSurrogate);
     persistCanonicalKnowledgeAssetVersion(assetIdentifier, surrogateIdentifier, assetSurrogate);
 
     return Answer.of(NoContent);
   }
+
 
   //*****************************************************************************************/
   //* Kowledge Artifacts
@@ -1328,6 +1331,43 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .filter(c -> !Util.isEmpty(c.getInlinedExpression()))
         .map(KnowledgeArtifact::getInlinedExpression)
         .map(String::getBytes);
+  }
+
+
+  /**
+   * Ensures that Asset, Carrier and Surrogate IDs follow the SemVer pattern,
+   * rewriting any ID that does not
+   *
+   * This method might be later changed to throw an exception
+   * @param assetSurrogate
+   */
+  private void ensureSemanticVersionedIdentifiers(KnowledgeAsset assetSurrogate) {
+    ResourceIdentifier axId = assetSurrogate.getAssetId();
+    if (VersionIdentifier.detectVersionTag(axId.getVersionTag()) != VersionTagType.SEM_VER) {
+      logger.warn("Asset ID {}:{} does not follow the SemVer pattern - will be rewritten",
+          axId.getTag(),axId.getVersionTag());
+      assetSurrogate.getSecondaryId().add(axId);
+      assetSurrogate.setAssetId(toAssetId(axId.getUuid(),axId.getVersionTag()));
+    }
+
+    assetSurrogate.getCarriers().forEach(carrier -> {
+      ResourceIdentifier cId = carrier.getArtifactId();
+      if (VersionIdentifier.detectVersionTag(cId.getVersionTag()) != VersionTagType.SEM_VER) {
+        logger.warn("Carrier ID {}:{} does not follow the SemVer pattern - will be rewritten",
+            cId.getTag(),cId.getVersionTag());
+        carrier.getSecondaryId().add(cId);
+        carrier.setArtifactId(toArtifactId(cId.getUuid(),cId.getVersionTag()));
+      }
+    });
+    assetSurrogate.getSurrogate().forEach(surrogate -> {
+      ResourceIdentifier sId = surrogate.getArtifactId();
+      if (VersionIdentifier.detectVersionTag(sId.getVersionTag()) != VersionTagType.SEM_VER) {
+        logger.warn("Carrier ID {}:{} does not follow the SemVer pattern - will be rewritten",
+            sId.getTag(),sId.getVersionTag());
+        surrogate.getSecondaryId().add(sId);
+        surrogate.setArtifactId(toArtifactId(sId.getUuid(),sId.getVersionTag()));
+      }
+    });
   }
 
 

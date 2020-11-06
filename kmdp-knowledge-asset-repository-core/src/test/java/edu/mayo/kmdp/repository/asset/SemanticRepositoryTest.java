@@ -50,6 +50,7 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._20200801.AbstractCarrier;
 import org.omg.spec.api4kp._20200801.Answer;
@@ -1157,6 +1158,57 @@ class SemanticRepositoryTest extends RepositoryTestBase {
             .orElse(Collections.emptyList());
     assertEquals(1,carrPointers2.size());
 
+  }
+
+
+  @Test
+  void testInitKnowledgeAssetWithNonSemVerAssetID() {
+    // the use of non-SemVer IDs is discouraged, but should behave consistently
+    String vTag = "0.0.0-LATEST";
+    String aTag = "0.0.0-CURRENT";
+    UUID assetUUID = uuid("1165");
+    ResourceIdentifier assetId = newId(assetUUID,"LATEST");
+
+    KnowledgeAsset surrogate = new KnowledgeAsset()
+        .withAssetId(assetId)
+        .withName("Test")
+        .withCarriers(new KnowledgeArtifact()
+        .withArtifactId(newId(UUID.randomUUID(),"CURRENT")));
+
+    semanticRepository.setKnowledgeAssetVersion(
+        assetId.getUuid(),assetId.getVersionTag(), surrogate);
+
+    List<Pointer> ptrs = semanticRepository.listKnowledgeAssets()
+        .orElseGet(Assertions::fail);
+    assertEquals(1,ptrs.size());
+    Pointer ptr = ptrs.get(0);
+
+    KnowledgeAsset ans = semanticRepository.getKnowledgeAsset(assetUUID)
+        .orElseGet(Assertions::fail);
+
+    System.out.println(ans.getAssetId().getVersionTag());
+
+    ResourceIdentifier artId = ans.getCarriers().get(0).getArtifactId();
+    ResourceIdentifier latestArtId = semanticRepository.getLatestCarrierVersion(artId.getUuid())
+        .orElseGet(Assertions::fail);
+    List<Pointer> artPtrs = semanticRepository.listKnowledgeAssetCarrierVersions(
+        ans.getAssetId().getUuid(),
+        ans.getAssetId().getVersionTag(),
+        artId.getUuid())
+    .orElseGet(Assertions::fail);
+    assertEquals(1, artPtrs.size());
+    Pointer artPtr = artPtrs.get(0);
+
+    assertEquals(vTag, ptr.getVersionTag());
+    assertTrue(ptr.getVersionId().toString().endsWith(vTag));
+
+    assertEquals(vTag,ans.getAssetId().getVersionTag());
+    assertTrue(ans.getAssetId().getVersionId().toString().endsWith(vTag));
+
+    assertEquals(aTag,artId.getVersionTag());
+    assertTrue(artId.getVersionId().toString().endsWith(aTag));
+
+    assertEquals(artId, latestArtId);
   }
 
 }
