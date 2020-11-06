@@ -51,4 +51,9 @@ public class ServerContextAwareHrefBuilder extends HrefBuilder {
       return super.getHost();
     }
   }
+
+  @Override
+  public String getCurrentURL() {
+    return ServletUriComponentsBuilder.fromCurrentRequest().build().toUriString();
+  }
 }

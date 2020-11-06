@@ -14,11 +14,7 @@
 package edu.mayo.kmdp.repository.asset;
 
 import static edu.mayo.kmdp.id.helper.DatatypeHelper.getDefaultVersionId;
-import static edu.mayo.kmdp.repository.asset.negotiation.ContentNegotiationHelper.anyCarrier;
 import static edu.mayo.kmdp.repository.asset.negotiation.ContentNegotiationHelper.decodePreferences;
-import static edu.mayo.kmdp.repository.asset.negotiation.ContentNegotiationHelper.isAcceptable;
-import static edu.mayo.kmdp.repository.asset.negotiation.ContentNegotiationHelper.negotiate;
-import static edu.mayo.kmdp.repository.asset.negotiation.ContentNegotiationHelper.negotiateCanonicalSurrogate;
 import static edu.mayo.kmdp.util.StreamUtil.filterAs;
 import static edu.mayo.kmdp.util.Util.coalesce;
 import static edu.mayo.kmdp.util.Util.isEmpty;
@@ -64,6 +60,7 @@ import edu.mayo.kmdp.repository.asset.HrefBuilder.HrefType;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.repository.asset.index.Index;
 import edu.mayo.kmdp.repository.asset.index.StaticFilter;
+import edu.mayo.kmdp.repository.asset.negotiation.ContentNegotiationHelper;
 import edu.mayo.kmdp.util.FileUtil;
 import edu.mayo.kmdp.util.Util;
 import edu.mayo.ontology.taxonomies.kmdo.semanticannotationreltype.SemanticAnnotationRelTypeSeries;
@@ -114,8 +111,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 
 /**
- * An {@link KnowledgeAssetRepositoryService} implementation
- * based on a JCR document store and a Jenna RDF index.
+ * An {@link KnowledgeAssetRepositoryService} implementation based on a JCR document store and a
+ * Jenna RDF index.
  */
 @Named
 @KPServer
@@ -125,23 +122,29 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       .getLogger(SemanticKnowledgeAssetRepository.class);
 
   /**
-   *  Canonical Knowledge Asset Surrogate metamodel
+   * Canonical Knowledge Asset Surrogate metamodel
    */
   private static final KnowledgeRepresentationLanguage
       defaultSurrogateModel = Knowledge_Asset_Surrogate_2_0;
 
   /**
-   *  Canonical Knowledge Asset Surrogate metamodel serialization format
+   * Canonical Knowledge Asset Surrogate metamodel serialization format
    */
   private static final SerializationFormat
       defaultSurrogateFormat = JSON;
 
   /**
-   * Canonical Concrete Representation of Surrogates,
-   * used by this server to exchange surrogates as Knowledge Artifacts
+   * Additional serialization formats supported by the Canonical Knowledge Asset Surrogate
+   */
+  private static final List<SerializationFormat>
+      supportedDefaultSurrogateFormats = Arrays.asList(JSON, XML_1_1);
+
+  /**
+   * Canonical Concrete Representation of Surrogates, used by this server to exchange surrogates as
+   * Knowledge Artifacts
    */
   private static final SyntacticRepresentation
-      defaultSurrogateRepresentation = rep(defaultSurrogateModel,defaultSurrogateFormat);
+      defaultSurrogateRepresentation = rep(defaultSurrogateModel, defaultSurrogateFormat);
 
   /**
    * Unique identifier of this repository instance
@@ -173,18 +176,21 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   private URI artifactNamespace;
 
+  private ContentNegotiationHelper negotiator;
+
   /**
    * Initializes a new Knowledge Asset Repository Server
    *
    * @param artifactRepo  The Artifact Repository that provides the persistence layer
-   * @param parser  De/serialization server to de/serialize Artifacts. At a minimum, MUST support
-   *                the canonical Asset Surrogate metamodel
-   * @param detector  Optional Representation Detection service
-   * @param validator Optional Representation validation service
-   * @param translator Optional Transrepresentation service used for content negotiation
+   * @param parser        De/serialization server to de/serialize Artifacts. At a minimum, MUST
+   *                      support the canonical Asset Surrogate metamodel
+   * @param detector      Optional Representation Detection service
+   * @param validator     Optional Representation validation service
+   * @param translator    Optional Transrepresentation service used for content negotiation
    * @param queryExecutor Query interface to get consult the index
-   * @param index The KnowledgeBase that indexes Assets, Artifacts and relationships and annotations thereof
-   * @param cfg Configuration object
+   * @param index         The KnowledgeBase that indexes Assets, Artifacts and relationships and
+   *                      annotations thereof
+   * @param cfg           Configuration object
    */
   public SemanticKnowledgeAssetRepository(
       @Autowired @KPServer KnowledgeArtifactRepositoryService artifactRepo,
@@ -204,6 +210,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     this.index = index;
     this.hrefBuilder = hrefBuilder != null
         ? hrefBuilder : new HrefBuilder(cfg);
+    this.negotiator = new ContentNegotiationHelper(this.hrefBuilder);
 
     this.parser = parser;
     this.detector = detector;
@@ -217,7 +224,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     this.repositoryId = cfg.getTyped(KnowledgeAssetRepositoryOptions.DEFAULT_REPOSITORY_ID);
 
     this.assetNamespace = URI.create(cfg.getTyped(KnowledgeAssetRepositoryOptions.ASSET_NAMESPACE));
-    this.artifactNamespace = URI.create(cfg.getTyped(KnowledgeAssetRepositoryOptions.ARTIFACT_NAMESPACE));
+    this.artifactNamespace = URI
+        .create(cfg.getTyped(KnowledgeAssetRepositoryOptions.ARTIFACT_NAMESPACE));
 
     if (artifactRepo == null ||
         !artifactRepo.getKnowledgeArtifactRepository(repositoryId)
@@ -228,23 +236,22 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   private ResourceIdentifier toAssetId(UUID assetId) {
-    return SemanticIdentifier.newId(assetNamespace,assetId);
+    return SemanticIdentifier.newId(assetNamespace, assetId);
   }
 
   private ResourceIdentifier toAssetId(UUID assetId, String versionTag) {
-    return SemanticIdentifier.newId(assetNamespace,assetId,
+    return SemanticIdentifier.newId(assetNamespace, assetId,
         VersionIdentifier.toSemVer(versionTag));
   }
 
   private ResourceIdentifier toArtifactId(UUID assetId) {
-    return SemanticIdentifier.newId(artifactNamespace,assetId);
+    return SemanticIdentifier.newId(artifactNamespace, assetId);
   }
 
   private ResourceIdentifier toArtifactId(UUID assetId, String versionTag) {
-    return SemanticIdentifier.newId(artifactNamespace,assetId,
+    return SemanticIdentifier.newId(artifactNamespace, assetId,
         VersionIdentifier.toSemVer(versionTag));
   }
-
 
   //*****************************************************************************************/
   //* Service Metadata
@@ -273,8 +280,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   /**
-   * Additional representations of Surrogates supported by this server, either
-   * by storage, redirection, or translation on demand
+   * Additional representations of Surrogates supported by this server, either by storage,
+   * redirection, or translation on demand
    *
    * @return A collection of supported Representations for Surrogates
    */
@@ -283,7 +290,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         rep(Knowledge_Asset_Surrogate_2_0, XML_1_1),
         rep(Knowledge_Asset_Surrogate_2_0, JSON),
         rep(Knowledge_Asset_Surrogate_2_0, RDF_1_1),
-        rep(HTML,TXT),
+        rep(HTML, TXT),
         rep(FHIR_STU3, JSON));
   }
 
@@ -308,6 +315,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   /**
    * Returns a copy of the repository Knowledge graph
+   *
    * @param xAccept A formal MIME type to drive the serialization of the graph
    * @return the Knowledge graph, wrapped in a KnowledgeCarrier
    */
@@ -330,7 +338,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         null);
   }
 
-
   //*****************************************************************************************/
   //* Canonical Surrogate
   //*****************************************************************************************/
@@ -338,20 +345,19 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   /**
    * Returns a list of Pointers to the Asset (series) currently registered in this repository
-   * Supports filtering by semantic annotations.
-   * Supports pagination
+   * Supports filtering by semantic annotations. Supports pagination
    *
+   * @param assetTypeTag           filter to include assets that have type or role denoted by this
+   *                               tag
+   * @param assetAnnotationTag     filter to include assets annotated with the asset/concept
+   *                               relationship denoted by this tag
+   * @param assetAnnotationConcept filter to include assets annotated with this concept
+   * @param offset                 (Pagination: start at element offset)
+   * @param limit                  (Pagination: do not return more than limit)
+   * @return A list of assets
    * @see edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetType
    * @see edu.mayo.ontology.taxonomies.kao.knowledgeassetrole.KnowledgeAssetRole
    * @see edu.mayo.ontology.taxonomies.kmdo.annotationreltype.AnnotationRelType
-   *
-   * @param assetTypeTag filter to include assets that have type or role denoted by this tag
-   * @param assetAnnotationTag filter to include assets annotated with the asset/concept relationship denoted by this tag
-   * @param assetAnnotationConcept filter to include assets annotated with this concept
-   * @param offset (Pagination: start at element offset)
-   * @param limit (Pagination: do not return more than limit)
-   *
-   * @return A list of assets
    */
   @Override
   public Answer<List<Pointer>> listKnowledgeAssets(
@@ -379,8 +385,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   /**
-   * Initializes a new asset with a random ID and an empty surrogate.
-   * Version is set to 0.0.0
+   * Initializes a new asset with a random ID and an empty surrogate. Version is set to 0.0.0
+   *
    * @return the UUID of the newly created surrogate series.
    */
   @Override
@@ -396,42 +402,39 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   /**
-   * Retrieves the latest version of the canonical surrogate
-   * for the latest version of a knowledge asset, in AST/object form
-   *
+   * Retrieves the latest version of the canonical surrogate for the latest version of a knowledge
+   * asset, in AST/object form
+   * <p>
    * Supports a limited form of content negotiation that can only handle the default asset
-   * representation itself, or HTML by means of a redirect.
-   * The actual serialization of the canonical asset, if needed (e.g. when deployed as a web service)
-   * is handled by externally.
-   *
+   * representation itself, or HTML by means of a redirect. The actual serialization of the
+   * canonical asset, if needed (e.g. when deployed as a web service) is handled by externally.
+   * <p>
    * For full control on the content negotiation and format,
-   * @see KnowledgeAssetRepositoryApiInternal#getCanonicalKnowledgeAssetSurrogate
-   * and related operations
    *
    * @param assetId the id of the asset for which the canonical surrogate is requested
    * @param xAccept MIME type for advanced content negotiation support
-   * @return The canonical surrogate in serializable AST/object form, or a redirect to a URL
-   * where an HTML variant can be found
+   * @return The canonical surrogate in serializable AST/object form, or a redirect to a URL where
+   * an HTML variant can be found
+   * @see KnowledgeAssetRepositoryApiInternal#getCanonicalKnowledgeAssetSurrogate and related
+   * operations
    */
   @Override
   public Answer<KnowledgeAsset> getKnowledgeAsset(UUID assetId, String xAccept) {
     return retrieveLatestCanonicalSurrogateForLatestAsset(assetId)
         .flatMap(latestCanonicalSurrogate ->
-            negotiateCanonicalSurrogate(latestCanonicalSurrogate,xAccept, defaultSurrogateRepresentation));
+            negotiator.negotiateCanonicalSurrogate(latestCanonicalSurrogate, xAccept,
+                defaultSurrogateRepresentation));
   }
 
   /**
-   * Returns a list of (pointers to the) versions of a given Knowledge Asset
-   **
-   * @param assetId The ID of the asset (series)
+   * Returns a list of (pointers to the) versions of a given Knowledge Asset *
    *
-   * @param offset (Pagination: start at element offset)
-   * @param limit (Pagination: do not return more than limit)
-   *
+   * @param assetId   The ID of the asset (series)
+   * @param offset    (Pagination: start at element offset)
+   * @param limit     (Pagination: do not return more than limit)
    * @param beforeTag (upper version tag limit - not implemented)
-   * @param afterTag (lower version tag limit - not implemented)
-   *
-   * @param sort sort order (not implemented)
+   * @param afterTag  (lower version tag limit - not implemented)
+   * @param sort      sort order (not implemented)
    * @return A list of known version for the given asset
    */
   @Override
@@ -450,45 +453,46 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .collect(toList());
 
     return Answer.of(
-        paginate(pointers,offset,limit,SemanticIdentifier.mostRecentFirstComparator()));
+        paginate(pointers, offset, limit, SemanticIdentifier.mostRecentFirstComparator()));
   }
 
 
   /**
-   * Retrieves the latest version of the Surrogate for a specific version of a knowledge asset,
-   * in AST/object form
-   *
+   * Retrieves the latest version of the Surrogate for a specific version of a knowledge asset, in
+   * AST/object form
+   * <p>
    * Supports a limited form of content negotiation that can only handle the default asset
-   * representation itself, or HTML by means of a redirect.
-   * The actual serialization of the canonical asset, if needed (e.g. when deployed as a web service)
-   * is handled by externally.
-   *
+   * representation itself, or HTML by means of a redirect. The actual serialization of the
+   * canonical asset, if needed (e.g. when deployed as a web service) is handled by externally.
+   * <p>
    * For full control on the content negotiation and format,
-   * @see KnowledgeAssetRepositoryApiInternal#getCanonicalKnowledgeAssetSurrogate
-   * and related operations
    *
-   * @param assetId the id of the asset for which the canonical surrogate is requested
+   * @param assetId    the id of the asset for which the canonical surrogate is requested
    * @param versionTag the version tag of the asset
-   * @param xAccept MIME type for advanced content negotiation support
-   * @return The canonical surrogate in serializable AST/object form, or a redirect to a URL
-   * where an HTML variant can be found
+   * @param xAccept    MIME type for advanced content negotiation support
+   * @return The canonical surrogate in serializable AST/object form, or a redirect to a URL where
+   * an HTML variant can be found
+   * @see KnowledgeAssetRepositoryApiInternal#getCanonicalKnowledgeAssetSurrogate and related
+   * operations
    */
   @Override
-  public Answer<KnowledgeAsset> getKnowledgeAssetVersion(UUID assetId, String versionTag, String xAccept) {
+  public Answer<KnowledgeAsset> getKnowledgeAssetVersion(UUID assetId, String versionTag,
+      String xAccept) {
     return retrieveLatestCanonicalSurrogateForAssetVersion(assetId, versionTag)
         .flatMap(assetVersionCanonicalSurrogate ->
-            negotiateCanonicalSurrogate(assetVersionCanonicalSurrogate, xAccept, defaultSurrogateRepresentation));
+            negotiator.negotiateCanonicalSurrogate(assetVersionCanonicalSurrogate, xAccept,
+                defaultSurrogateRepresentation));
   }
 
   /**
-   * Registers a Canonical Surrogate (version) for a specific Asset Version
-   * The Asset must not have a different canonical surrogate, unless it is equal to the one provided
+   * Registers a Canonical Surrogate (version) for a specific Asset Version The Asset must not have
+   * a different canonical surrogate, unless it is equal to the one provided
+   * <p>
+   * This operation will also check for consistency between the asset Identifier in the provided
+   * Surrogate, and the assetId/version provided by the client
    *
-   * This operation will also check for consistency between the asset Identifier in the provided Surrogate,
-   * and the assetId/version provided by the client
-   *
-   * @param assetId the Asset (series) ID
-   * @param versionTag the Asset version tag
+   * @param assetId        the Asset (series) ID
+   * @param versionTag     the Asset version tag
    * @param assetSurrogate the Canonical Asset Surrogate
    * @return Void
    */
@@ -503,23 +507,21 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       return Answer.of(Conflict);
     }
 
-    ResourceIdentifier assetIdentifier = toAssetId(assetId,versionTag);
-    ResourceIdentifier surrogateIdentifier = ensureHasCanonicalSurrogateManifestation(assetSurrogate);
-    if (detectCanonicalSurrogateConflict(assetIdentifier,surrogateIdentifier,assetSurrogate)) {
+    ResourceIdentifier assetIdentifier = toAssetId(assetId, versionTag);
+    ResourceIdentifier surrogateIdentifier = ensureHasCanonicalSurrogateManifestation(
+        assetSurrogate);
+    if (detectCanonicalSurrogateConflict(assetIdentifier, surrogateIdentifier, assetSurrogate)) {
       return Answer.of(Conflict);
     }
 
-    persistCanonicalKnowledgeAssetVersion(assetIdentifier,surrogateIdentifier,assetSurrogate);
+    persistCanonicalKnowledgeAssetVersion(assetIdentifier, surrogateIdentifier, assetSurrogate);
 
     return Answer.of(NoContent);
   }
 
-
-
   //*****************************************************************************************/
   //* Kowledge Artifacts
   //*****************************************************************************************/
-
 
 
   /**
@@ -558,8 +560,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
               // tries to honor the client's preferences,
               // or returns one of the artifacts non-deterministically (usually the first)
               Answer<KnowledgeArtifact> bestAvailableCarrier = withNegotiation
-                  ? negotiate(surrogate.getCarriers(), preferences)
-                  : anyCarrier(surrogate.getCarriers());
+                  ? negotiator.negotiate(surrogate.getCarriers(), preferences)
+                  : negotiator.anyCarrier(surrogate.getCarriers());
 
               if (bestAvailableCarrier.map(this::isRedirectable).orElse(false)) {
                 return bestAvailableCarrier.flatMap(ka -> Answer.referTo(ka.getLocator(), false));
@@ -580,20 +582,16 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
 
   /**
-   * Lists the Carrier Artifacts for a given Knowledge Asset version
-   * Groups the version of each Carrier, and returns the latest
+   * Lists the Carrier Artifacts for a given Knowledge Asset version Groups the version of each
+   * Carrier, and returns the latest
    *
-   * @param assetId The ID of the asset for which to retrieve Carriers
+   * @param assetId    The ID of the asset for which to retrieve Carriers
    * @param versionTag The version of the asset
-
-   *
-   * @param offset (Pagination: start at element offset)
-   * @param limit (Pagination: do not return more than limit)
-   *
-   * @param beforeTag (upper version tag limit - not implemented)
-   * @param afterTag (lower version tag limit - not implemented)
-   * @param sort sort order (not implemented)
-   *
+   * @param offset     (Pagination: start at element offset)
+   * @param limit      (Pagination: do not return more than limit)
+   * @param beforeTag  (upper version tag limit - not implemented)
+   * @param afterTag   (lower version tag limit - not implemented)
+   * @param sort       sort order (not implemented)
    * @return A sorted and grouped list of known Carriers for the given asset
    */
   @Override
@@ -617,15 +615,15 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   /**
    * Retrieves the latest version of a given Carrier for a given asset
-   *
+   * <p>
    * Supports content negotiation.
    *
-   * @param assetId The Asset (series) id
+   * @param assetId    The Asset (series) id
    * @param versionTag The Asset version tag
    * @param artifactId the Carrier artifact id
-   * @param xAccept formal mime type to negotiate the form of the result
-   * @return A Knowledge Carrier with the latest version of the chosen artifact,
-   *  respecting the user preferences (if any)
+   * @param xAccept    formal mime type to negotiate the form of the result
+   * @return A Knowledge Carrier with the latest version of the chosen artifact, respecting the user
+   * preferences (if any)
    */
   @Override
   public Answer<KnowledgeCarrier> getKnowledgeAssetCarrier(UUID assetId, String versionTag,
@@ -641,20 +639,20 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   /**
-   * Retrieves a specific version of a Knowledge Artifact,
-   * in its role of carrier of a given Knowledge Asset
+   * Retrieves a specific version of a Knowledge Artifact, in its role of carrier of a given
+   * Knowledge Asset
+   * <p>
+   * If content negotiation preferences are specified, this operation will validate that the actual
+   * artifact fits the client's preferences, or respond with 'not acceptable' In particular, this
+   * operation will not attempt to translate/transform the Artifact (if needed, @see {@link
+   * SemanticKnowledgeAssetRepository._getCanonicalKnowledgeAssetCarrier})
    *
-   * If content negotiation preferences are specified, this operation will validate
-   * that the actual artifact fits the client's preferences, or respond with 'not acceptable'
-   * In particular, this operation will not attempt to translate/transform the Artifact
-   * (if needed, @see {@link SemanticKnowledgeAssetRepository._getCanonicalKnowledgeAssetCarrier})
-   *
-   * @param assetId The id of the Asset for which the Artifact is a Carrier
-   * @param versionTag The version of the Asset for which the Artifact is a Carrier
-   * @param artifactId The id of the Carrier Artifact
+   * @param assetId            The id of the Asset for which the Artifact is a Carrier
+   * @param versionTag         The version of the Asset for which the Artifact is a Carrier
+   * @param artifactId         The id of the Carrier Artifact
    * @param artifactVersionTag The version of the Carrier Artifact
-   * @param xAccept Client's preferences on the Artifact representation, which must fit
-   *                at least one of the preferences, if preferences are specified
+   * @param xAccept            Client's preferences on the Artifact representation, which must fit
+   *                           at least one of the preferences, if preferences are specified
    * @return The Carrier Artifact, in binary form, wrapped in a KnowledgeCarrier
    */
   @Override
@@ -673,18 +671,19 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     if (!artifactMetadata.isSuccess()) {
       return Answer.notFound();
     }
-    if (!isAcceptable(artifactMetadata.get(),xAccept)) {
+    if (!negotiator.isAcceptable(artifactMetadata.get(), xAccept)) {
       return Answer.failed(NotAcceptable);
     }
 
     return artifactMetadata
         .flatMap(meta ->
-          retrieveBinaryArtifact(meta)
-              .map(bytes -> buildKnowledgeCarrier(
-                  assetId,versionTag,
-                  artifactId,artifactVersionTag,
-                  meta.getRepresentation(), coalesce(meta.getName(),assetMetadata.get().getName()),
-                  bytes))
+            retrieveBinaryArtifact(meta)
+                .map(bytes -> buildKnowledgeCarrier(
+                    assetId, versionTag,
+                    artifactId, artifactVersionTag,
+                    meta.getRepresentation(),
+                    coalesce(meta.getName(), assetMetadata.get().getName()),
+                    bytes))
         );
 
   }
@@ -693,11 +692,11 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   /**
    * Stores a (binary) exemplar artifact in the repository, associating it to a knowledge asset
    *
-   * @param assetId the id of the asset
-   * @param versionTag the version of the asset
-   * @param artifactId the id of the carrier artifact
+   * @param assetId         the id of the asset
+   * @param versionTag      the version of the asset
+   * @param artifactId      the id of the carrier artifact
    * @param artifactVersion the version of the carrier artifact
-   * @param exemplar a binary-encoded copy of the artifact
+   * @param exemplar        a binary-encoded copy of the artifact
    * @return Void
    */
   @Override
@@ -720,43 +719,46 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     return Answer.of(OK);
   }
 
-
   //*****************************************************************************************/
   //* Surrogates
   //*****************************************************************************************/
 
 
   /**
-   * Returns the Canonical Surrogate for the given Knowledge Asset,
-   * serialized using the server's default format, and encoded in binary form.
-   * To get the Surrogate as an object, use {@link SemanticKnowledgeAssetRepository#}getVersionedKnowledgeAsset}
-   * and related operations instead.
+   * Returns the Canonical Surrogate for the given Knowledge Asset, serialized using the server's
+   * default format, and encoded in binary form. To get the Surrogate as an object, use {@link
+   * SemanticKnowledgeAssetRepository#}getVersionedKnowledgeAsset} and related operations instead.
+   * <p>
+   * Supports content negotiation to create alternative representation of the same Surrogate
    *
-   * Supports content negotiation to create alternative representation
-   * of the same Surrogate
-   *
-   * @param assetId The asset for which to retrieve a canonical surrogate
+   * @param assetId    The asset for which to retrieve a canonical surrogate
    * @param versionTag The asset version for which to retrieve a canonical surrogate
-   * @param xAccept The client's preferences on the representation of the surrogate's content
+   * @param xAccept    The client's preferences on the representation of the surrogate's content
    * @return A carrier that wraps the Canonical Surrogate, or transrepresentation thereof
    */
   @Override
   public Answer<KnowledgeCarrier> getCanonicalKnowledgeAssetSurrogate(UUID assetId,
       String versionTag, String xAccept) {
-    boolean withNegotiation = ! Util.isEmpty(xAccept);
+    boolean withNegotiation = !Util.isEmpty(xAccept);
+    List<SyntacticRepresentation> preferences =
+        decodePreferences(xAccept, defaultSurrogateRepresentation);
+    SerializationFormat preferredFormat = negotiator.getPreferredFormat(preferences).orElse(null);
+
     return getKnowledgeAssetVersion(assetId, versionTag)
         .flatMap(asset -> {
-              KnowledgeArtifact self = getCanonicalSurrogateMetadata(asset)
+              KnowledgeArtifact self = getCanonicalSurrogateMetadata(
+                  asset,
+                  preferredFormat)
                   .orElseThrow(
                       () -> new IllegalStateException(
                           "Surrogates should have self-referential metadata"));
               Answer<KnowledgeCarrier> binaryCarrier =
-                  buildCanonicalSurrogateCarrier(self.getArtifactId(), asset);
+                  buildCanonicalSurrogateCarrier(self.getArtifactId(), asset, preferredFormat);
 
               return withNegotiation ?
                   binaryCarrier.flatMap(bin ->
                       Answer.anyDo(
-                          decodePreferences(xAccept),
+                          preferences,
                           preferredRep -> attemptTranslation(bin, preferredRep)))
                   : binaryCarrier;
             }
@@ -765,6 +767,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   /**
    * Returns a list of pointers to the Surrogates registerd for a given Knowledge
+   *
    * @param assetId
    * @param versionTag
    * @return
@@ -772,7 +775,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<List<Pointer>> listKnowledgeAssetSurrogates(UUID assetId, String versionTag,
       Integer offset, Integer limit, String beforeTag, String afterTag, String sort) {
-    ResourceIdentifier assetRef = toAssetId(assetId,versionTag);
+    ResourceIdentifier assetRef = toAssetId(assetId, versionTag);
 
     List<Pointer> pointers = index.getSurrogatesForAsset(assetRef).stream()
         .map(surrId -> index.getSurrogateVersions(surrId.getUuid()))
@@ -789,25 +792,26 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
 
   /**
-   * Retrieves a specific version of a Knowledge Artifact,
-   * in its role of Surrogate of a given Knowledge Asset
+   * Retrieves a specific version of a Knowledge Artifact, in its role of Surrogate of a given
+   * Knowledge Asset
+   * <p>
+   * If content negotiation preferences are specified, this operation will validate that the actual
+   * artifact fits the client's preferences, or respond with 'not acceptable' In particular, this
+   * operation will not attempt to translate/transform the Artifact (if needed, @see {@link
+   * SemanticKnowledgeAssetRepository#getCanonicalKnowledgeAssetSurrogate} )
    *
-   * If content negotiation preferences are specified, this operation will validate
-   * that the actual artifact fits the client's preferences, or respond with 'not acceptable'
-   * In particular, this operation will not attempt to translate/transform the Artifact
-   * (if needed, @see {@link SemanticKnowledgeAssetRepository#getCanonicalKnowledgeAssetSurrogate} )
-   *
-   * @param assetId The id of the Asset for which the Artifact is a Carrier
-   * @param versionTag The version of the Asset for which the Artifact is a Carrier
-   * @param surrogateId The id of the Surrogate Artifact
+   * @param assetId             The id of the Asset for which the Artifact is a Carrier
+   * @param versionTag          The version of the Asset for which the Artifact is a Carrier
+   * @param surrogateId         The id of the Surrogate Artifact
    * @param surrogateVersionTag The version of the Surrogate Artifact
-   * @param xAccept Client's preferences on the Artifact representation, which must fit
-   *                at least one of the preferences, if preferences are specified
+   * @param xAccept             Client's preferences on the Artifact representation, which must fit
+   *                            at least one of the preferences, if preferences are specified
    * @return The Surrogate Artifact, in binary form, wrapped in a KnowledgeCarrier
    */
   @Override
   public Answer<KnowledgeCarrier> getKnowledgeAssetSurrogateVersion(
-      UUID assetId, String versionTag, UUID surrogateId, String surrogateVersionTag, String xAccept) {
+      UUID assetId, String versionTag, UUID surrogateId, String surrogateVersionTag,
+      String xAccept) {
 
     Answer<KnowledgeAsset> assetMetadata = getKnowledgeAssetVersion(assetId, versionTag);
     Answer<KnowledgeArtifact> surrogateMetadata = assetMetadata
@@ -816,7 +820,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     if (!surrogateMetadata.isSuccess()) {
       return Answer.notFound();
     }
-    if (!isAcceptable(surrogateMetadata.get(),xAccept)) {
+    if (!negotiator.isAcceptable(surrogateMetadata.get(), xAccept)) {
       return Answer.failed(NotAcceptable);
     }
 
@@ -824,18 +828,14 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .flatMap(meta ->
             retrieveBinaryArtifact(meta)
                 .map(bytes -> buildKnowledgeCarrier(
-                    assetId,versionTag,
-                    surrogateId,surrogateVersionTag,
+                    assetId, versionTag,
+                    surrogateId, surrogateVersionTag,
                     meta.getRepresentation(),
-                    "Metadata - " + coalesce(meta.getName(),assetMetadata.get().getName()),
+                    "Metadata - " + coalesce(meta.getName(), assetMetadata.get().getName()),
                     bytes))
         );
 
   }
-
-
-
-
 
   //*****************************************************************************************/
   //* Composites and Structs
@@ -844,10 +844,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   /**
    * Registers a Canonical Asset Surrogate in this server, for a given Asset and Version
-   *
+   * <p>
    * Supports Composite Assets
-   * @param assetId The Asset for which a Surrogate is being registered
-   * @param versionTag The version of the Asset for which a Surrogate is being registered
+   *
+   * @param assetId               The Asset for which a Surrogate is being registered
+   * @param versionTag            The version of the Asset for which a Surrogate is being
+   *                              registered
    * @param assetSurrogateCarrier The Carrier of a (Composite) Canonical Surrogate
    * @return
    */
@@ -879,21 +881,21 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     } else {
       return liftCanonicalSurrogate(assetSurrogateCarrier)
           .flatMap(ax -> setKnowledgeAssetVersion(
-              ax.getAssetId().getUuid(),ax.getAssetId().getVersionTag(),ax));
+              ax.getAssetId().getUuid(), ax.getAssetId().getVersionTag(), ax));
     }
   }
 
 
   /**
-   * Constructs an Anonymous Composite Knowledge Asset (Surrogate),
-   * using a given Asset as a seed, by means of a query that traverses the relationships
-   * between that Asset and other Assets, which will be considered the Components.
+   * Constructs an Anonymous Composite Knowledge Asset (Surrogate), using a given Asset as a seed,
+   * by means of a query that traverses the relationships between that Asset and other Assets, which
+   * will be considered the Components.
    *
-   * @param assetId The id of the seed Asset
+   * @param assetId    The id of the seed Asset
    * @param versionTag The version of the seed Asset
-   * @param query The query that selects the Components
-   * @param xAccept A content negotiation parameter to control the format
-   *                in which the Components are returned(NOT IMPLEMENTED)
+   * @param query      The query that selects the Components
+   * @param xAccept    A content negotiation parameter to control the format in which the Components
+   *                   are returned(NOT IMPLEMENTED)
    * @return a Composite Knowledge Carrier that includes the Canonical Surrogates (in AST form)
    */
   @Override
@@ -915,7 +917,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
                       .orElseThrow(),
                   components)
                   .withLevel(Abstract_Knowledge_Expression)
-                  .withRootId(toAssetId(assetId,versionTag))
+                  .withRootId(toAssetId(assetId, versionTag))
                   .withRepresentation(rep(defaultSurrogateModel))
           );
         });
@@ -930,7 +932,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .flatMap(componentIds -> {
 
           Answer<Set<KnowledgeCarrier>> componentSurrogates = componentIds.stream()
-              .map(comp -> getCanonicalKnowledgeAssetCarrier(comp.getUuid(), comp.getVersionTag(), xAccept))
+              .map(comp -> getCanonicalKnowledgeAssetCarrier(comp.getUuid(), comp.getVersionTag(),
+                  xAccept))
               .collect(Answer.toSet());
 
           return componentSurrogates
@@ -943,9 +946,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   //*****************************************************************************************/
 
 
-
-
-
   @Override
   public Answer<List<KnowledgeCarrier>> initCompositeKnowledgeAsset(UUID assetId, String versionTag,
       String assetRelationshipTag, Integer depth) {
@@ -953,7 +953,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   @Override
-  public Answer<CompositeKnowledgeCarrier> getCompositeKnowledgeAssetCarrier(UUID assetId, String versionTag,
+  public Answer<CompositeKnowledgeCarrier> getCompositeKnowledgeAssetCarrier(UUID assetId,
+      String versionTag,
       Boolean flat, String xAccept) {
     return Answer.unsupported();
   }
@@ -991,8 +992,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
 
-
-
   @Override
   public Answer<List<Pointer>> listKnowledgeAssetSurrogateVersions(UUID assetId, String versionTag,
       UUID surrogateId, Integer offset, Integer limit, String beforeTag, String afterTag,
@@ -1001,20 +1000,11 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
 
-
   @Override
   public Answer<List<Pointer>> listKnowledgeAssetCarrierVersions(UUID assetId, String versionTag,
       UUID artifactId) {
     return Answer.unsupported();
   }
-
-
-
-
-
-
-
-
 
 // ****************************************************************************************************/
 // Internal functions and helpers
@@ -1023,6 +1013,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   /**
    * Queries the Knowledge Graph to select a set of Knowledge Asset's version identifiers
+   *
    * @param query The query
    * @return The set of Asset version identifiers selected by the query
    */
@@ -1036,17 +1027,20 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   /**
-   * Ensures that minimal metadata about a carrier KnowledgeArtifact appear in the Canonical Surrogate's Carriers section
-   * If an Artifact with the same id is not already included, updates the Surrogate and persists the new version
+   * Ensures that minimal metadata about a carrier KnowledgeArtifact appear in the Canonical
+   * Surrogate's Carriers section If an Artifact with the same id is not already included, updates
+   * the Surrogate and persists the new version
    *
-   * @param asset the Canonical Surrogate
+   * @param asset     the Canonical Surrogate
    * @param carrierId the Id of the artifact
-   * @param exemplar a copy of the carrier Artifact, used to infer metadata
+   * @param exemplar  a copy of the carrier Artifact, used to infer metadata
    * @return A flag that indicates whether an update was actually performed or not
    */
-  private boolean updateCanonicalSurrogateWithCarrier(KnowledgeAsset asset, ResourceIdentifier carrierId, byte[] exemplar) {
+  private boolean updateCanonicalSurrogateWithCarrier(KnowledgeAsset asset,
+      ResourceIdentifier carrierId, byte[] exemplar) {
     if (asset.getCarriers().stream()
-        .noneMatch(art -> art.getArtifactId().sameAs(carrierId.getUuid(), carrierId.getVersionTag()))) {
+        .noneMatch(
+            art -> art.getArtifactId().sameAs(carrierId.getUuid(), carrierId.getVersionTag()))) {
       // the Artifact needs to be attached to the surrogate
       ResourceIdentifier newSurrogateId = attachCarrier(asset, carrierId, exemplar);
       persistCanonicalKnowledgeAssetVersion(asset.getAssetId(), newSurrogateId, asset);
@@ -1056,12 +1050,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   /**
-   * Adds metadata about a Knowledge Carrier to a Canonical Surrogate, updating the Surrogate in the process
-   * Increments the identifier of the Surrogate itself by a minor version increment.
+   * Adds metadata about a Knowledge Carrier to a Canonical Surrogate, updating the Surrogate in the
+   * process Increments the identifier of the Surrogate itself by a minor version increment.
    *
-   * @param asset the Canonical Surrogate
+   * @param asset      the Canonical Surrogate
    * @param artifactId the Id of the artifact
-   * @param exemplar a copy of the carrier Artifact, used to infer metadata
+   * @param exemplar   a copy of the carrier Artifact, used to infer metadata
    * @return A flag that indicates whether an update was actually performed or not
    */
   private ResourceIdentifier attachCarrier(
@@ -1083,15 +1077,16 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   /**
-   * Tries to construct a Knowledge Artifact that matches one of the given preferences,
-   * using the existing Asset and its material Carriers as inputs
+   * Tries to construct a Knowledge Artifact that matches one of the given preferences, using the
+   * existing Asset and its material Carriers as inputs
    *
-   * @param asset The Asset for which an ephemeral Artifact is desired
+   * @param asset       The Asset for which an ephemeral Artifact is desired
    * @param preferences The preferred representations, sorted by preference
-   * @return The result of a transrepresentation the Asset's
-   * material Carrier(s) into an ephemeral Knowledge Artifact
+   * @return The result of a transrepresentation the Asset's material Carrier(s) into an ephemeral
+   * Knowledge Artifact
    */
-  private Answer<KnowledgeCarrier> tryConstructEphemeral(KnowledgeAsset asset, List<SyntacticRepresentation> preferences) {
+  private Answer<KnowledgeCarrier> tryConstructEphemeral(KnowledgeAsset asset,
+      List<SyntacticRepresentation> preferences) {
     if (translator == null) {
       return Answer.unacceptable();
     }
@@ -1100,13 +1095,13 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   /**
-   * Tries to construct a Knowledge Artifact that matches the given preference,
-   * using the existing Asset and its material Carriers as inputs
+   * Tries to construct a Knowledge Artifact that matches the given preference, using the existing
+   * Asset and its material Carriers as inputs
    *
-   * @param asset The Asset for which an ephemeral Artifact is desired
+   * @param asset                The Asset for which an ephemeral Artifact is desired
    * @param targetRepresentation The preferred representation
-   * @return The result of a transrepresentation the Asset's
-   * material Carrier(s) into an ephemeral Knowledge Artifact
+   * @return The result of a transrepresentation the Asset's material Carrier(s) into an ephemeral
+   * Knowledge Artifact
    */
   private Answer<KnowledgeCarrier> attemptTranslation(KnowledgeAsset asset,
       SyntacticRepresentation targetRepresentation) {
@@ -1123,13 +1118,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   /**
-   * Tries to construct a Knowledge Artifact that matches the given preference,
-   * using an existing Carrier metadata as input
-   * Will resolve the metadata into an actual Artifact, then attempt the transformation
+   * Tries to construct a Knowledge Artifact that matches the given preference, using an existing
+   * Carrier metadata as input Will resolve the metadata into an actual Artifact, then attempt the
+   * transformation
    *
-   *
-   * @param asset The Asset for which the Artifact is provided
-   * @param carrier The Artifact to use as a source for the transrepresentation
+   * @param asset                The Asset for which the Artifact is provided
+   * @param carrier              The Artifact to use as a source for the transrepresentation
    * @param targetRepresentation The preferred representation
    * @return The result of a transrepresentation the Artifact into an ephemeral Knowledge Artifact
    */
@@ -1138,13 +1132,13 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     if (translator == null) {
       return Answer.unacceptable();
     }
-    return retrieveWrappedBinaryArtifact(asset,carrier)
-        .flatMap(sourceCarrier -> attemptTranslation(sourceCarrier,targetRepresentation));
+    return retrieveWrappedBinaryArtifact(asset, carrier)
+        .flatMap(sourceCarrier -> attemptTranslation(sourceCarrier, targetRepresentation));
   }
 
   /**
-   * Tries to construct a Knowledge Artifact that matches the given preference,
-   * using an existing Artifact as input
+   * Tries to construct a Knowledge Artifact that matches the given preference, using an existing
+   * Artifact as input
    *
    * @param sourceBinaryArtifact The Artifact to use as a source for the transrepresentation
    * @param targetRepresentation The preferred representation
@@ -1156,6 +1150,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       return Answer.unacceptable();
     }
     SyntacticRepresentation from = sourceBinaryArtifact.getRepresentation();
+    if (from.getLanguage().sameAs(targetRepresentation.getLanguage())) {
+      return Answer.of(sourceBinaryArtifact);
+    }
 
     return translator.listTxionOperators(encode(from), encode(targetRepresentation))
         .flatMap(tranxOperators ->
@@ -1171,18 +1168,19 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   /**
    * Instantiates a KnowledgeCarrier wrapper for a given binary encoding of a Knowledge Artifact
-   * @param assetId the Id of the Asset the Artifact is a manifestation of
-   * @param versionTag the version of the Asset
-   * @param artifactId the Id of the Artifact itself
+   *
+   * @param assetId            the Id of the Asset the Artifact is a manifestation of
+   * @param versionTag         the version of the Asset
+   * @param artifactId         the Id of the Artifact itself
    * @param artifactVersionTag the version of the Artifact
-   * @param representation the Representation metadata of the artitfact
-   * @param bytes the Artifact itself, binary encoded
+   * @param representation     the Representation metadata of the artitfact
+   * @param bytes              the Artifact itself, binary encoded
    * @return the Artifact wrapped in a KnowledgeCarrier
    */
   private KnowledgeCarrier buildKnowledgeCarrier(UUID assetId, String versionTag, UUID artifactId,
       String artifactVersionTag,
       SyntacticRepresentation representation, String label, byte[] bytes) {
-    ResourceIdentifier axtId = toAssetId(assetId,versionTag);
+    ResourceIdentifier axtId = toAssetId(assetId, versionTag);
     ResourceIdentifier artId = toArtifactId(artifactId, artifactVersionTag);
 
     SyntacticRepresentation rep = (SyntacticRepresentation) representation.clone();
@@ -1191,7 +1189,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .withAssetId(axtId)
         .withArtifactId(artId)
         .withLevel(Encoded_Knowledge_Expression)
-        .withHref(hrefBuilder.getHref(axtId,artId,HrefType.ASSET_CARRIER_VERSION))
+        .withHref(hrefBuilder.getHref(axtId, artId, HrefType.ASSET_CARRIER_VERSION))
         .withLabel(label)
         .withRepresentation(rep
             .withCharset(defaultCharset().name())
@@ -1199,15 +1197,15 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   /**
-   * Instantiates a KnowledgeCarrier wrapper for a Canonical Knowledge Surrogate,
-   * serializing it into binary form in the process
+   * Instantiates a KnowledgeCarrier wrapper for a Canonical Knowledge Surrogate, serializing it
+   * into binary form in the process
    *
    * @param surrId the Id of the Canonical Surrogate
-   * @param asset The Canonical Surrogate
+   * @param asset  The Canonical Surrogate
    */
   private Answer<KnowledgeCarrier> buildCanonicalSurrogateCarrier(ResourceIdentifier surrId,
-      KnowledgeAsset asset) {
-    return encodeCanonicalSurrogate(asset)
+      KnowledgeAsset asset, SerializationFormat format) {
+    return encodeCanonicalSurrogate(asset, format)
         // level and representation are set during the encoding process
         .map(kc -> kc
             .withAssetId(surrId)
@@ -1219,9 +1217,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   /**
    * Uses the Knowledge Artifact metadata to retrieve an actual copy of an artifact, in this order:
-   * * Inlined representation
-   * * Local Knowledge Artifact Repository
-   * * External Locations
+   * * Inlined representation * Local Knowledge Artifact Repository * External Locations
    *
    * @param artifact The Knowledge Artifact Metadata
    * @return a byte-encoded copy of the artifact
@@ -1233,11 +1229,13 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   /**
-   * Determines whether a given Artifact should be preferentially resolved
-   * by means of redirecting the client to an external URL, as opposed to retrieving
-   * the data from an underlying Artifact Repository
+   * Determines whether a given Artifact should be preferentially resolved by means of redirecting
+   * the client to an external URL, as opposed to retrieving the data from an underlying Artifact
+   * Repository
+   *
    * @param artifactSurrogate the metadata about the Artifact
-   * @return true if the client should be redirected (vs the server retrieving a copy of the Artifact)
+   * @return true if the client should be redirected (vs the server retrieving a copy of the
+   * Artifact)
    */
   private boolean isRedirectable(KnowledgeArtifact artifactSurrogate) {
     return HTML.sameAs(artifactSurrogate.getRepresentation().getLanguage())
@@ -1248,25 +1246,26 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   /**
    * Retrieves a binary carrier for a given asset, wrapped in a KnowledgeCarrier
    *
-   * @param asset The Asset for which to retrieve a binary carrier
+   * @param asset   The Asset for which to retrieve a binary carrier
    * @param carrier The Knowledge Artifact Metadata
    * @return a byte-encoded copy of the artifact
    */
-  private Answer<KnowledgeCarrier> retrieveWrappedBinaryArtifact(KnowledgeAsset asset, KnowledgeArtifact carrier) {
+  private Answer<KnowledgeCarrier> retrieveWrappedBinaryArtifact(KnowledgeAsset asset,
+      KnowledgeArtifact carrier) {
     return retrieveBinaryArtifact(carrier)
         .map(bytes -> buildKnowledgeCarrier(
-            asset.getAssetId().getUuid(),asset.getAssetId().getVersionTag(),
-            carrier.getArtifactId().getUuid(),carrier.getArtifactId().getVersionTag(),
+            asset.getAssetId().getUuid(), asset.getAssetId().getVersionTag(),
+            carrier.getArtifactId().getUuid(), carrier.getArtifactId().getVersionTag(),
             carrier.getRepresentation(),
-            coalesce(asset.getName(),carrier.getName()),
+            coalesce(asset.getName(), carrier.getName()),
             bytes));
   }
 
 
   /**
-   * Uses a locator (URL) to get a copy of an external artifact
-   * TODO: this method assumes the URL is openly available.
-   * This method may need to delegate to a helper
+   * Uses a locator (URL) to get a copy of an external artifact TODO: this method assumes the URL is
+   * openly available. This method may need to delegate to a helper
+   *
    * @param artifact The KnowledgeArtifact metadata, which could include the locator URL
    * @return The bytes streamed from the locator URL
    */
@@ -1280,6 +1279,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   /**
    * Extracts a representation inlined in a surrogate
+   *
    * @param artifact The Knowledge Artifact Surrogate
    * @return the inlined artifact, if present
    */
@@ -1294,15 +1294,15 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
 
   /**
-   * Detects whether :
-   *  * the given Asset has a Canonical Surrogate, AND
-   *  *  that Canonical Surrogate is not the same as the provided Surrogate
-   *  *  OR
-   *  *  that Canonical Surrogate is the same, AND same version, but the existing and given representation differ
-   * @param assetIdentifier the id of the existing Asset
+   * Detects whether : * the given Asset has a Canonical Surrogate, AND *  that Canonical Surrogate
+   * is not the same as the provided Surrogate *  OR *  that Canonical Surrogate is the same, AND
+   * same version, but the existing and given representation differ
+   *
+   * @param assetIdentifier     the id of the existing Asset
    * @param surrogateIdentifier the Id of the existing Surrogate
-   * @param assetSurrogate a newly provided Surrogate
-   * @return true if the new Surrogate conflicts (i.e. replaces without being identical) with the old
+   * @param assetSurrogate      a newly provided Surrogate
+   * @return true if the new Surrogate conflicts (i.e. replaces without being identical) with the
+   * old
    */
   private boolean detectCanonicalSurrogateConflict(
       ResourceIdentifier assetIdentifier,
@@ -1310,15 +1310,16 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       KnowledgeAsset assetSurrogate) {
     Optional<ResourceIdentifier> surrId = index.getCanonicalSurrogateForAsset(assetIdentifier);
     if (surrId.isPresent()
-        && (! surrId.get().getUuid().equals(surrogateIdentifier.getUuid()))) {
+        && (!surrId.get().getUuid().equals(surrogateIdentifier.getUuid()))) {
       return true;
     }
 
     if (surrId.isPresent() &&
         surrogateIdentifier.getUuid().equals(surrId.get().getUuid())) {
-      Answer<KnowledgeAsset> existingSurrogate = retrieveCanonicalSurrogateVersion(surrogateIdentifier);
+      Answer<KnowledgeAsset> existingSurrogate = retrieveCanonicalSurrogateVersion(
+          surrogateIdentifier);
       return existingSurrogate.isSuccess()
-          && ! SurrogateDiffer.isEquivalent(assetSurrogate,existingSurrogate.get());
+          && !SurrogateDiffer.isEquivalent(assetSurrogate, existingSurrogate.get());
     }
 
     return false;
@@ -1326,14 +1327,14 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   /**
    * Registers and saves a version of a canonical Surrogate for a given Asset version
-   *
+   * <p>
    * Assigns a random surrogate ID if not present (TODO should reject?)
+   * <p>
+   * If the Asset already has a Canonical Surrogate, it must be the same Surrogate, or a version
+   * thereof.
    *
-   * If the Asset already has a Canonical Surrogate, it must be the same Surrogate,
-   * or a version thereof.
-   *
-   * @param assetId the Id of the Asset
-   * @param surrogateId the Id of the Surrogate
+   * @param assetId        the Id of the Asset
+   * @param surrogateId    the Id of the Surrogate
    * @param assetSurrogate the Canonical Surrogate
    */
   private void persistCanonicalKnowledgeAssetVersion(
@@ -1360,9 +1361,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   /**
    * Persists and indexes a Knowledge Carrier (version) for a given Asset (version)
-   * @param assetId the Id of the Asset
+   *
+   * @param assetId    the Id of the Asset
    * @param artifactId the Id of the Carrier Artifact
-   * @param exemplar A binary-encoded copy of the Carrier Artifact
+   * @param exemplar   A binary-encoded copy of the Carrier Artifact
    */
   private void persistKnowledgeCarrier(ResourceIdentifier assetId, ResourceIdentifier artifactId,
       byte[] exemplar) {
@@ -1372,17 +1374,18 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         artifactId.getUuid(), artifactId.getVersionTag(),
         exemplar);
 
-    this.index.registerArtifactToAsset(assetId,artifactId);
+    this.index.registerArtifactToAsset(assetId, artifactId);
   }
 
   /**
-   * Checks that the Canonical Surrogate has an entry for 'self' in the Surrogates section.
-   * If not, it will add one
-   * Returns the (artifact) Id of the canonical Surrogate
+   * Checks that the Canonical Surrogate has an entry for 'self' in the Surrogates section. If not,
+   * it will add one Returns the (artifact) Id of the canonical Surrogate
+   *
    * @param assetSurrogate the Canonical Surrogate
    * @return the Id of the Surrogate itself, registered within the Surrogate
    */
-  private ResourceIdentifier ensureHasCanonicalSurrogateManifestation(KnowledgeAsset assetSurrogate) {
+  private ResourceIdentifier ensureHasCanonicalSurrogateManifestation(
+      KnowledgeAsset assetSurrogate) {
     return getCanonicalSurrogateId(assetSurrogate)
         .orElseGet(() -> {
           ResourceIdentifier rid = randomArtifactId(artifactNamespace);
@@ -1396,46 +1399,67 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   /**
-   * Extracts the metadata self-descriptor of the canonical surrogate,
-   * from the list of Surrogates registered in a canonical surrogate itself
+   * Extracts the metadata self-descriptor of the canonical surrogate, from the list of Surrogates
+   * registered in a canonical surrogate itself
+   *
    * @param assetSurrogate The Surrogate to extract the self-referential metadata from
    * @return The id of the Surrogate it'self'
    */
   private Optional<KnowledgeArtifact> getCanonicalSurrogateMetadata(KnowledgeAsset assetSurrogate) {
     return getSurrogateMetadata(
-        assetSurrogate,defaultSurrogateModel,defaultSurrogateFormat);
+        assetSurrogate, defaultSurrogateModel, defaultSurrogateFormat);
   }
 
   /**
-   * Extracts the ID of the canonical surrogate, from the list of Surrogates registered
-   * in a canonical surrogate itself
+   * Extracts the metadata self-descriptor of the canonical surrogate, from the list of Surrogates
+   * registered in a canonical surrogate itself
+   *
+   * @param assetSurrogate The Surrogate to extract the self-referential metadata from
+   * @param format         The variant of the Surrogate that matches the given format
+   * @return The id of the Surrogate it'self'
+   */
+  private Optional<KnowledgeArtifact> getCanonicalSurrogateMetadata(
+      KnowledgeAsset assetSurrogate,
+      SerializationFormat format) {
+    return getSurrogateMetadata(
+        assetSurrogate, defaultSurrogateModel, format != null ? format : defaultSurrogateFormat)
+        .or(() -> getSurrogateMetadata(assetSurrogate, defaultSurrogateModel,
+            defaultSurrogateFormat));
+  }
+
+  /**
+   * Extracts the ID of the canonical surrogate, from the list of Surrogates registered in a
+   * canonical surrogate itself
+   *
    * @param assetSurrogate The Surrogate to extract the Id from
    * @return The id of the Surrogate it'self'
    */
   private Optional<ResourceIdentifier> getCanonicalSurrogateId(KnowledgeAsset assetSurrogate) {
     return getSurrogateId(
-        assetSurrogate,defaultSurrogateModel,defaultSurrogateFormat);
+        assetSurrogate, defaultSurrogateModel, defaultSurrogateFormat);
   }
 
   /**
-   * Updates the ID of the canonical surrogate, from the list of Surrogates registered
-   * in a canonical surrogate itself.
-   * Should be invoked as a consequence of updating a Surrogate, before persisting it back,
-   * to preserve immutablility
+   * Updates the ID of the canonical surrogate, from the list of Surrogates registered in a
+   * canonical surrogate itself. Should be invoked as a consequence of updating a Surrogate, before
+   * persisting it back, to preserve immutablility
    *
    * @param assetSurrogate The Surrogate to extract the Id from
    * @param newSurrogateId The new Surrogate Id
    */
-  private ResourceIdentifier setCanonicalSurrogateId(KnowledgeAsset assetSurrogate, ResourceIdentifier newSurrogateId) {
+  private ResourceIdentifier setCanonicalSurrogateId(KnowledgeAsset assetSurrogate,
+      ResourceIdentifier newSurrogateId) {
     return SurrogateHelper.setSurrogateId(
         assetSurrogate, defaultSurrogateModel, defaultSurrogateFormat, newSurrogateId);
   }
 
   /**
-   * Validates that a Canonical Surrogate declares the same Asset Id for which it was used in a call
+   * Validates that a Canonical Surrogate declares the same Asset Id for which it was used in a
+   * call
+   *
    * @param assetSurrogate The Canonical Surrogate, which contains an asset id and version
-   * @param assetId the asset id associated to the surrogate
-   * @param versionTag the version tag associated to the surrogate
+   * @param assetId        the asset id associated to the surrogate
+   * @param versionTag     the version tag associated to the surrogate
    * @return true if the assetId/version are the same as the ones in the Surrogate
    */
   private boolean testIdentifiersConsistency(KnowledgeAsset assetSurrogate, UUID assetId,
@@ -1446,10 +1470,11 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   /**
-   * Reconciles any missing asset Id and version in a Canonical Surrogate, using the parameters
-   * of an asset-related call (e.g. getKnowledgeAsset)
-   *
+   * Reconciles any missing asset Id and version in a Canonical Surrogate, using the parameters of
+   * an asset-related call (e.g. getKnowledgeAsset)
+   * <p>
    * TODO this method should probably throw a 403-BAD REQUEST exception
+   *
    * @param assetSurrogate
    * @param assetId
    * @param versionTag
@@ -1470,10 +1495,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
 
-
   /**
-   * Aggregates identifiers of different versions of different entities by the same entity.
-   * For each entity, returns the identifier of the most recent version of that entity
+   * Aggregates identifiers of different versions of different entities by the same entity. For each
+   * entity, returns the identifier of the most recent version of that entity
+   *
    * @param versionIdentifiers the identifiers of the different versions of the different entities
    * @return the identifier of the most recent version of each entity
    */
@@ -1488,13 +1513,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   /**
-   * Converts the identifier of a Knowledge Asset to a Pointer,
-   * including additional information such as the name, type(s) and URL on this server
-   * at which thise resource can be provided.
+   * Converts the identifier of a Knowledge Asset to a Pointer, including additional information
+   * such as the name, type(s) and URL on this server at which thise resource can be provided.
    *
-   * @param assetId the Id of the Asset to be mapped to a Pointer
+   * @param assetId  the Id of the Asset to be mapped to a Pointer
    * @param hrefType the type of resource (only ASSET and ASSET_VERSION are supported)
-   * @param mime the MIME type of the resource the Pointer resolves to
+   * @param mime     the MIME type of the resource the Pointer resolves to
    * @return a Pointer that includes a URL to this server
    */
   private Pointer toKnowledgeAssetPointer(
@@ -1512,16 +1536,16 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .forEach(ci -> pointer.setType(ci.getReferentId()));
 
     return pointer
-        .withHref(hrefBuilder.getHref(assetId,hrefType))
+        .withHref(hrefBuilder.getHref(assetId, hrefType))
         .withMimeType(mime);
   }
 
   /**
    * Converts the identifier of a Knowledge Artifact to a Pointer,
    *
-   * @param assetId the Id of the Asset carried by the Artifact
+   * @param assetId    the Id of the Asset carried by the Artifact
    * @param artifactId the Id of the Artifact to be mapped to a Pointer
-   * @param hrefType the type of resource
+   * @param hrefType   the type of resource
    * @return a Pointer that includes a URL to this server
    */
   private Pointer toKnowledgeArtifactPointer(
@@ -1529,11 +1553,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     Pointer pointer = artifactId.toPointer();
 
     return pointer
-        .withHref(hrefBuilder.getHref(assetId,artifactId,hrefType));
+        .withHref(hrefBuilder.getHref(assetId, artifactId, hrefType));
   }
 
   /**
    * Returns the latest version of the surrogate for the latest version of the given asset
+   *
    * @param assetId the uuid of the asset (series)
    * @return the latest Canonical Surrogate for the latest version of the given asset
    */
@@ -1546,11 +1571,13 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   /**
    * Returns the latest version of the surrogate for the latest version of the given asset
-   * @param assetId the uuid of the asset (series)
+   *
+   * @param assetId    the uuid of the asset (series)
    * @param versionTag the version tag of the asset
    * @return the latest Canonical Surrogate for the latest version of the given asset
    */
-  private Answer<KnowledgeAsset> retrieveLatestCanonicalSurrogateForAssetVersion(UUID assetId, String versionTag) {
+  private Answer<KnowledgeAsset> retrieveLatestCanonicalSurrogateForAssetVersion(UUID assetId,
+      String versionTag) {
     Optional<ResourceIdentifier> surrogateId =
         index.getCanonicalSurrogateForAsset(toAssetId(assetId, versionTag));
     return Answer.of(surrogateId)
@@ -1559,16 +1586,19 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   /**
    * Retrieves the latest Surrogate in a Surrogate Series
+   *
    * @param surrogateIdentifier the identifier of the surrogate series
    * @return the latest canonical surrogate
    */
-  private Answer<KnowledgeAsset> retrieveLatestCanonicalSurrogate(ResourceIdentifier surrogateIdentifier) {
+  private Answer<KnowledgeAsset> retrieveLatestCanonicalSurrogate(
+      ResourceIdentifier surrogateIdentifier) {
     return Answer.of(getLatestSurrogateVersion(surrogateIdentifier.getUuid()))
         .flatMap(this::retrieveCanonicalSurrogateVersion);
   }
 
   /**
    * Retrieves the identifier of the lastest known version of the given Knowledge Asset (series)
+   *
    * @param assetId The uuid of the asset series
    * @return the ResourceIdentifier of the latest version of that asset (series)
    */
@@ -1580,6 +1610,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   /**
    * Retrieves the identifier of the lastest known version of the given Knowledge Asset (series)
+   *
    * @param surrogateId The uuid of the surrogate series
    * @return the ResourceIdentifier of the latest version of that surrogate (series)
    */
@@ -1591,6 +1622,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   /**
    * Retrieves the identifier of the lastest known version of a given Knowledge Artifact
+   *
    * @param carrierId The uuid of the artifact series
    * @return the ResourceIdentifier of the latest version of that artifact (series)
    */
@@ -1603,6 +1635,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   /**
    * Retrieves a specific version of a surrogate, and parses it to its AST form
+   *
    * @param surrogateId the ID of the surrogate
    * @return the parsed Canonical KnowledgeAsset
    */
@@ -1611,8 +1644,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .flatMap(this::decodeCanonicalSurrogate);
 
   }
+
   /**
    * Retrieves a binary artifact from the underlying Knowledge Artifact Repository
+   *
    * @param artifactId the ID of the artifact
    * @return the binary encoding of the artifact
    */
@@ -1628,9 +1663,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   /**
    * Lifts a binary Canonical Knowledge Asset Surrogate into its AST/object form
    *
-   * @see SemanticKnowledgeAssetRepository#encodeCanonicalSurrogate(KnowledgeAsset)
    * @param encodedCanonicalSurrogate the binary encoding of the canonical surrogate
    * @return The KnowledgeAsset surrogate
+   * @see SemanticKnowledgeAssetRepository#encodeCanonicalSurrogate(KnowledgeAsset)
    */
   protected Answer<KnowledgeAsset> decodeCanonicalSurrogate(byte[] encodedCanonicalSurrogate) {
     return parser
@@ -1655,19 +1690,30 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   /**
-   * Serializes a canonical Knowledge Asset Surrogate into binary form,
-   * and returns it wrapped in a KnowledgeCarrier
+   * Serializes a canonical Knowledge Asset Surrogate into binary form, and returns it wrapped in a
+   * KnowledgeCarrier
    *
-   * @see SemanticKnowledgeAssetRepository#decodeCanonicalSurrogate(byte[])
    * @param assetSurrogate A KnowledgeAsset surrogate
    * @return A KnowledgeCarrier that wraps the binary encoding of that surrogate
+   * @see SemanticKnowledgeAssetRepository#decodeCanonicalSurrogate(byte[])
    */
   protected Answer<KnowledgeCarrier> encodeCanonicalSurrogate(KnowledgeAsset assetSurrogate) {
+    return encodeCanonicalSurrogate(assetSurrogate, defaultSurrogateFormat);
+  }
+
+  protected Answer<KnowledgeCarrier> encodeCanonicalSurrogate(KnowledgeAsset assetSurrogate,
+      SerializationFormat format) {
+    SerializationFormat actualFormat =
+        (format != null && supportedDefaultSurrogateFormats.stream()
+            .anyMatch(f -> f.sameAs(format)))
+            ? format : defaultSurrogateFormat;
+    SyntacticRepresentation rep
+        = rep(defaultSurrogateModel, actualFormat, defaultCharset(), Encodings.DEFAULT);
     return parser.applyLower(
         ofAst(assetSurrogate)
-            .withRepresentation(rep(defaultSurrogateModel)),
+            .withRepresentation(rep),
         Encoded_Knowledge_Expression,
-        encode(rep(defaultSurrogateModel,defaultSurrogateFormat, defaultCharset(),Encodings.DEFAULT)),
+        encode(rep),
         null
     );
   }

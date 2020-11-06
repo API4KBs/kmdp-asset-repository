@@ -16,6 +16,7 @@
 package edu.mayo.kmdp.repository.asset;
 
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
+import edu.mayo.kmdp.util.Util;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -52,6 +53,21 @@ public class HrefBuilder {
         .removeEnd(cfg.getTyped(
             KnowledgeAssetRepositoryOptions.SERVER_HOST)
             .toString(), "/");
+  }
+
+  public String getCurrentURL() {
+    return "";
+  }
+
+  public URI getRelativeURL(String relative) {
+    String curr = getCurrentURL();
+    if (Util.isEmpty(relative)) {
+      return URI.create(curr);
+    }
+    if (curr.endsWith("/") && relative.startsWith("/")) {
+      curr = curr.substring(0, curr.length() - 1);
+    }
+    return URI.create(curr + relative);
   }
 
   public URI getHref(ResourceIdentifier assetId, ResourceIdentifier artifactId, HrefType hrefType) {

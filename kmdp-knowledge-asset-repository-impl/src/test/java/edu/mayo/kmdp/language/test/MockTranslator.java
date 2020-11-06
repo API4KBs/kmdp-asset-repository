@@ -69,6 +69,7 @@ public class MockTranslator extends AbstractSimpleTranslator<byte[],String> {
 
   @Override
   protected Optional<String> transformBinary(ResourceIdentifier assetId, byte[] bytes,
+      SyntacticRepresentation srcRep,
       SyntacticRepresentation tgtRep, Properties config) {
     return Optional.of(translate(bytes));
   }

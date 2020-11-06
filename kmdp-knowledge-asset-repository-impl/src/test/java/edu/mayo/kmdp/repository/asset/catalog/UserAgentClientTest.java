@@ -7,15 +7,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
-import static org.omg.spec.api4kp._20200801.id.IdentifierConstants.VERSION_LATEST;
+import static org.omg.spec.api4kp._20200801.id.IdentifierConstants.VERSION_ZERO;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomArtifactId;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetcategory.KnowledgeAssetCategorySeries.Terminology_Ontology_And_Assertional_KBs;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Factual_Knowledge;
+import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.JSON;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.TXT;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
+import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate_2_0;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.OWL_2;
 import static org.omg.spec.api4kp._20200801.taxonomy.krserialization.KnowledgeRepresentationLanguageSerializationSeries.Turtle;
+import static org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevelSeries.Abstract_Knowledge_Expression;
 
+import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
@@ -41,9 +45,11 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.vocabulary.RDF;
+import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.omg.spec.api4kp._20200801.AbstractCarrier;
 import org.omg.spec.api4kp._20200801.Answer;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetCatalogApi;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.client.ApiClientFactory;
@@ -76,6 +82,87 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
         = new ApiClientFactory(host, WithFHIR.NONE);
 
     rpo = KnowledgeAssetCatalogApi.newInstance(apiClientFactory);
+  }
+
+
+  @Test
+  public void testGetKnowledgeAssetWithHTMLViaRedirect() {
+    UUID assetId = UUID.randomUUID();
+    populateRepository(assetId);
+
+    String out = executeRequest(
+        "/cat/assets/" + assetId + "/versions/" + VERSION_ZERO,
+        "text/html");
+
+    org.jsoup.nodes.Document doh = Jsoup.parse(out);
+    assertNotNull(doh);
+  }
+
+  @Test
+  public void testCanonicalSurrogate() {
+    UUID assetId = UUID.randomUUID();
+    populateRepositoryWithRedirectables(assetId);
+
+    String out = executeRequest(
+        "/cat/assets/" + assetId + "/versions/" + VERSION_ZERO + "/surrogate",
+        "application/xml");
+
+    XMLUtil.loadXMLDocument(out)
+        .orElseGet(Assertions::fail);
+  }
+
+  @Test
+  public void testCanonicalSurrogateJSON() {
+    UUID assetId = UUID.randomUUID();
+    populateRepositoryWithRedirectables(assetId);
+
+    String out = executeRequest(
+        "/cat/assets/" + assetId + "/versions/" + VERSION_ZERO + "/surrogate",
+        "application/json");
+
+    KnowledgeCarrier kc = JSonUtil.readJson(out, KnowledgeCarrier.class)
+        .orElseGet(Assertions::fail);
+    Answer<KnowledgeCarrier> ans = new Surrogate2Parser()
+        .applyLift(
+            kc,
+            Abstract_Knowledge_Expression,
+            codedRep(Knowledge_Asset_Surrogate_2_0),
+            null);
+    assertTrue(ans.isSuccess());
+  }
+
+  @Test
+  public void testCanonicalSurrogateWithWrappedNegotiation() {
+    UUID assetId = UUID.randomUUID();
+    populateRepositoryWithRedirectables(assetId);
+
+    // the KC will return as JSON (default format)
+    // the KC will contain a HTML document
+    String out = executeModelRequest(
+        "/cat/assets/" + assetId + "/versions/" + VERSION_ZERO + "/surrogate",
+        "text/html");
+
+    String s = JSonUtil.parseJson(out, KnowledgeCarrier.class)
+        .flatMap(AbstractCarrier::asString)
+        .orElseGet(Assertions::fail);
+    org.jsoup.nodes.Document doh = Jsoup.parse(s);
+    assertNotNull(doh);
+  }
+
+
+  @Test
+  public void testCanonicalSurrogateWithHTMLOut() {
+    UUID assetId = UUID.randomUUID();
+    populateRepositoryWithRedirectables(assetId);
+
+    // the KC will return as JSON (default format)
+    // the KC will contain a HTML document
+    String out = executeRequest(
+        "/cat/assets/" + assetId + "/versions/" + VERSION_ZERO + "/surrogate",
+        "text/html");
+
+    org.jsoup.nodes.Document doh = Jsoup.parse(out);
+    assertNotNull(doh);
   }
 
 
@@ -128,7 +215,7 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
     // Accept defaults to JSON
     String out = executeModelRequest("/cat/graph", codedRep(OWL_2, Turtle, TXT));
 
-    KnowledgeCarrier kc = JSonUtil.parseJson(out,KnowledgeCarrier.class)
+    KnowledgeCarrier kc = JSonUtil.parseJson(out, KnowledgeCarrier.class)
         .orElseGet(Assertions::fail);
 
     String ttlStr = kc.asString()
@@ -141,7 +228,8 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
         "TTL"
     );
     JenaUtil.asString(m);
-    List<Resource> assets = m.listResourcesWithProperty(RDF.type,ResourceFactory.createResource(SparqlIndex.ASSET_URI.toString()))
+    List<Resource> assets = m.listResourcesWithProperty(RDF.type,
+        ResourceFactory.createResource(SparqlIndex.ASSET_URI.toString()))
         .filterKeep(r -> r.getURI().contains(assetId.toString()))
         .toList();
     assertEquals(1, assets.size());
@@ -198,14 +286,24 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
   private void populateRepositoryWithRedirectables(UUID pockId) {
     Answer<Void> ans1 = rpo.setKnowledgeAssetVersion(
         pockId,
-        VERSION_LATEST,
-        pocSurrogate(pockId, VERSION_LATEST));
+        VERSION_ZERO,
+        pocSurrogate(pockId, VERSION_ZERO, true));
     assertTrue(ans1.isSuccess());
-
   }
 
-  private KnowledgeAsset pocSurrogate(UUID pockId, String version) {
-    return new KnowledgeAsset()
+  private void populateRepository(UUID pockId) {
+    Answer<Void> ans1 = rpo.setKnowledgeAssetVersion(
+        pockId,
+        VERSION_ZERO,
+        pocSurrogate(pockId, VERSION_ZERO, false));
+    assertTrue(ans1.isSuccess());
+  }
+
+  private KnowledgeAsset pocSurrogate(
+      UUID pockId,
+      String version,
+      boolean withHTMLSurrogateRedirect) {
+    KnowledgeAsset ka = new KnowledgeAsset()
         .withAssetId(SurrogateBuilder.assetId(pockId, version))
         .withFormalCategory(Terminology_Ontology_And_Assertional_KBs)
         .withFormalType(Factual_Knowledge)
@@ -213,8 +311,7 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
         .withSurrogate(
             new KnowledgeArtifact()
                 .withArtifactId(randomArtifactId())
-                .withLocator(URI.create("http://localhost:" + port + "/cat"))
-                .withRepresentation(rep(HTML, TXT))
+                .withRepresentation(rep(Knowledge_Asset_Surrogate_2_0, JSON))
         )
         .withCarriers(
             new KnowledgeArtifact()
@@ -222,6 +319,14 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
                 .withLocator(URI.create("http://www.myrepo/section0/carrier"))
                 .withRepresentation(rep(HTML, TXT))
         );
+    if (withHTMLSurrogateRedirect) {
+      ka.withSurrogate(
+          new KnowledgeArtifact()
+              .withArtifactId(randomArtifactId())
+              .withLocator(URI.create("http://localhost:" + port + "/cat"))
+              .withRepresentation(rep(HTML, TXT)));
+    }
+    return ka;
   }
 
 }

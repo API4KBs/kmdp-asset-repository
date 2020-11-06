@@ -5,6 +5,7 @@ import static java.util.Collections.singletonList;
 import static org.omg.spec.api4kp._20200801.contrastors.SyntacticRepresentationContrastor.theRepContrastor;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
 
+import edu.mayo.kmdp.repository.asset.HrefBuilder;
 import edu.mayo.kmdp.util.StreamUtil;
 import edu.mayo.kmdp.util.Util;
 import java.net.URI;
@@ -17,14 +18,17 @@ import org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder
 import org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.WeightedRepresentation;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
+import org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormat;
 
 public class ContentNegotiationHelper {
 
-  private ContentNegotiationHelper() {
-    // static functions only
+  HrefBuilder hrefBuilder;
+
+  public ContentNegotiationHelper(HrefBuilder builder) {
+    this.hrefBuilder = builder;
   }
 
-  public static Answer<KnowledgeAsset> negotiateCanonicalSurrogate(
+  public Answer<KnowledgeAsset> negotiateCanonicalSurrogate(
       KnowledgeAsset surrogate, String xAccept,
       SyntacticRepresentation defaultSurrogateRepresentation) {
     // only support HTML (by redirection), or the default surrogate
@@ -46,8 +50,8 @@ public class ContentNegotiationHelper {
 
     if (redirectUri.isPresent()) {
       return Answer.referTo(redirectUri.get(), false);
-    } if (HTML.sameAs(acceptable.get(0).getLanguage())) {
-      return Answer.of(NotAcceptable, null);
+    } else if (HTML.sameAs(acceptable.get(0).getLanguage())) {
+      return Answer.referTo(hrefBuilder.getRelativeURL("/surrogate"),false);
     } else {
       return Answer.of(surrogate);
     }
@@ -64,7 +68,7 @@ public class ContentNegotiationHelper {
    * @return The first artifact that matches a representation that is first in order of preference,
    * or an artifact chosen non-deterministically
    */
-  public static Answer<KnowledgeArtifact> negotiateOrDefault(
+  public Answer<KnowledgeArtifact> negotiateOrDefault(
       List<KnowledgeArtifact> artifacts,
       List<SyntacticRepresentation> reps) {
     Answer<KnowledgeArtifact> chosen = Answer.of(reps.stream()
@@ -81,7 +85,7 @@ public class ContentNegotiationHelper {
    * @param artifacts The list of candidates
    * @return One of the carriers
    */
-  public static Answer<KnowledgeArtifact> anyCarrier(List<KnowledgeArtifact> artifacts) {
+  public Answer<KnowledgeArtifact> anyCarrier(List<KnowledgeArtifact> artifacts) {
     return Answer.of(artifacts.stream()
         .flatMap(StreamUtil.filterAs(KnowledgeArtifact.class))
         .findFirst());
@@ -97,7 +101,7 @@ public class ContentNegotiationHelper {
    * @param reps The preferred representations, in order of preference
    * @return The first artifact that matches a representation that is first in order of preference
    */
-  public static Answer<KnowledgeArtifact> negotiate(
+  public Answer<KnowledgeArtifact> negotiate(
       List<KnowledgeArtifact> artifacts,
       List<SyntacticRepresentation> reps) {
     return Answer.of(reps.stream()
@@ -115,7 +119,7 @@ public class ContentNegotiationHelper {
    * @param rep The preferred representation
    * @return The first artifact that matches the given representation
    */
-  public static Optional<KnowledgeArtifact> getBestCandidateForRepresentation(
+  public Optional<KnowledgeArtifact> getBestCandidateForRepresentation(
       List<KnowledgeArtifact> artifacts,
       SyntacticRepresentation rep) {
     return artifacts.stream()
@@ -171,12 +175,24 @@ public class ContentNegotiationHelper {
    * @return true if the Artifact's representation is narrower or equal than
    * at least one of the preferences
    */
-  public static boolean isAcceptable(KnowledgeArtifact descriptor, String xAccept) {
+  public boolean isAcceptable(KnowledgeArtifact descriptor, String xAccept) {
     if (! Util.isEmpty(xAccept)) {
       Answer<KnowledgeArtifact> negotiatedCarrier =
           negotiate(singletonList(descriptor),decodePreferences(xAccept));
       return negotiatedCarrier.isSuccess();
     }
     return true;
+  }
+
+  /**
+   * Given a set of ranked, sorted preferences, returns the first format
+   * i.e. the format of the first preference that specifies a format
+   * @param preferences
+   * @return
+   */
+  public Optional<SerializationFormat> getPreferredFormat(List<SyntacticRepresentation> preferences) {
+    return preferences.stream()
+        .map(SyntacticRepresentation::getFormat)
+        .findFirst();
   }
 }
