@@ -34,6 +34,7 @@ import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.timedSemverCom
 import static org.omg.spec.api4kp._20200801.id.VersionIdentifier.toSemVer;
 import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.decode;
 import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.encode;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.assetId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomArtifactId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getComputableSurrogateMetadata;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getSurrogateId;
@@ -941,6 +942,56 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         });
   }
 
+
+  /**
+   * Returns Pointers to the versions of a given surrogate of a given (version of a) KnowledgeAsset
+   */
+  @Override
+  public Answer<List<Pointer>> listKnowledgeAssetSurrogateVersions(UUID assetId, String versionTag,
+      UUID surrogateId, Integer offset, Integer limit, String beforeTag, String afterTag,
+      String sort) {
+    ResourceIdentifier axId = assetId(assetId,versionTag);
+    if (index.getSurrogatesForAsset(axId).stream()
+        .noneMatch(cId -> cId.getUuid().equals(surrogateId))) {
+      return Answer.notFound();
+    }
+    return Answer.of(
+        paginate(
+            index.getSurrogateVersions(surrogateId).stream()
+                .map(SemanticIdentifier::toPointer)
+                .map(ptr -> ptr.withHref(
+                    hrefBuilder.getHref(
+                        axId,
+                        ptr,
+                        HrefType.ASSET_SURROGATE_VERSION)
+                )).collect(toList()),
+            offset, limit, SemanticIdentifier.timedSemverComparator()));
+  }
+
+  /**
+   * Returns Pointers to the versions of a given carrier of a given (version of a) KnowledgeAsset
+   */
+  @Override
+  public Answer<List<Pointer>> listKnowledgeAssetCarrierVersions(UUID assetId, String versionTag,
+      UUID artifactId) {
+    ResourceIdentifier axId = assetId(assetId,versionTag);
+    if (index.getArtifactsForAsset(axId).stream()
+        .noneMatch(cId -> cId.getUuid().equals(artifactId))) {
+      return Answer.notFound();
+    }
+    return Answer.of(
+        paginate(
+            index.getCarrierVersions(artifactId).stream()
+                .map(SemanticIdentifier::toPointer)
+                .map(ptr -> ptr.withHref(
+                    hrefBuilder.getHref(
+                        axId,
+                        ptr,
+                        HrefType.ASSET_CARRIER_VERSION)
+                )).collect(toList()),
+            0, -1, SemanticIdentifier.timedSemverComparator()));
+  }
+
   //*****************************************************************************************/
   //* Not yet implemented
   //*****************************************************************************************/
@@ -992,19 +1043,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
 
-  @Override
-  public Answer<List<Pointer>> listKnowledgeAssetSurrogateVersions(UUID assetId, String versionTag,
-      UUID surrogateId, Integer offset, Integer limit, String beforeTag, String afterTag,
-      String sort) {
-    return Answer.unsupported();
-  }
-
-
-  @Override
-  public Answer<List<Pointer>> listKnowledgeAssetCarrierVersions(UUID assetId, String versionTag,
-      UUID artifactId) {
-    return Answer.unsupported();
-  }
 
 // ****************************************************************************************************/
 // Internal functions and helpers

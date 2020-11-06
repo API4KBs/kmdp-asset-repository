@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
+import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.artifactId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.assetId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomArtifactId;
@@ -532,7 +533,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
   void testMissingVersionOnly_getsSet() {
     KnowledgeAsset asset = new KnowledgeAsset()
         .withFormalType(Predictive_Model)
-        .withAssetId(SemanticIdentifier.newId(URI.create(BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52")));
+        .withAssetId(newId(URI.create(BASE_URI + "12a81582-1b1d-3439-9400-6e2fee0c3f52")));
 
     Answer<Void> response = semanticRepository
         .setKnowledgeAssetVersion(UUID.fromString("12a81582-1b1d-3439-9400-6e2fee0c3f52"), "1.0.0",
@@ -1059,6 +1060,103 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         "application/xml");
 
     assertTrue(ans.isSuccess());
+  }
+
+  @Test
+  void testGetSurrogateVersions() {
+    ResourceIdentifier assetId = assetId(uuid("1"),"1.0.0");
+    ResourceIdentifier extraSurrogateIdV1 = SurrogateBuilder.randomArtifactId();
+    ResourceIdentifier extraSurrogateIdV2 = newId(extraSurrogateIdV1.getNamespaceUri(),extraSurrogateIdV1.getUuid(),"1.0.0");
+    ResourceIdentifier extraSurrogateId2 = SurrogateBuilder.randomArtifactId();
+
+    KnowledgeAsset surrogate = new KnowledgeAsset()
+        .withCarriers(new KnowledgeArtifact()
+            .withArtifactId(randomArtifactId())
+            .withRepresentation(rep(HL7_ELM)))
+        .withSurrogate(
+            new KnowledgeArtifact()
+                .withArtifactId(extraSurrogateIdV1)
+                .withRepresentation(rep(HTML,TXT))
+                .withInlinedExpression("<p>Metadata</p>"))
+        .withSurrogate(
+            new KnowledgeArtifact()
+                .withArtifactId(extraSurrogateIdV2)
+                .withRepresentation(rep(HTML,TXT))
+                .withInlinedExpression("<p>Metadata 2</p>"))
+        .withSurrogate(
+            new KnowledgeArtifact()
+                .withArtifactId(extraSurrogateId2)
+                .withRepresentation(rep(HTML,TXT))
+                .withInlinedExpression("<p>Another Metadata</p>"))
+        ;
+
+    semanticRepository.setKnowledgeAssetVersion(
+        assetId.getUuid(),assetId.getVersionTag(), surrogate);
+
+    List<Pointer> surrPointers =
+        semanticRepository.listKnowledgeAssetSurrogateVersions(
+            assetId.getUuid(),assetId.getVersionTag(),extraSurrogateIdV1.getUuid())
+            .orElse(Collections.emptyList());
+    assertEquals(2,surrPointers.size());
+
+    List<Pointer> surrPointers2 =
+        semanticRepository.listKnowledgeAssetSurrogateVersions(
+            assetId.getUuid(),assetId.getVersionTag(),extraSurrogateId2.getUuid())
+            .orElse(Collections.emptyList());
+    assertEquals(1,surrPointers2.size());
+
+    Answer<List<Pointer>> ans = semanticRepository.listKnowledgeAssetSurrogateVersions(
+            assetId.getUuid(),assetId.getVersionTag(),randomArtifactId().getUuid());
+    assertTrue(ans.isFailure());
+    assertTrue(NotFound.sameAs(ans.getOutcomeType()));
+
+  }
+
+
+  @Test
+  void testGetCarrierVersions() {
+    ResourceIdentifier assetId = assetId(uuid("1"),"1.0.0");
+    ResourceIdentifier extraCarrierIdV1 = randomArtifactId();
+    ResourceIdentifier extraCarrierIdV2 =
+        newId(extraCarrierIdV1.getNamespaceUri(),extraCarrierIdV1.getUuid(),"1.0.0");
+    ResourceIdentifier extraCarrierId2 = randomArtifactId();
+
+    KnowledgeAsset surrogate = new KnowledgeAsset()
+        .withCarriers(new KnowledgeArtifact()
+            .withArtifactId(randomArtifactId())
+            .withRepresentation(rep(HL7_ELM)))
+        .withSurrogate(
+            new KnowledgeArtifact()
+                .withArtifactId(extraCarrierIdV1)
+                .withRepresentation(rep(HTML,TXT))
+                .withInlinedExpression("<p>How to</p>"))
+        .withSurrogate(
+            new KnowledgeArtifact()
+                .withArtifactId(extraCarrierIdV2)
+                .withRepresentation(rep(HTML,TXT))
+                .withInlinedExpression("<p>How to 2</p>"))
+        .withSurrogate(
+            new KnowledgeArtifact()
+                .withArtifactId(extraCarrierId2)
+                .withRepresentation(rep(HTML,TXT))
+                .withInlinedExpression("<p>This or that</p>"))
+        ;
+
+    semanticRepository.setKnowledgeAssetVersion(
+        assetId.getUuid(),assetId.getVersionTag(), surrogate);
+
+    List<Pointer> carrPointers =
+        semanticRepository.listKnowledgeAssetSurrogateVersions(
+            assetId.getUuid(),assetId.getVersionTag(),extraCarrierIdV1.getUuid())
+            .orElse(Collections.emptyList());
+    assertEquals(2,carrPointers.size());
+
+    List<Pointer> carrPointers2 =
+        semanticRepository.listKnowledgeAssetSurrogateVersions(
+            assetId.getUuid(),assetId.getVersionTag(),extraCarrierId2.getUuid())
+            .orElse(Collections.emptyList());
+    assertEquals(1,carrPointers2.size());
+
   }
 
 }
