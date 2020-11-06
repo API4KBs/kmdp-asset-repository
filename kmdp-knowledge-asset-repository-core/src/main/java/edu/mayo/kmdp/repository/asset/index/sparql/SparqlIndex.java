@@ -382,7 +382,7 @@ public class SparqlIndex implements Index {
     return this.jenaSparqlDao
         .readObjectBySubjectAndPredicate(assetPointer.getVersionId(), HAS_CANONICAL_SURROGATE_URI)
         .stream()
-        .map(this::resourceToResourceIdentifier)
+        .map(this::resourceSeriesToResourceIdentifier)
         .findFirst();
   }
 
@@ -457,7 +457,7 @@ public class SparqlIndex implements Index {
             .readObjectBySubjectAndPredicate(assetId.getVersionId(), HAS_CARRIER_URI);
 
     return resources.stream()
-        .map(this::resourceToResourceIdentifier)
+        .map(this::resourceSeriesToResourceIdentifier)
         .collect(Collectors.toSet());
   }
 
@@ -676,6 +676,11 @@ public class SparqlIndex implements Index {
   protected ResourceIdentifier resourceToResourceIdentifier(Resource resource) {
     return SemanticIdentifier
         .newVersionId(URI.create(resource.getURI()));
+  }
+
+  protected ResourceIdentifier resourceSeriesToResourceIdentifier(Resource resource) {
+    return SemanticIdentifier
+        .newId(URI.create(resource.getURI()));
   }
 
   protected ResourceIdentifier versionInfoToIdentifier(

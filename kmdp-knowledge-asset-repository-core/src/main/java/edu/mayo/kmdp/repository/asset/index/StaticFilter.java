@@ -2,6 +2,7 @@ package edu.mayo.kmdp.repository.asset.index;
 
 import com.google.common.collect.Sets;
 import edu.mayo.kmdp.util.URIUtil;
+import edu.mayo.kmdp.util.Util;
 import edu.mayo.ontology.taxonomies.kmdo.semanticannotationreltype.SemanticAnnotationRelTypeSeries;
 import java.net.URI;
 import java.util.Optional;
@@ -100,6 +101,9 @@ public class StaticFilter {
   }
 
   private static Optional<URI> resolveTypeTag(String assetTypeTag) {
+    if (Util.isEmpty(assetTypeTag)) {
+      return Optional.empty();
+    }
     Optional<KnowledgeAssetType> type = KnowledgeAssetTypeSeries.resolve(assetTypeTag);
     if (type.isPresent()) {
       return type.map(ConceptTerm::getReferentId);
