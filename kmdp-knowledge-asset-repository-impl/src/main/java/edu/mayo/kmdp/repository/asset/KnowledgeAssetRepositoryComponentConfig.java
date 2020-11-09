@@ -127,7 +127,7 @@ public class KnowledgeAssetRepositoryComponentConfig {
   }
 
   @Bean
-  HttpMessageConverter<?> knowledgeCarrierToHTMLAdapter() {
-    return new HTMLAdapter<>();
+  HttpMessageConverter<KnowledgeCarrier> knowledgeCarrierToHTMLAdapter() {
+    return new HTMLAdapter();
   }
 }

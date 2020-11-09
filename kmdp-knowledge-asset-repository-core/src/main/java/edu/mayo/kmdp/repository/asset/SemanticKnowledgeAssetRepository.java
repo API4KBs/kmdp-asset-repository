@@ -636,7 +636,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
                 assetId,
                 versionTag,
                 artifactVersionId.getUuid(),
-                artifactVersionId.getTag(),
+                artifactVersionId.getVersionTag(),
                 xAccept));
   }
 
@@ -687,7 +687,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
                     coalesce(meta.getName(), assetMetadata.get().getName()),
                     bytes))
         );
-
   }
 
 

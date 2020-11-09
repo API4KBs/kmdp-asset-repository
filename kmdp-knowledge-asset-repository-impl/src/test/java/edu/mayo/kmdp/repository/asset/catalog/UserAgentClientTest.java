@@ -33,6 +33,7 @@ import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -53,6 +54,7 @@ import org.omg.spec.api4kp._20200801.AbstractCarrier;
 import org.omg.spec.api4kp._20200801.Answer;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetCatalogApi;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.client.ApiClientFactory;
+import org.omg.spec.api4kp._20200801.id.Pointer;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
@@ -256,6 +258,36 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
   }
 
 
+  @Test
+  void testSurrogateWithCarrierLatestVersion() {
+    UUID assetId = UUID.randomUUID();
+    populateRepositoryWithRedirectables(assetId);
+
+    String ptrStr = executeRequest(
+        "/cat/assets/" + assetId + "/versions/" + VERSION_ZERO + "/carriers",
+        "application/json");
+    List<Pointer> ptrs = JSonUtil.parseJsonList(
+        new ByteArrayInputStream(ptrStr.getBytes()),
+        Pointer.class)
+        .orElse(Collections.emptyList());
+    assertFalse(ptrs.isEmpty());
+    Pointer ptr = ptrs.get(0);
+
+    String carrierId = ptr.getUuid().toString();
+
+    String out = executeModelRequest(
+        "/cat/assets/" + assetId + "/versions/" + VERSION_ZERO + "/carriers/" + carrierId,
+        "text/html", "text/html");
+    assertTrue(out.trim().startsWith("<html>"));
+
+    String outJ = executeModelRequest(
+        "/cat/assets/" + assetId + "/versions/" + VERSION_ZERO + "/carriers/" + carrierId,
+        "application/json", "text/html");
+    JSonUtil.parseJson(outJ,KnowledgeCarrier.class)
+        .orElseGet(Assertions::fail);
+  }
+
+
   private String executeRequest(String url, String accept) {
     HttpGet request =
         new HttpGet("http://localhost:" + port + url);
@@ -270,10 +302,19 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
     return executeModelRequest(request);
   }
 
+  private String executeModelRequest(String url, String accept, String xAccept) {
+    HttpGet request =
+        new HttpGet("http://localhost:" + port + url);
+    request.addHeader(HttpHeaders.ACCEPT, accept);
+    request.addHeader("X-Accept", xAccept);
+    return executeModelRequest(request);
+  }
+
   private String executeModelRequest(HttpGet request) {
     try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
       String out;
       try (CloseableHttpResponse resp = httpClient.execute(request)) {
+        System.out.println("RESPONSE " + resp.getStatusLine());
         out = EntityUtils.toString(resp.getEntity());
       }
       return out;
@@ -316,7 +357,8 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
         .withCarriers(
             new KnowledgeArtifact()
                 .withArtifactId(randomArtifactId())
-                .withLocator(URI.create("http://www.myrepo/section0/carrier"))
+                .withLocator(URI.create("http://localhost:" + port + "/cat/assets/"
+                    + pockId + "/versions/" + version + "/surrogate"))
                 .withRepresentation(rep(HTML, TXT))
         );
     if (withHTMLSurrogateRedirect) {
