@@ -1128,8 +1128,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     if (translator == null) {
       return Answer.unacceptable();
     }
-    return Answer.firstDo(preferences,
-        preferred -> attemptTranslation(asset, preferred));
+    return Answer.firstDo(
+        preferences,
+        preferred -> attemptTranslation(asset, preferred),
+        Answer::unacceptable);
   }
 
   /**

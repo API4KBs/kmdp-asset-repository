@@ -3,6 +3,7 @@ package edu.mayo.kmdp.repository.asset.catalog;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
@@ -36,6 +37,8 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpResponseException;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -288,18 +291,51 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
   }
 
 
+  @Test
+  void testSurrogateWithDefaultCarrier() {
+    UUID assetId = UUID.randomUUID();
+    populateRepositoryWithRedirectables(assetId);
+
+    String str = executeRequest(
+        "/cat/assets/" + assetId + "/versions/" + VERSION_ZERO + "/carrier",
+        "text/html");
+    assertTrue(str.startsWith("<html>"));
+
+    assertThrows(StatusCodeException.class, () -> {
+      tryExecuteRequest(
+          "/cat/assets/" + assetId + "/versions/" + VERSION_ZERO + "/carrier",
+          "application/json");
+    });
+  }
+
+
   private String executeRequest(String url, String accept) {
+    try {
+      return tryExecuteRequest(url, accept);
+    } catch (StatusCodeException e) {
+      fail(e);
+    }
+    return "";
+  }
+
+  private String tryExecuteRequest(String url, String accept)
+      throws StatusCodeException {
     HttpGet request =
         new HttpGet("http://localhost:" + port + url);
     request.addHeader(HttpHeaders.ACCEPT, accept);
-    return executeModelRequest(request);
+      return executeModelRequest(request);
   }
 
   private String executeModelRequest(String url, String xAccept) {
     HttpGet request =
         new HttpGet("http://localhost:" + port + url);
     request.addHeader("X-Accept", xAccept);
-    return executeModelRequest(request);
+    try {
+      return executeModelRequest(request);
+    } catch (StatusCodeException e) {
+      fail(e);
+    }
+    return "";
   }
 
   private String executeModelRequest(String url, String accept, String xAccept) {
@@ -307,21 +343,28 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
         new HttpGet("http://localhost:" + port + url);
     request.addHeader(HttpHeaders.ACCEPT, accept);
     request.addHeader("X-Accept", xAccept);
-    return executeModelRequest(request);
+    try {
+      return executeModelRequest(request);
+    } catch (StatusCodeException e) {
+      fail(e);
+    }
+    return "";
   }
 
-  private String executeModelRequest(HttpGet request) {
+  private String executeModelRequest(HttpGet request) throws StatusCodeException {
     try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
-      String out;
       try (CloseableHttpResponse resp = httpClient.execute(request)) {
-        System.out.println("RESPONSE " + resp.getStatusLine());
-        out = EntityUtils.toString(resp.getEntity());
+        if (resp.getStatusLine().getStatusCode() / 100 != 2) {
+          throw new StatusCodeException(
+              resp.getStatusLine().getStatusCode(),
+              resp.getStatusLine().getReasonPhrase());
+        }
+        return EntityUtils.toString(resp.getEntity());
       }
-      return out;
     } catch (IOException e) {
-      fail(e.getMessage());
-      return "";
+      e.printStackTrace();
     }
+    return "";
   }
 
   private void populateRepositoryWithRedirectables(UUID pockId) {
@@ -371,4 +414,30 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
     return ka;
   }
 
+  private static class StatusCodeException extends Exception {
+
+    private int code;
+    private String msg;
+
+    public StatusCodeException(int statusCode, String reasonPhrase) {
+      this.code = statusCode;
+      this.msg = reasonPhrase;
+    }
+
+    public int getCode() {
+      return code;
+    }
+
+    public String getMsg() {
+      return msg;
+    }
+
+    @Override
+    public String toString() {
+      return "StatusCodeException{" +
+          "code=" + code +
+          ", msg='" + msg + '\'' +
+          '}';
+    }
+  }
 }
