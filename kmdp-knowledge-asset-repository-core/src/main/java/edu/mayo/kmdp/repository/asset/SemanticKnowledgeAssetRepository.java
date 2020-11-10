@@ -1131,7 +1131,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     return Answer.firstDo(
         preferences,
         preferred -> attemptTranslation(asset, preferred),
-        Answer::unacceptable);
+        () -> Answer.unacceptable());
   }
 
   /**
@@ -1432,7 +1432,13 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
       logger.debug("REGISTERING ASSET {} : {}", assetId.getUuid(), assetId.getVersionTag());
 
-      Index.registerAssetByCanonicalSurrogate(assetSurrogate, surrogateId, index);
+      Index.registerAssetByCanonicalSurrogate(
+          assetSurrogate,
+          surrogateId,
+          surrogateBinary.map(KnowledgeCarrier::getRepresentation)
+              .map(ModelMIMECoder::encode)
+              .orElseThrow(IllegalStateException::new),
+          index);
     }
   }
 
@@ -1451,7 +1457,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         artifactId.getUuid(), artifactId.getVersionTag(),
         exemplar);
 
-    this.index.registerArtifactToAsset(assetId, artifactId);
+    this.index.registerArtifactToAsset(assetId, artifactId, null);
   }
 
   /**
@@ -1692,7 +1698,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @return the ResourceIdentifier of the latest version of that surrogate (series)
    */
   protected Optional<ResourceIdentifier> getLatestSurrogateVersion(UUID surrogateId) {
-    List<ResourceIdentifier> versions = index.getSurrogateVersions(surrogateId);
+    List<Pointer> versions = index.getSurrogateVersions(surrogateId);
     versions.sort(timedSemverComparator());
     return versions.isEmpty() ? Optional.empty() : Optional.of(versions.get(0));
   }
@@ -1704,7 +1710,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @return the ResourceIdentifier of the latest version of that artifact (series)
    */
   protected Optional<ResourceIdentifier> getLatestCarrierVersion(UUID carrierId) {
-    List<ResourceIdentifier> versions = index.getCarrierVersions(carrierId);
+    List<Pointer> versions = index.getCarrierVersions(carrierId);
     versions.sort(timedSemverComparator());
     return versions.isEmpty() ? Optional.empty() : Optional.of(versions.get(0));
   }

@@ -37,8 +37,6 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpResponseException;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -59,6 +57,8 @@ import org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetCatal
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.client.ApiClientFactory;
 import org.omg.spec.api4kp._20200801.id.Pointer;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
+import org.omg.spec.api4kp._20200801.services.repository.KnowledgeAssetCatalog;
+import org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
@@ -176,7 +176,6 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
     populateRepositoryWithRedirectables(UUID.randomUUID());
 
     String out = executeRequest("/cat/assets", "application/xhtml+xml, application/xml;q=0.9");
-    System.out.println(out);
     Document dox = XMLUtil.loadXMLDocument(out)
         .orElseGet(Assertions::fail);
 
@@ -185,7 +184,6 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
     assertFalse(Util.isEmpty(n.getTextContent()));
     assertTrue(n.getTextContent().contains("http://localhost:" + port));
 
-    System.out.println(n);
   }
 
   @Test
@@ -194,7 +192,6 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
     populateRepositoryWithRedirectables(assetId);
 
     String out = executeRequest("/cat/graph", "application/xml");
-    System.out.println(out);
     XMLUtil.loadXMLDocument(out)
         .orElseGet(Assertions::fail);
   }
@@ -206,7 +203,6 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
     populateRepositoryWithRedirectables(assetId);
 
     String out = executeRequest("/cat/graph", "application/json");
-    System.out.println(out);
     JSonUtil.readJson(out, KnowledgeCarrier.class)
         .orElseGet(Assertions::fail);
   }
@@ -306,6 +302,61 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
           "/cat/assets/" + assetId + "/versions/" + VERSION_ZERO + "/carrier",
           "application/json");
     });
+  }
+
+
+  @Test
+  void testSpecificCarrierVersion() {
+    UUID assetId = UUID.randomUUID();
+    populateRepositoryWithRedirectables(assetId);
+
+    String ptrStr = executeRequest(
+        "/cat/assets/" + assetId + "/versions/" + VERSION_ZERO + "/carriers",
+        "application/json");
+    List<Pointer> ptrs = JSonUtil.parseJsonList(
+        new ByteArrayInputStream(ptrStr.getBytes()),
+        Pointer.class)
+        .orElse(Collections.emptyList());
+    assertFalse(ptrs.isEmpty());
+    Pointer ptr = ptrs.get(0);
+
+    String str = executeRequest(
+        "/cat/assets/" + assetId + "/versions/" + VERSION_ZERO
+            + "/carriers/" + ptr.getUuid() + "/versions/" + ptr.getVersionTag(),
+        "text/html");
+    assertTrue(str.startsWith("<html>"));
+  }
+
+  @Test
+  void testSpecificSurrogateVersion() {
+    UUID assetId = UUID.randomUUID();
+    populateRepositoryWithRedirectables(assetId);
+
+    String ptrStr = executeRequest(
+        "/cat/assets/" + assetId + "/versions/" + VERSION_ZERO + "/surrogates",
+        "application/json");
+    List<Pointer> ptrs = JSonUtil.parseJsonList(
+        new ByteArrayInputStream(ptrStr.getBytes()),
+        Pointer.class)
+        .orElse(Collections.emptyList());
+    assertFalse(ptrs.isEmpty());
+
+    Pointer ptr = ptrs.stream()
+        .filter(p -> ModelMIMECoder.decode(p.getMimeType())
+            .map(rep -> rep.getLanguage().sameAs(HTML)).orElse(false))
+        .findFirst()
+        .orElseGet(Assertions::fail);
+
+    String str = executeModelRequest(
+        "/cat/assets/" + assetId + "/versions/" + VERSION_ZERO
+            + "/surrogates/" + ptr.getUuid() + "/versions/" + ptr.getVersionTag(),
+        "text/html", ptr.getMimeType());
+
+    // Despite claiming HTML form, the surrogate metadata actually redirects to /cat
+    // which returns a JSON payload. This inconsistency is only due to the test configuration
+    // and the need to redirect to a predictable URL distinct from the one used for the carriers...
+    JSonUtil.parseJson(str, KnowledgeAssetCatalog.class)
+        .orElseGet(Assertions::fail);
   }
 
 

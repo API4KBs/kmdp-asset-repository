@@ -45,6 +45,7 @@ import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetT
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries;
 import org.omg.spec.api4kp._20200801.terms.ConceptTerm;
 import org.omg.spec.api4kp._20200801.terms.model.ConceptDescriptor;
+import org.semanticweb.owlapi.vocab.DublinCoreVocabulary;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -73,6 +74,7 @@ public class SparqlIndex implements Index {
   public static final String API4KP = "https://www.omg.org/spec/API4KP/api4kp/";
   public static final String API4KP_SERIES = "https://www.omg.org/spec/API4KP/api4kp-series/";
   public static final String KMD = "http://ontology.mayo.edu/ontologies/kmdp/";
+  public static final String DC = DublinCoreVocabulary.NAME_SPACE;
 
 
   public static final String ASSET = "KnowledgeAsset";
@@ -102,6 +104,9 @@ public class SparqlIndex implements Index {
   public static final String HAS_CANONICAL_SURROGATE = "hasCanonicalSurrogate";
   public static final URI HAS_CANONICAL_SURROGATE_URI = URI.create(KMD + HAS_CANONICAL_SURROGATE);
 
+  public static final String FORMAT = DublinCoreVocabulary.FORMAT.getShortForm();
+  public static final URI FORMAT_URI = URI.create(DC + FORMAT);
+
   @Autowired
   protected JenaSparqlDao jenaSparqlDao;
 
@@ -121,7 +126,7 @@ public class SparqlIndex implements Index {
    * @return
    */
   public List<Statement> toRdf(ResourceIdentifier asset, String assetName,
-      ResourceIdentifier surrogate,
+      ResourceIdentifier surrogate, String surrogateMimeType,
       List<KnowledgeAssetType> types, List<KnowledgeAssetRole> roles, List<Annotation> annotations,
       List<Link> related) {
     List<Statement> statements = Lists.newArrayList();
@@ -191,6 +196,10 @@ public class SparqlIndex implements Index {
         assetVersionId,
         HAS_SURROGATE_URI,
         surrogateId));
+    statements.add(this.toStringValueStatement(
+        surrogateId,
+        FORMAT_URI,
+        surrogateMimeType));
     statements.add(this.toStatement(
         surrogateId,
         HAS_VERSION_URI,
@@ -341,21 +350,23 @@ public class SparqlIndex implements Index {
 
   @Override
   public void registerAsset(ResourceIdentifier asset, String assetName,
-      ResourceIdentifier surrogate,
+      ResourceIdentifier surrogate, String surrogateMimeType,
       List<KnowledgeAssetType> types, List<KnowledgeAssetRole> roles, List<Annotation> annotations,
       List<Link> related) {
     this.jenaSparqlDao
-        .store(this.toRdf(asset, assetName, surrogate, types, roles, annotations, related));
+        .store(this.toRdf(asset, assetName, surrogate, surrogateMimeType, types, roles, annotations, related));
   }
 
   @Override
   public void registerArtifactToAsset(ResourceIdentifier assetPointer,
-      ResourceIdentifier artifact) {
+      ResourceIdentifier artifact, String mimeType) {
     List<Statement> statements = Arrays.asList(
         toStatement(assetPointer.getVersionId(), HAS_CARRIER_URI, artifact.getResourceId()),
         toStatement(artifact.getResourceId(), HAS_VERSION_URI, artifact.getVersionId()),
         toStringValueStatement(artifact.getResourceId(), TAG_ID_URI, artifact.getUuid().toString()),
         toStringValueStatement(artifact.getVersionId(), HAS_VERSION_TAG_URI, artifact.getVersionTag()),
+        toStringValueStatement(artifact.getResourceId(), FORMAT_URI,
+            Util.isNotEmpty(mimeType) ? mimeType : "/"),
         toLongValueStatement(artifact.getVersionId(),
             ESTABLISHED_URI, artifact.getEstablishedOn().toInstant().toEpochMilli())
         );
@@ -364,11 +375,13 @@ public class SparqlIndex implements Index {
 
   @Override
   public void registerSurrogateToAsset(ResourceIdentifier assetPointer,
-      ResourceIdentifier surrogate) {
+      ResourceIdentifier surrogate, String mimeType) {
     List<Statement> statements = Arrays.asList(
         toStatement(assetPointer.getVersionId(), HAS_SURROGATE_URI, surrogate.getResourceId()),
         toStatement(surrogate.getResourceId(), HAS_VERSION_URI, surrogate.getVersionId()),
         toStringValueStatement(surrogate.getResourceId(), TAG_ID_URI, surrogate.getUuid().toString()),
+        toStringValueStatement(surrogate.getResourceId(), FORMAT_URI,
+            Util.isNotEmpty(mimeType) ? mimeType : null),
         toStringValueStatement(surrogate.getVersionId(), HAS_VERSION_TAG_URI, surrogate.getVersionTag()),
         toLongValueStatement(surrogate.getVersionId(),
             ESTABLISHED_URI, surrogate.getEstablishedOn().toInstant().toEpochMilli())
@@ -468,7 +481,7 @@ public class SparqlIndex implements Index {
             .readObjectBySubjectAndPredicate(assetId.getVersionId(), HAS_SURROGATE_URI);
 
     return resources.stream()
-        .map(this::resourceToResourceIdentifier)
+        .map(this::resourceSeriesToResourceIdentifier)
         .collect(Collectors.toSet());
   }
 
@@ -552,11 +565,12 @@ public class SparqlIndex implements Index {
         Collections.emptyMap(),
         literalParams, (
             querySolution -> versions.add(
-                this.versionInfoToIdentifier(
+                this.versionInfoToPointer(
                     querySolution.getResource("?asset"),
                     querySolution.getResource("?version"),
                     querySolution.getLiteral("?vTag"),
-                    querySolution.getLiteral("?vTimestamp")))));
+                    querySolution.getLiteral("?vTimestamp"),
+                    null))));
     return versions;
   }
 
@@ -567,26 +581,28 @@ public class SparqlIndex implements Index {
    * @param surrogateSeriesId the identifier of a Surrogate series
    */
   @Override
-  public List<ResourceIdentifier> getSurrogateVersions(UUID surrogateSeriesId) {
+  public List<Pointer> getSurrogateVersions(UUID surrogateSeriesId) {
     String sparql = ""
         + " PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n"
         + " PREFIX lcc: <https://www.omg.org/spec/LCC/Languages/LanguageRepresentation/> \n"
         + " PREFIX api4kp: <https://www.omg.org/spec/API4KP/api4kp/> \n"
+        + " PREFIX dc: <" + DublinCoreVocabulary.NAME_SPACE + "> \n"
         + " PREFIX api4kp-series: <https://www.omg.org/spec/API4KP/api4kp-series/> \n"
         + " PREFIX kmd: <http://ontology.mayo.edu/ontologies/kmdp/> \n"
 
-        + "SELECT ?surrogate ?version ?vTag ?vTimestamp \n"
+        + "SELECT ?surrogate ?version ?vTag ?vTimestamp ?format \n"
         + "WHERE { \n"
         + "  ?asset api4kp:" + HAS_SURROGATE + " ?surrogate . \n"
         + "  ?surrogate kmd:" + TAG_ID + " ?tag ; \n"
         + "     api4kp-series:" + HAS_VERSION + " ?version . \n"
+        + "     OPTIONAL { ?surrogate dc:" + FORMAT + " ?format } \n"
         + "  ?version  \n"
         + "     kmd:" + HAS_VERSION_TAG + " ?vTag ; \n"
         + "     api4kp-series:" + ESTABLISHED + " ?vTimestamp . \n"
         + "} \n"
         + "ORDER BY DESC(?vTimestamp)";
 
-    List<ResourceIdentifier> versions = new ArrayList<>();
+    List<Pointer> versions = new ArrayList<>();
     Map<String, Literal> literalParams = new HashMap<>();
     literalParams.put("?tag",
         ResourceFactory.createPlainLiteral(surrogateSeriesId.toString()));
@@ -595,11 +611,13 @@ public class SparqlIndex implements Index {
         Collections.emptyMap(),
         literalParams, (
             querySolution -> versions.add(
-                this.versionInfoToIdentifier(
+                this.versionInfoToPointer(
                     querySolution.getResource("?surrogate"),
                     querySolution.getResource("?version"),
                     querySolution.getLiteral("?vTag"),
-                    querySolution.getLiteral("?vTimestamp")))));
+                    querySolution.getLiteral("?vTimestamp"),
+                    querySolution.getLiteral("?format")
+                    ))));
     return versions;
   }
 
@@ -611,26 +629,28 @@ public class SparqlIndex implements Index {
    * @param carrierSeriesId the identifier of a Surrogate series
    */
   @Override
-  public List<ResourceIdentifier> getCarrierVersions(UUID carrierSeriesId) {
+  public List<Pointer> getCarrierVersions(UUID carrierSeriesId) {
     String sparql = ""
         + " PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n"
         + " PREFIX lcc: <https://www.omg.org/spec/LCC/Languages/LanguageRepresentation/> \n"
         + " PREFIX api4kp: <https://www.omg.org/spec/API4KP/api4kp/> \n"
+        + " PREFIX dc: <" + DublinCoreVocabulary.NAME_SPACE + "> \n"
         + " PREFIX api4kp-series: <https://www.omg.org/spec/API4KP/api4kp-series/> \n"
         + " PREFIX kmd: <http://ontology.mayo.edu/ontologies/kmdp/> \n"
 
-        + "SELECT ?carrier ?version ?vTag ?vTimestamp \n"
+        + "SELECT ?carrier ?version ?vTag ?vTimestamp ?format \n"
         + "WHERE { \n"
         + "  ?asset api4kp:" + HAS_CARRIER + " ?carrier . \n"
         + "  ?carrier kmd:" + TAG_ID + " ?tag ; \n"
         + "     api4kp-series:" + HAS_VERSION + " ?version . \n"
+        + "     OPTIONAL { ?carrier dc:" + FORMAT + " ?format } \n"
         + "  ?version  \n"
         + "     kmd:" + HAS_VERSION_TAG + " ?vTag ; \n"
         + "     api4kp-series:" + ESTABLISHED + " ?vTimestamp . \n"
         + "} \n"
         + "ORDER BY DESC(?vTimestamp)";
 
-    List<ResourceIdentifier> versions = new ArrayList<>();
+    List<Pointer> versions = new ArrayList<>();
     Map<String, Literal> literalParams = new HashMap<>();
     literalParams.put("?tag",
         ResourceFactory.createPlainLiteral(carrierSeriesId.toString()));
@@ -639,11 +659,13 @@ public class SparqlIndex implements Index {
         Collections.emptyMap(),
         literalParams, (
             querySolution -> versions.add(
-                this.versionInfoToIdentifier(
+                this.versionInfoToPointer(
                     querySolution.getResource("?carrier"),
                     querySolution.getResource("?version"),
                     querySolution.getLiteral("?vTag"),
-                    querySolution.getLiteral("?vTimestamp")))));
+                    querySolution.getLiteral("?vTimestamp"),
+                    querySolution.getLiteral("?format")
+                    ))));
     return versions;
   }
 
@@ -683,11 +705,11 @@ public class SparqlIndex implements Index {
         .newId(URI.create(resource.getURI()));
   }
 
-  protected ResourceIdentifier versionInfoToIdentifier(
+  protected Pointer versionInfoToPointer(
       Resource resourceId, Resource resourceVersionId,
-      Literal versionTag, Literal versionTimestamp) {
-    ResourceIdentifier rid = SemanticIdentifier
-        .newVersionId(URI.create(resourceVersionId.getURI()));
+      Literal versionTag, Literal versionTimestamp, Literal mimeType) {
+    Pointer rid = SemanticIdentifier
+        .newVersionIdAsPointer(URI.create(resourceVersionId.getURI()));
     if (!rid.getResourceId().equals(URI.create(resourceId.getURI()))) {
       throw new IllegalStateException("Mismatch between entity " + resourceId.getURI()
           + "  and its version " + resourceVersionId.getURI());
@@ -698,6 +720,9 @@ public class SparqlIndex implements Index {
               + " expected " + versionTag.getString());
     }
     rid.setEstablishedOn(DateTimeUtil.fromEpochTimestamp(versionTimestamp.getLong()));
+    if (mimeType != null) {
+      rid.setMimeType(mimeType.getString());
+    }
     return rid;
   }
 

@@ -1197,7 +1197,6 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         artId.getUuid())
     .orElseGet(Assertions::fail);
     assertEquals(1, artPtrs.size());
-    Pointer artPtr = artPtrs.get(0);
 
     assertEquals(vTag, ptr.getVersionTag());
     assertTrue(ptr.getVersionId().toString().endsWith(vTag));
@@ -1208,7 +1207,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     assertEquals(aTag,artId.getVersionTag());
     assertTrue(artId.getVersionId().toString().endsWith(aTag));
 
-    assertEquals(artId, latestArtId);
+    assertEquals(artId.getVersionId(), latestArtId.getVersionId());
   }
 
 }

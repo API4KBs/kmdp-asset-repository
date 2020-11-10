@@ -16,14 +16,17 @@
 package edu.mayo.kmdp.repository.asset.index;
 
 
+import edu.mayo.kmdp.util.Util;
 import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.omg.spec.api4kp._20200801.id.ConceptIdentifier;
+import org.omg.spec.api4kp._20200801.id.Pointer;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.services.KnowledgeBase;
+import org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder;
 import org.omg.spec.api4kp._20200801.surrogate.Annotation;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 import org.omg.spec.api4kp._20200801.surrogate.Link;
@@ -37,26 +40,35 @@ public interface Index {
 
   /**
    * Registers an Asset, using the information contained in the canonical Surrogate
-   * @see Index#registerAsset(ResourceIdentifier, String, ResourceIdentifier, List, List, List, List)
-   *
-   * @param assetSurrogate
+   * @see Index#registerAsset(ResourceIdentifier, String, ResourceIdentifier, String, List, List, List, List)
+   *@param assetSurrogate
    * @param surrogateId
+   * @param surrogateMimeType
    * @param index
    */
-  static void registerAssetByCanonicalSurrogate(KnowledgeAsset assetSurrogate, ResourceIdentifier surrogateId, Index index) {
+  static void registerAssetByCanonicalSurrogate(KnowledgeAsset assetSurrogate,
+      ResourceIdentifier surrogateId, String surrogateMimeType, Index index) {
     index.registerAsset(
         assetSurrogate.getAssetId(),
         assetSurrogate.getName(),
         surrogateId,
+        surrogateMimeType,
         assetSurrogate.getFormalType(),
         assetSurrogate.getRole(),
         assetSurrogate.getAnnotation(),
         assetSurrogate.getLinks());
-    assetSurrogate.getCarriers().forEach(ka -> index.registerArtifactToAsset(assetSurrogate.getAssetId(),ka.getArtifactId()));
+    assetSurrogate.getCarriers()
+        .forEach(ka -> index.registerArtifactToAsset(
+            assetSurrogate.getAssetId(),
+            ka.getArtifactId(),
+            Util.coalesce(ModelMIMECoder.encode(ka.getRepresentation()), ka.getMimeType())));
     // exclude the canonical surrogate, which is processed by 'registerAsset'
     assetSurrogate.getSurrogate().stream()
         .filter(surr -> ! surr.getArtifactId().sameAs(surrogateId))
-        .forEach(surr -> index.registerSurrogateToAsset(assetSurrogate.getAssetId(),surr.getArtifactId()));
+        .forEach(surr -> index.registerSurrogateToAsset(
+            assetSurrogate.getAssetId(),
+            surr.getArtifactId(),
+            ModelMIMECoder.encode(surr.getRepresentation())));
   }
 
   /**
@@ -68,16 +80,18 @@ public interface Index {
    * @param annotations
    * @param related
    */
-  void registerAsset(ResourceIdentifier assetId, String assetName, ResourceIdentifier surrogateId, List<KnowledgeAssetType> types,
-                     List<KnowledgeAssetRole> roles, List<Annotation> annotations, List<Link> related);
+  void registerAsset(ResourceIdentifier assetId, String assetName, ResourceIdentifier surrogateId,
+      String surrogateMimeType, List<KnowledgeAssetType> types,
+      List<KnowledgeAssetRole> roles, List<Annotation> annotations, List<Link> related);
 
   /**
    * Link an Artifact to an Asset.
    *
    * @param assetPointer
    * @param artifact
+   * @parm
    */
-  void registerArtifactToAsset(ResourceIdentifier assetPointer, ResourceIdentifier artifact);
+  void registerArtifactToAsset(ResourceIdentifier assetPointer, ResourceIdentifier artifact, String mimeTypes);
 
 
   /**
@@ -113,7 +127,7 @@ public interface Index {
    * @param surrogate
    */
   void registerSurrogateToAsset(ResourceIdentifier assetPointer,
-      ResourceIdentifier surrogate);
+      ResourceIdentifier surrogate, String mimeType);
 
   /**
    * Retrieve a pointer to the Surrogate given an Asset.
@@ -213,7 +227,7 @@ public interface Index {
    *
    * @param surrogateSeriesId the identifier of a Surrogate series
    */
-  List<ResourceIdentifier> getSurrogateVersions(UUID surrogateSeriesId);
+  List<Pointer> getSurrogateVersions(UUID surrogateSeriesId);
 
   /**
    * Returns the known Versions of a Knowledge Artifact
@@ -221,7 +235,7 @@ public interface Index {
    *
    * @param carrierSeriesId the identifier of a Surrogate series
    */
-  List<ResourceIdentifier> getCarrierVersions(UUID carrierSeriesId);
+  List<Pointer> getCarrierVersions(UUID carrierSeriesId);
 
   /**
    * Reset and clear the store.
