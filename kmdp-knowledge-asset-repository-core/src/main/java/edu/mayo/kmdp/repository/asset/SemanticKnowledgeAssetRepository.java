@@ -45,7 +45,7 @@ import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationForma
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.FHIR_STU3;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate_2_0;
-import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.snapshot.KnowledgeRepresentationLanguage.OWL_2;
+import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.OWL_2;
 import static org.omg.spec.api4kp._20200801.taxonomy.krserialization.KnowledgeRepresentationLanguageSerializationSeries.RDF_XML_Syntax;
 import static org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevelSeries.Abstract_Knowledge_Expression;
 import static org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevelSeries.Encoded_Knowledge_Expression;
@@ -354,9 +354,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @param offset                 (Pagination: start at element offset)
    * @param limit                  (Pagination: do not return more than limit)
    * @return A list of assets
-   * @see edu.mayo.ontology.taxonomies.kao.knowledgeassettype.KnowledgeAssetType
-   * @see edu.mayo.ontology.taxonomies.kao.knowledgeassetrole.KnowledgeAssetRole
-   * @see edu.mayo.ontology.taxonomies.kmdo.annotationreltype.AnnotationRelType
+   * @see org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetType
+   * @see org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRole
+   * @see edu.mayo.ontology.taxonomies.kmdo.semanticannotationreltype.SemanticAnnotationRelType
    */
   @Override
   public Answer<List<Pointer>> listKnowledgeAssets(
