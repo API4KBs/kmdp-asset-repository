@@ -16,7 +16,6 @@ package edu.mayo.kmdp.repository.asset;
 import static edu.mayo.kmdp.util.Util.uuid;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Care_Process_Model;
@@ -24,7 +23,6 @@ import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationForma
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.OWL_2;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.SPARQL_1_1;
 import static org.omg.spec.api4kp._20200801.taxonomy.krserialization.KnowledgeRepresentationLanguageSerializationSeries.RDF_XML_Syntax;
-import static org.omg.spec.api4kp._20200801.taxonomy.krserialization.KnowledgeRepresentationLanguageSerializationSeries.Turtle;
 
 import java.nio.charset.Charset;
 import java.util.Collections;
@@ -81,10 +79,8 @@ class SemanticRepositoryQueryTest extends RepositoryTestBase {
 
     assertTrue(graph.is(String.class));
     assertTrue(graph.asString().filter(str -> str.startsWith("<rdf:RDF")).isPresent());
-    assertSame(OWL_2,
-        graph.getRepresentation().getLanguage().asEnum());
-    assertSame(RDF_XML_Syntax,
-        graph.getRepresentation().getSerialization().asEnum());
+    assertTrue(OWL_2.sameAs(graph.getRepresentation().getLanguage()));
+    assertTrue(RDF_XML_Syntax.sameAs(graph.getRepresentation().getSerialization()));
   }
 
   @Test
@@ -94,10 +90,8 @@ class SemanticRepositoryQueryTest extends RepositoryTestBase {
     KnowledgeCarrier graph = graphAns.get();
 
     assertTrue(graph.is(String.class));
-    assertSame(OWL_2,
-        graph.getRepresentation().getLanguage().asEnum());
-    assertSame(RDF_XML_Syntax,
-        graph.getRepresentation().getSerialization().asEnum());
+    assertTrue(OWL_2.sameAs(graph.getRepresentation().getLanguage()));
+    assertTrue(RDF_XML_Syntax.sameAs(graph.getRepresentation().getSerialization()));
   }
 
 }
