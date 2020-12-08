@@ -25,7 +25,9 @@ import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.artifactId;
@@ -39,10 +41,14 @@ import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.Knowledg
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Predictive_Model;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.JSON;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.TXT;
+import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.XML_1_1;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HL7_ELM;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate_2_0;
+import static org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevelSeries.Abstract_Knowledge_Expression;
 
+import edu.mayo.kmdp.comparator.Contrastor.Comparison;
+import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
 import edu.mayo.kmdp.registry.Registry;
 import edu.mayo.kmdp.util.DateTimeUtil;
 import edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries;
@@ -67,6 +73,7 @@ import org.omg.spec.api4kp._20200801.surrogate.Dependency;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
+import org.omg.spec.api4kp._20200801.surrogate.SurrogateDiffer;
 
 
 class SemanticRepositoryTest extends RepositoryTestBase {
@@ -1210,4 +1217,63 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     assertEquals(artId.getVersionId(), latestArtId.getVersionId());
   }
 
+  @Test
+  void testSurrogateXML() {
+    // the use of non-SemVer IDs is discouraged, but should behave consistently
+    UUID assetUUID = uuid("942124");
+    String versionTag = "0.0.0";
+    ResourceIdentifier assetId = SurrogateBuilder.assetId(assetUUID, versionTag);
+
+    KnowledgeAsset surrogate = SurrogateBuilder
+        .newSurrogate(assetId)
+        .withName("Test", "Test Asset")
+        .get();
+
+    Answer<Void> ans = semanticRepository.setKnowledgeAssetVersion(
+        assetId.getUuid(),assetId.getVersionTag(), surrogate);
+    assertTrue(ans.isSuccess());
+
+    List<Pointer> ptrs = semanticRepository.listKnowledgeAssetSurrogates(assetUUID, versionTag)
+        .orElseGet(Assertions::fail);
+    assertEquals(2,ptrs.size());
+
+    Pointer xmlSurr = ptrs.stream()
+        .filter(ptr -> codedRep(Knowledge_Asset_Surrogate_2_0,XML_1_1).equals(ptr.getMimeType()))
+        .findFirst()
+        .orElseGet(Assertions::fail);
+
+    Answer<KnowledgeCarrier> xmlCarrier =
+        semanticRepository.getKnowledgeAssetSurrogateVersion(
+            assetUUID,
+            versionTag,
+            xmlSurr.getUuid(),
+            xmlSurr.getVersionTag())
+        .flatMap(kc -> new Surrogate2Parser()
+            .applyLift(
+                kc,
+                Abstract_Knowledge_Expression,
+                codedRep(Knowledge_Asset_Surrogate_2_0),
+                null));
+    assertTrue(xmlCarrier.isSuccess());
+
+    KnowledgeAsset ax2 = xmlCarrier
+        .flatOpt(kc -> kc.as(KnowledgeAsset.class))
+        .orElseGet(Assertions::fail);
+
+    assertSame(Comparison.EQUIVALENT, new SurrogateDiffer().contrast(surrogate,ax2));
+  }
+
+
+  @Test
+  void testListCarriersSurrogatesNotFound() {
+    // t use of non-SemVer IDs is discouraged, but should behave consistently
+    UUID assetUUID = randomAssetId().getUuid();
+    String versionTag = "0.0.0";
+
+    Answer<List<Pointer>> ptrs = semanticRepository.listKnowledgeAssetCarriers(assetUUID,versionTag);
+    assertTrue(ptrs.isNotFound());
+
+    Answer<List<Pointer>> ptrs2 = semanticRepository.listKnowledgeAssetSurrogates(assetUUID,versionTag);
+    assertTrue(ptrs2.isNotFound());
+  }
 }
