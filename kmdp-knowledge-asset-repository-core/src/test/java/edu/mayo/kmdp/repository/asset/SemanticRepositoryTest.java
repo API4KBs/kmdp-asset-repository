@@ -751,7 +751,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     assertEquals("test", namedArtifact.asString().orElse(""));
 
     KnowledgeCarrier artifact = semanticRepository
-        .getCanonicalKnowledgeAssetCarrier(assetId.getUuid(),assetId.getVersionTag())
+        .getKnowledgeAssetVersionCanonicalCarrier(assetId.getUuid(),assetId.getVersionTag())
         .orElse(null);
 
     assertNotNull(artifact);
@@ -1042,15 +1042,40 @@ class SemanticRepositoryTest extends RepositoryTestBase {
 
     semanticRepository.setKnowledgeAssetVersion(assetId,versionTag,asset);
 
-    Answer<KnowledgeCarrier> ans = semanticRepository.getCanonicalKnowledgeAssetCarrier(
-        assetId,
-        versionTag,
-        "text/html");
+    Answer<KnowledgeCarrier> ans =
+        semanticRepository.getKnowledgeAssetVersionCanonicalCarrier(
+            assetId,
+            versionTag,
+            "text/html");
 
     assertTrue(ResponseCodeSeries.SeeOther.sameAs(ans.getOutcomeType()));
     assertEquals(mockRedirectURL, ans.getMeta("Location").orElse(""));
   }
 
+  @Test
+  public void testNegotiateCarrierForLatestVersion() {
+    UUID assetId = UUID.nameUUIDFromBytes("2".getBytes());
+    String versionTag = "2";
+    String mockRedirectURL = "http://localhost:123/foo";
+
+    KnowledgeAsset asset = new KnowledgeAsset()
+        .withAssetId(assetId(assetId, versionTag))
+        .withCarriers(new KnowledgeArtifact()
+            .withArtifactId(SurrogateBuilder.randomArtifactId())
+            .withRepresentation(rep(HTML,TXT))
+            .withLocator(URI.create(mockRedirectURL))
+        );
+
+    semanticRepository.setKnowledgeAssetVersion(assetId,versionTag,asset);
+
+    Answer<KnowledgeCarrier> ans =
+        semanticRepository.getKnowledgeAssetCanonicalCarrier(
+            assetId,
+            "text/html");
+
+    assertTrue(ResponseCodeSeries.SeeOther.sameAs(ans.getOutcomeType()));
+    assertEquals(mockRedirectURL, ans.getMeta("Location").orElse(""));
+  }
 
   @Test
   public void testContentNegotiationSurrogateWithMetaFormats() {

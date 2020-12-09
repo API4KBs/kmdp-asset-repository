@@ -525,6 +525,26 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   //* Kowledge Artifacts
   //*****************************************************************************************/
 
+  /**
+   * Attempts to find the best manifestation of a given asset, for the latest version of that asset,
+   * based on the client's preference, as per content standard negotiation
+   *
+   * @param assetId    the ID of the asset to find a manifestation of
+   * @param xAccept    the client's preference, as per content negotiation
+   * @return The chosen Knowledge Artifact, wrapped in a KnowledgeCarrier
+   * @see SemanticKnowledgeAssetRepository#getKnowledgeAssetVersionCanonicalCarrier(UUID, String, String)
+   */
+  @Override
+  public Answer<KnowledgeCarrier> getKnowledgeAssetCanonicalCarrier(
+      UUID assetId, String xAccept) {
+    return getLatestAssetVersion(assetId)
+        .map(assetVersionId ->
+            getKnowledgeAssetVersionCanonicalCarrier(
+                assetVersionId.getUuid(),
+                assetVersionId.getVersionTag(),
+                xAccept))
+        .orElseGet(Answer::notFound);
+  }
 
   /**
    * Attempts to find the best manifestation of a given asset, based on the client's preference, as
@@ -549,7 +569,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @return The chosen Knowledge Artifact, wrapped in a KnowledgeCarrier
    */
   @Override
-  public Answer<KnowledgeCarrier> getCanonicalKnowledgeAssetCarrier(
+  public Answer<KnowledgeCarrier> getKnowledgeAssetVersionCanonicalCarrier(
       UUID assetId, String versionTag, String xAccept) {
     boolean withNegotiation = !isEmpty(xAccept);
     // retrieves the surrogate, which has the representation information
@@ -654,7 +674,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * If content negotiation preferences are specified, this operation will validate that the actual
    * artifact fits the client's preferences, or respond with 'not acceptable' In particular, this
    * operation will not attempt to translate/transform the Artifact (if needed, @see {@link
-   * SemanticKnowledgeAssetRepository._getCanonicalKnowledgeAssetCarrier})
+   * SemanticKnowledgeAssetRepository._getKnowledgeAssetVersionCanonicalCarrier})
    *
    * @param assetId            The id of the Asset for which the Artifact is a Carrier
    * @param versionTag         The version of the Asset for which the Artifact is a Carrier
@@ -968,7 +988,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .flatMap(componentIds -> {
 
           Answer<Set<KnowledgeCarrier>> componentSurrogates = componentIds.stream()
-              .map(comp -> getCanonicalKnowledgeAssetCarrier(comp.getUuid(), comp.getVersionTag(),
+              .map(comp -> getKnowledgeAssetVersionCanonicalCarrier(comp.getUuid(), comp.getVersionTag(),
                   xAccept))
               .collect(Answer.toSet());
 
@@ -1058,13 +1078,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<KnowledgeCarrier> getCompositeKnowledgeAssetStructure(UUID assetId,
       String versionTag, String xAccept) {
-    return Answer.unsupported();
-  }
-
-
-  @Override
-  public Answer<KnowledgeCarrier> getCompositeKnowledgeAssetStructure(UUID assetId,
-      String versionTag) {
     return Answer.unsupported();
   }
 

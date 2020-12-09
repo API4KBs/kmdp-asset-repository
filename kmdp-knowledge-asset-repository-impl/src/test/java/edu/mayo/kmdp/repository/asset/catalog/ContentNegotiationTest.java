@@ -91,7 +91,7 @@ public class ContentNegotiationTest extends SemanticRepoAPITestBase {
 
     ckac.setKnowledgeAssetVersion(assetId,versionTag,asset);
 
-    Answer<KnowledgeCarrier> ans = repo.getCanonicalKnowledgeAssetCarrier(
+    Answer<KnowledgeCarrier> ans = repo.getKnowledgeAssetVersionCanonicalCarrier(
         assetId,
         versionTag,
         ModelMIMECoder.encode(rep(KNART_1_3, XML_1_1)));
@@ -99,7 +99,7 @@ public class ContentNegotiationTest extends SemanticRepoAPITestBase {
     assertTrue(ans.isSuccess());
     assertTrue(ans.getOptionalValue().isPresent());
 
-    Answer<KnowledgeCarrier> ans2 = repo.getCanonicalKnowledgeAssetCarrier(
+    Answer<KnowledgeCarrier> ans2 = repo.getKnowledgeAssetVersionCanonicalCarrier(
         assetId,
         versionTag,
         ModelMIMECoder.encode(rep(HTML, TXT)));
@@ -122,7 +122,7 @@ public class ContentNegotiationTest extends SemanticRepoAPITestBase {
 
     ckac.setKnowledgeAssetVersion(assetId,versionTag,asset);
 
-    Answer<KnowledgeCarrier> ans = repo.getCanonicalKnowledgeAssetCarrier(
+    Answer<KnowledgeCarrier> ans = repo.getKnowledgeAssetVersionCanonicalCarrier(
         assetId,
         versionTag,
         "text/html,application/xhtml+xml,application/xml;q=0.9,"
