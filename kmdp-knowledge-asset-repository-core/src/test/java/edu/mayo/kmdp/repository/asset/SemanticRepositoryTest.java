@@ -1260,10 +1260,9 @@ class SemanticRepositoryTest extends RepositoryTestBase {
 
     List<Pointer> ptrs = semanticRepository.listKnowledgeAssetSurrogates(assetUUID, versionTag)
         .orElseGet(Assertions::fail);
-    assertEquals(2,ptrs.size());
+    assertEquals(1, ptrs.size());
 
-    Pointer xmlSurr = ptrs.stream()
-        .filter(ptr -> codedRep(Knowledge_Asset_Surrogate_2_0,XML_1_1).equals(ptr.getMimeType()))
+    Pointer surrPtr = ptrs.stream()
         .findFirst()
         .orElseGet(Assertions::fail);
 
@@ -1271,8 +1270,9 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         semanticRepository.getKnowledgeAssetSurrogateVersion(
             assetUUID,
             versionTag,
-            xmlSurr.getUuid(),
-            xmlSurr.getVersionTag())
+            surrPtr.getUuid(),
+            surrPtr.getVersionTag(),
+            codedRep(Knowledge_Asset_Surrogate_2_0,XML_1_1))
         .flatMap(kc -> new Surrogate2Parser()
             .applyLift(
                 kc,

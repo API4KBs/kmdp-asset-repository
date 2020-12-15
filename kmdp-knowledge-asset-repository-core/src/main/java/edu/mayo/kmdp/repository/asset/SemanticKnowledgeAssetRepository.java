@@ -30,11 +30,13 @@ import static java.util.stream.Collectors.toList;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.ofAst;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
+import static org.omg.spec.api4kp._20200801.id.IdentifierConstants.VERSION_ZERO;
+import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.timedSemverComparator;
 import static org.omg.spec.api4kp._20200801.id.VersionIdentifier.toSemVer;
 import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.decode;
 import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.encode;
-import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomArtifactId;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.defaultSurrogateUUID;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getComputableSurrogateMetadata;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getSurrogateId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getSurrogateMetadata;
@@ -62,6 +64,7 @@ import edu.mayo.kmdp.repository.asset.index.Index;
 import edu.mayo.kmdp.repository.asset.index.StaticFilter;
 import edu.mayo.kmdp.repository.asset.negotiation.ContentNegotiationHelper;
 import edu.mayo.kmdp.util.FileUtil;
+import edu.mayo.kmdp.util.URIUtil;
 import edu.mayo.kmdp.util.Util;
 import edu.mayo.ontology.taxonomies.kmdo.semanticannotationreltype.SemanticAnnotationRelTypeSeries;
 import java.net.URI;
@@ -853,41 +856,50 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       String xAccept) {
 
     Answer<KnowledgeAsset> assetMetadata = getKnowledgeAssetVersion(assetId, versionTag);
+
+    // get the specific surrogate requested by the client
     Answer<KnowledgeArtifact> surrogateMetadata = assetMetadata
         .flatOpt(surr -> getComputableSurrogateMetadata(surrogateId, surrogateVersionTag, surr));
 
     if (!surrogateMetadata.isSuccess()) {
       return Answer.notFound();
     }
-    if (!negotiator.isAcceptable(surrogateMetadata.get(), xAccept)) {
-      return Answer.failed(NotAcceptable);
+
+    boolean isAcceptable = negotiator.isAcceptable(surrogateMetadata.get(), xAccept);
+
+    Answer<KnowledgeCarrier> surrogate = Answer.notFound();
+    if (isAcceptable) {
+      // retrieve a copy of the surrogate
+      surrogate = surrogateMetadata
+          .flatMap(meta ->
+              retrieveBinaryArtifact(meta)
+                  .map(bytes -> buildKnowledgeCarrier(
+                      assetId, versionTag,
+                      surrogateId, surrogateVersionTag,
+                      meta.getRepresentation(),
+                      "Metadata - " + coalesce(meta.getName(), assetMetadata.get().getName()),
+                      bytes))
+          );
     }
 
-    Answer<KnowledgeCarrier> surrogate = surrogateMetadata
-        .flatMap(meta ->
-            retrieveBinaryArtifact(meta)
-                .map(bytes -> buildKnowledgeCarrier(
-                    assetId, versionTag,
-                    surrogateId, surrogateVersionTag,
-                    meta.getRepresentation(),
-                    "Metadata - " + coalesce(meta.getName(), assetMetadata.get().getName()),
-                    bytes))
-        );
-
-    if (surrogate.isNotFound()) {
+    if (! isAcceptable || surrogate.isNotFound()) {
       // fall back to the canonical surrogate
       Answer<KnowledgeArtifact> canonicalSurrogate = assetMetadata
           .flatOpt(this::getCanonicalSurrogateMetadata);
-      SyntacticRepresentation tgtRep = surrogateMetadata.get().getRepresentation();
 
-      // retrieve it and see if it can be trans*ed into the required format
-      return canonicalSurrogate
-          .flatMap(canonicalSurrogateMeta ->
-              attemptTranslation(
-                  assetMetadata.get(),
-                  canonicalSurrogateMeta,
-                  rep(tgtRep.getLanguage(), tgtRep.getFormat(),
-                      defaultCharset(), Encodings.DEFAULT)));
+      return decodePreferences(
+          xAccept, surrogateMetadata.get().getRepresentation()).stream()
+          .map(tgtRep ->
+              // retrieve it and see if it can be trans*ed into the required format
+              canonicalSurrogate
+                  .flatMap(canonicalSurrogateMeta ->
+                      attemptTranslation(
+                          assetMetadata.get(),
+                          canonicalSurrogateMeta,
+                          rep(tgtRep.getLanguage(), tgtRep.getFormat(),
+                              defaultCharset(), Encodings.DEFAULT))))
+          .findFirst()
+          .orElse(Answer.unacceptable());
     } else {
       return surrogate;
     }
@@ -1372,7 +1384,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       KnowledgeArtifact artifact) {
     return Answer.of(artifact)
         .cast(KnowledgeArtifact.class)
-        .filter(cka -> cka.getLocator() != null)
+        .filter(cka -> URIUtil.isDereferencingURL(cka.getLocator()))
         .flatOpt(cka -> FileUtil.readBytes(cka.getLocator()));
   }
 
@@ -1528,16 +1540,25 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    */
   private ResourceIdentifier ensureHasCanonicalSurrogateManifestation(
       KnowledgeAsset assetSurrogate) {
-    return getCanonicalSurrogateId(assetSurrogate)
-        .orElseGet(() -> {
-          ResourceIdentifier rid = randomArtifactId(artifactNamespace);
-          assetSurrogate.withSurrogate(
-              new KnowledgeArtifact()
-                  .withArtifactId(rid)
-                  .withRepresentation(rep(defaultSurrogateModel, defaultSurrogateFormat,
-                      defaultCharset(), Encodings.DEFAULT)));
-          return rid;
-        });
+    Optional<KnowledgeArtifact> canonicalSurrogate =
+        getSurrogateMetadata(assetSurrogate, defaultSurrogateModel, null);
+
+    if (canonicalSurrogate.isPresent()) {
+      KnowledgeArtifact meta = canonicalSurrogate.get();
+      if (meta.getRepresentation().getFormat() == null) {
+        meta.getRepresentation().setFormat(defaultSurrogateFormat);
+      }
+      return meta.getArtifactId();
+    } else {
+      UUID uuid = defaultSurrogateUUID(assetSurrogate.getAssetId(),defaultSurrogateModel);
+      ResourceIdentifier rid = newId(artifactNamespace, uuid, VERSION_ZERO);
+      assetSurrogate.withSurrogate(
+          new KnowledgeArtifact()
+              .withArtifactId(rid)
+              .withRepresentation(rep(defaultSurrogateModel, defaultSurrogateFormat,
+                  defaultCharset(), Encodings.DEFAULT)));
+      return rid;
+    }
   }
 
   /**
@@ -1578,7 +1599,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    */
   private Optional<ResourceIdentifier> getCanonicalSurrogateId(KnowledgeAsset assetSurrogate) {
     return getSurrogateId(
-        assetSurrogate, defaultSurrogateModel, defaultSurrogateFormat);
+        assetSurrogate, defaultSurrogateModel, null);
   }
 
   /**

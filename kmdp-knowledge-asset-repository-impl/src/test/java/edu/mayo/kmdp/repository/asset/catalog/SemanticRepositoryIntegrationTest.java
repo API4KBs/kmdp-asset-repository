@@ -1,11 +1,11 @@
 /**
  * Copyright © 2018 Mayo Clinic (RSTKNOWLEDGEMGMT@mayo.edu)
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
  * or implied. See the License for the specific language governing permissions and limitations under
@@ -18,12 +18,14 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.assetId;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.defaultSurrogateUUID;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomAssetId;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Care_Process_Model;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Clinical_Rule;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Decision_Model;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Predictive_Model;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeprocessingtechnique.KnowledgeProcessingTechniqueSeries.Qualitative_Technique;
+import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate_2_0;
 
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
@@ -41,7 +43,9 @@ import org.omg.spec.api4kp._20200801.id.Pointer;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.id.Term;
 import org.omg.spec.api4kp._20200801.surrogate.Applicability;
+import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
+import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
 
 class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
 
@@ -73,7 +77,7 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
   @Test
   void testListKnowledgeAssetsBadType() {
     ResourceIdentifier assetId = randomAssetId();
-    ckac.setKnowledgeAssetVersion(assetId.getUuid(),assetId.getVersionTag(),
+    ckac.setKnowledgeAssetVersion(assetId.getUuid(), assetId.getVersionTag(),
         new KnowledgeAsset()
             .withAssetId(assetId)
             .withFormalType(Care_Process_Model));
@@ -91,13 +95,13 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
     assertTrue(zero.isSuccess());
 
     ResourceIdentifier rid1 = randomAssetId();
-    ckac.setKnowledgeAssetVersion(rid1.getUuid(),rid1.getVersionTag(),
+    ckac.setKnowledgeAssetVersion(rid1.getUuid(), rid1.getVersionTag(),
         new KnowledgeAsset()
             .withAssetId(rid1)
             .withFormalType(Care_Process_Model));
 
     ResourceIdentifier rid2 = randomAssetId();
-    ckac.setKnowledgeAssetVersion(rid2.getUuid(),rid2.getVersionTag(),
+    ckac.setKnowledgeAssetVersion(rid2.getUuid(), rid2.getVersionTag(),
         new KnowledgeAsset()
             .withAssetId(rid2)
             .withFormalType(Clinical_Rule));
@@ -115,12 +119,12 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
   @Test
   void testGeKnowledgeAssetsVersions() {
     UUID uid = UUID.randomUUID();
-    ResourceIdentifier rid1 = assetId(uid,"1.0.0");
-    ckac.setKnowledgeAssetVersion(rid1.getUuid(),rid1.getVersionTag(),
+    ResourceIdentifier rid1 = assetId(uid, "1.0.0");
+    ckac.setKnowledgeAssetVersion(rid1.getUuid(), rid1.getVersionTag(),
         new KnowledgeAsset().withAssetId(rid1));
 
     ResourceIdentifier rid2 = assetId(uid, "2.0.0");
-    ckac.setKnowledgeAssetVersion(rid2.getUuid(),rid2.getVersionTag(),
+    ckac.setKnowledgeAssetVersion(rid2.getUuid(), rid2.getVersionTag(),
         new KnowledgeAsset().withAssetId(rid2));
 
     List<Pointer> pointers = ckac.listKnowledgeAssets()
@@ -138,11 +142,11 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
     UUID uid = UUID.randomUUID();
 
     ResourceIdentifier rid2 = assetId(uid, "2.0.0");
-    ckac.setKnowledgeAssetVersion(rid2.getUuid(),rid2.getVersionTag(),
+    ckac.setKnowledgeAssetVersion(rid2.getUuid(), rid2.getVersionTag(),
         new KnowledgeAsset().withAssetId(rid2));
 
     ResourceIdentifier rid1 = assetId(uid, "1.0.0");
-    ckac.setKnowledgeAssetVersion(rid1.getUuid(),rid1.getVersionTag(),
+    ckac.setKnowledgeAssetVersion(rid1.getUuid(), rid1.getVersionTag(),
         new KnowledgeAsset().withAssetId(rid1));
 
     Answer<KnowledgeAsset> axx = ckac.getKnowledgeAsset(uid, null);
@@ -154,11 +158,11 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
   void testGetLatestKnowledgeAssetHasCorrectId() {
     UUID uid = UUID.randomUUID();
     ResourceIdentifier rid1 = newId(uid, "1.0.0");
-    ckac.setKnowledgeAssetVersion(rid1.getUuid(),rid1.getVersionTag(),
+    ckac.setKnowledgeAssetVersion(rid1.getUuid(), rid1.getVersionTag(),
         new KnowledgeAsset().withAssetId(rid1));
 
-    ResourceIdentifier rid2 = newId(uid,"2.0.0");
-    ckac.setKnowledgeAssetVersion(rid2.getUuid(),rid2.getVersionTag(),
+    ResourceIdentifier rid2 = newId(uid, "2.0.0");
+    ckac.setKnowledgeAssetVersion(rid2.getUuid(), rid2.getVersionTag(),
         new KnowledgeAsset().withAssetId(rid2));
 
     String id = ckac.getKnowledgeAsset(uid)
@@ -172,7 +176,7 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
   @Test
   void testSurrogateWithApplicability() {
     ResourceIdentifier assetId = randomAssetId();
-    ckac.setKnowledgeAssetVersion(assetId.getUuid(),assetId.getVersionTag(),
+    ckac.setKnowledgeAssetVersion(assetId.getUuid(), assetId.getVersionTag(),
         new KnowledgeAsset()
             .withAssetId(assetId)
             .withApplicableIn(new Applicability()
@@ -186,7 +190,69 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
 
     Term t = ax.getApplicableIn().getSituation().get(0);
     assertNotNull(t);
-    assertEquals(Qualitative_Technique.getUuid(),t.getUuid());
+    assertEquals(Qualitative_Technique.getUuid(), t.getUuid());
+  }
+
+  @Test
+  void testIdempotentPublishWithImplicitSurrogate() {
+    KnowledgeAsset asset = new KnowledgeAsset()
+        .withAssetId(randomAssetId())
+        .withName("Test");
+    UUID uuid = asset.getAssetId().getUuid();
+    String vTag = asset.getAssetId().getVersionTag();
+
+    Answer<Void> ans1 = ckac.setKnowledgeAssetVersion(
+        uuid,
+        vTag,
+        asset);
+    assertTrue(ans1.isSuccess());
+
+    Answer<Void> ans2 = ckac.setKnowledgeAssetVersion(
+        uuid,
+        vTag,
+        asset);
+    assertTrue(ans2.isSuccess());
+
+    UUID suid = defaultSurrogateUUID(asset.getAssetId(),Knowledge_Asset_Surrogate_2_0);
+
+    KnowledgeAsset surrogate = ckac.getKnowledgeAssetVersion(uuid, vTag)
+        .orElseGet(Assertions::fail);
+    assertEquals(1, surrogate.getSurrogate().size());
+    surrogate.getSurrogate()
+        .forEach(
+            surr -> assertEquals(suid, surr.getArtifactId().getUuid())
+        );
+  }
+
+  @Test
+  void testIdempotentPublishWithKnownSurrogate() {
+    KnowledgeAsset asset = SurrogateBuilder
+        .newSurrogate(randomAssetId())
+        .get();
+    UUID uuid = asset.getAssetId().getUuid();
+    String vTag = asset.getAssetId().getVersionTag();
+
+    Answer<Void> ans1 = ckac.setKnowledgeAssetVersion(
+        uuid,
+        vTag,
+        asset);
+    assertTrue(ans1.isSuccess());
+
+    Answer<Void> ans2 = ckac.setKnowledgeAssetVersion(
+        uuid,
+        vTag,
+        asset);
+    assertTrue(ans2.isSuccess());
+
+    UUID suid = defaultSurrogateUUID(asset.getAssetId(),Knowledge_Asset_Surrogate_2_0);
+
+    KnowledgeAsset surrogate = ckac.getKnowledgeAssetVersion(uuid, vTag)
+        .orElseGet(Assertions::fail);
+    assertEquals(1, surrogate.getSurrogate().size());
+    surrogate.getSurrogate()
+        .forEach(
+            surr -> assertEquals(suid, surr.getArtifactId().getUuid())
+        );
   }
 
 }
