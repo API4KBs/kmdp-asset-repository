@@ -417,7 +417,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @param xAccept MIME type for advanced content negotiation support
    * @return The canonical surrogate in serializable AST/object form, or a redirect to a URL where
    * an HTML variant can be found
-   * @see KnowledgeAssetRepositoryApiInternal#getCanonicalKnowledgeAssetSurrogate and related
+   * @see KnowledgeAssetRepositoryApiInternal#getKnowledgeAssetCanonicalSurrogate(UUID)  and related
    * operations
    */
   @Override
@@ -474,7 +474,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @param xAccept    MIME type for advanced content negotiation support
    * @return The canonical surrogate in serializable AST/object form, or a redirect to a URL where
    * an HTML variant can be found
-   * @see KnowledgeAssetRepositoryApiInternal#getCanonicalKnowledgeAssetSurrogate and related
+   * @see KnowledgeAssetRepositoryApiInternal#getKnowledgeAssetVersionCanonicalSurrogate and related
    * operations
    */
   @Override
@@ -761,6 +761,26 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   //* Surrogates
   //*****************************************************************************************/
 
+  /**
+   * Returns the LATEST version of the Canonical Surrogate for the LATEST version of the
+   * given Knowledge Asset
+   *
+   * @see SemanticKnowledgeAssetRepository#getKnowledgeAssetVersionCanonicalSurrogate(UUID, String, String)
+   *
+   * @param assetId    The asset for which to retrieve a canonical surrogate
+   * @param xAccept    The client's preferences on the representation of the surrogate's content
+   * @return A carrier that wraps the Canonical Surrogate, or transrepresentation thereof
+   */
+  @Override
+  public Answer<KnowledgeCarrier> getKnowledgeAssetCanonicalSurrogate(UUID assetId, String xAccept) {
+    return getLatestAssetVersion(assetId)
+        .map(assetVersionId ->
+            getKnowledgeAssetVersionCanonicalSurrogate(
+                assetVersionId.getUuid(),
+                assetVersionId.getVersionTag(),
+                xAccept))
+        .orElseGet(Answer::notFound);
+  }
 
   /**
    * Returns the Canonical Surrogate for the given Knowledge Asset, serialized using the server's
@@ -775,7 +795,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @return A carrier that wraps the Canonical Surrogate, or transrepresentation thereof
    */
   @Override
-  public Answer<KnowledgeCarrier> getCanonicalKnowledgeAssetSurrogate(UUID assetId,
+  public Answer<KnowledgeCarrier> getKnowledgeAssetVersionCanonicalSurrogate(UUID assetId,
       String versionTag, String xAccept) {
     boolean withNegotiation = !Util.isEmpty(xAccept);
     List<SyntacticRepresentation> preferences =
@@ -840,7 +860,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * If content negotiation preferences are specified, this operation will validate that the actual
    * artifact fits the client's preferences, or respond with 'not acceptable' In particular, this
    * operation will not attempt to translate/transform the Artifact (if needed, @see {@link
-   * SemanticKnowledgeAssetRepository#getCanonicalKnowledgeAssetSurrogate} )
+   * SemanticKnowledgeAssetRepository#getKnowledgeAssetVersionCanonicalSurrogate} )
    *
    * @param assetId             The id of the Asset for which the Artifact is a Carrier
    * @param versionTag          The version of the Asset for which the Artifact is a Carrier

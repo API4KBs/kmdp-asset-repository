@@ -405,6 +405,9 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
   private String executeModelRequest(HttpGet request) throws StatusCodeException {
     try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
       try (CloseableHttpResponse resp = httpClient.execute(request)) {
+        if (resp.getStatusLine().getStatusCode() / 100 == 5) {
+          fail("Internal Server error");
+        }
         if (resp.getStatusLine().getStatusCode() / 100 != 2) {
           throw new StatusCodeException(
               resp.getStatusLine().getStatusCode(),
