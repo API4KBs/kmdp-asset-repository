@@ -360,6 +360,68 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
   }
 
 
+
+  @Test
+  void testSpecificSurrogateVersionWithNoRedirect() {
+    UUID assetId = UUID.randomUUID();
+    populateRepository(assetId);
+
+    String ptrStr = executeRequest(
+        "/cat/assets/" + assetId + "/versions/" + VERSION_ZERO + "/surrogates",
+        "application/json");
+    List<Pointer> ptrs = JSonUtil.parseJsonList(
+        new ByteArrayInputStream(ptrStr.getBytes()),
+        Pointer.class)
+        .orElse(Collections.emptyList());
+    assertFalse(ptrs.isEmpty());
+
+    Pointer ptr = ptrs.stream()
+        .filter(p -> ModelMIMECoder.decode(p.getMimeType())
+            .map(rep -> rep.getLanguage().sameAs(Knowledge_Asset_Surrogate_2_0))
+            .orElse(false))
+        .findFirst()
+        .orElseGet(Assertions::fail);
+
+    String str = executeRequest(
+        "/cat/assets/" + assetId + "/versions/" + VERSION_ZERO
+            + "/surrogates/" + ptr.getUuid() + "/versions/" + ptr.getVersionTag(),
+        "text/html");
+
+    assertTrue(str.startsWith("<html>"));
+  }
+
+  @Test
+  void testSpecificSurrogateVersionWithNoRedirectWrapped() {
+    UUID assetId = UUID.randomUUID();
+    populateRepository(assetId);
+
+    String ptrStr = executeRequest(
+        "/cat/assets/" + assetId + "/versions/" + VERSION_ZERO + "/surrogates",
+        "application/json");
+    List<Pointer> ptrs = JSonUtil.parseJsonList(
+        new ByteArrayInputStream(ptrStr.getBytes()),
+        Pointer.class)
+        .orElse(Collections.emptyList());
+    assertFalse(ptrs.isEmpty());
+
+    Pointer ptr = ptrs.stream()
+        .filter(p -> ModelMIMECoder.decode(p.getMimeType())
+            .map(rep -> rep.getLanguage().sameAs(Knowledge_Asset_Surrogate_2_0))
+            .orElse(false))
+        .findFirst()
+        .orElseGet(Assertions::fail);
+
+    String str = executeModelRequest(
+        "/cat/assets/" + assetId + "/versions/" + VERSION_ZERO
+            + "/surrogates/" + ptr.getUuid() + "/versions/" + ptr.getVersionTag(),
+        "application/json", "text/html");
+
+    KnowledgeCarrier kc = JSonUtil.parseJson(str, KnowledgeCarrier.class)
+        .orElseGet(Assertions::fail);
+    assertTrue(kc.asString().orElse("").startsWith("<html>"));
+  }
+
+
   private String executeRequest(String url, String accept) {
     try {
       return tryExecuteRequest(url, accept);
