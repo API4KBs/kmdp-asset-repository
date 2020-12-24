@@ -25,6 +25,7 @@ import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.N
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.NotAcceptable;
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.OK;
 import static java.nio.charset.Charset.defaultCharset;
+import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
@@ -34,6 +35,7 @@ import static org.omg.spec.api4kp._20200801.id.IdentifierConstants.VERSION_ZERO;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.timedSemverComparator;
 import static org.omg.spec.api4kp._20200801.id.VersionIdentifier.toSemVer;
+import static org.omg.spec.api4kp._20200801.services.CompositeStructType.NONE;
 import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.decode;
 import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.encode;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.defaultSurrogateUUID;
@@ -67,6 +69,7 @@ import edu.mayo.kmdp.util.FileUtil;
 import edu.mayo.kmdp.util.URIUtil;
 import edu.mayo.kmdp.util.Util;
 import edu.mayo.ontology.taxonomies.kmdo.semanticannotationreltype.SemanticAnnotationRelTypeSeries;
+import edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
@@ -80,6 +83,7 @@ import javax.inject.Named;
 import org.omg.spec.api4kp._20200801.AbstractCarrier;
 import org.omg.spec.api4kp._20200801.AbstractCarrier.Encodings;
 import org.omg.spec.api4kp._20200801.Answer;
+import org.omg.spec.api4kp._20200801.ServerSideException;
 import org.omg.spec.api4kp._20200801.api.inference.v4.server.ReasoningApiInternal._askQuery;
 import org.omg.spec.api4kp._20200801.api.knowledgebase.v4.server.TranscreateApiInternal._applyNamedIntrospectDirect;
 import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactApiInternal;
@@ -513,11 +517,13 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     ResourceIdentifier assetIdentifier = toAssetId(assetId, semVerTag);
     ResourceIdentifier surrogateIdentifier = ensureHasCanonicalSurrogateManifestation(
         assetSurrogate);
-    if (detectCanonicalSurrogateConflict(assetIdentifier, surrogateIdentifier, assetSurrogate)) {
-      return Answer.of(Conflict);
-    }
 
     ensureSemanticVersionedIdentifiers(assetSurrogate);
+    try {
+      detectCanonicalSurrogateConflict(assetIdentifier, surrogateIdentifier, assetSurrogate);
+    } catch (ServerSideException sse) {
+      return Answer.failedOnServer(sse);
+    }
     persistCanonicalKnowledgeAssetVersion(assetIdentifier, surrogateIdentifier, assetSurrogate);
 
     return Answer.of(NoContent);
@@ -954,8 +960,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
           .reduce(Answer::merge)
           .orElse(Answer.failed());
 
-      // TODO define a struct type for Anonymous composites
-      if (ckc.getStructType() != null) {
+      if (ckc.getStructType() != null && ckc.getStructType() != NONE) {
         Answer<Void> compositeAns =
             compositeStructIntrospector.applyNamedIntrospectDirect(
                 CompositeAssetMetadataIntrospector.id, ckc, null)
@@ -1473,25 +1478,30 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @return true if the new Surrogate conflicts (i.e. replaces without being identical) with the
    * old
    */
-  private boolean detectCanonicalSurrogateConflict(
+  private void detectCanonicalSurrogateConflict(
       ResourceIdentifier assetIdentifier,
       ResourceIdentifier surrogateIdentifier,
       KnowledgeAsset assetSurrogate) {
     Optional<ResourceIdentifier> surrId = index.getCanonicalSurrogateForAsset(assetIdentifier);
     if (surrId.isPresent()
         && (!surrId.get().getUuid().equals(surrogateIdentifier.getUuid()))) {
-      return true;
+      throw new ServerSideException(Conflict, emptyMap(),
+          "Asset already existing with a different Surrogate ID".getBytes());
     }
 
     if (surrId.isPresent() &&
         surrogateIdentifier.getUuid().equals(surrId.get().getUuid())) {
       Answer<KnowledgeAsset> existingSurrogate = retrieveCanonicalSurrogateVersion(
           surrogateIdentifier);
-      return existingSurrogate.isSuccess()
-          && !SurrogateDiffer.isEquivalent(assetSurrogate, existingSurrogate.get());
+      if (existingSurrogate.isSuccess()) {
+        KnowledgeAsset existing = existingSurrogate.get();
+        if (!SurrogateDiffer.isEquivalent(assetSurrogate, existing)) {
+          SurrogateDiffer differ = new SurrogateDiffer();
+          String msg = differ.diff(assetSurrogate, existing).prettyPrint();
+          throw new ServerSideException(Conflict, emptyMap(), msg.getBytes());
+        }
+      }
     }
-
-    return false;
   }
 
   /**

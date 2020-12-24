@@ -1301,4 +1301,29 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     Answer<List<Pointer>> ptrs2 = semanticRepository.listKnowledgeAssetSurrogates(assetUUID,versionTag);
     assertTrue(ptrs2.isNotFound());
   }
+
+  @Test
+  void testDiffOnConflict() {
+    ResourceIdentifier axId = randomAssetId();
+    KnowledgeAsset ka1 = new KnowledgeAsset()
+        .withAssetId(axId)
+        .withName("Foo");
+    KnowledgeAsset ka2 = new KnowledgeAsset()
+        .withAssetId(axId)
+        .withName("Bar");
+
+    Answer<Void> ans1 = semanticRepository.setKnowledgeAssetVersion(
+        axId.getUuid(),axId.getVersionTag(),ka1);
+    assertTrue(ans1.isSuccess());
+
+    Answer<Void> ans2 = semanticRepository.setKnowledgeAssetVersion(
+        axId.getUuid(),axId.getVersionTag(),ka2);
+    assertFalse(ans2.isSuccess());
+    assertTrue(Conflict.sameAs(ans2.getOutcomeType()));
+
+    String expl = ans2.getExplanation().asString().orElse("");
+    assertTrue(expl.contains(axId.getResourceId().toString()));
+    assertTrue(expl.contains("Foo"));
+    assertTrue(expl.contains("Bar"));
+  }
 }
