@@ -949,7 +949,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       CompositeKnowledgeCarrier ckc = ((CompositeKnowledgeCarrier) assetSurrogateCarrier);
 
       Answer<Void> ans = ckc.getComponent().stream()
-          .map(comp -> addCanonicalKnowledgeAssetSurrogate(assetId, versionTag, comp))
+          .map(comp -> addCanonicalKnowledgeAssetSurrogate(
+              comp.getAssetId().getUuid(), comp.getAssetId().getVersionTag(), comp))
           .reduce(Answer::merge)
           .orElse(Answer.failed());
 
