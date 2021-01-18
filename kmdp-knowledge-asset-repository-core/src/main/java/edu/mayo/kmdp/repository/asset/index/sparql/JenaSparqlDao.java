@@ -1,5 +1,6 @@
 package edu.mayo.kmdp.repository.asset.index.sparql;
 
+import static org.apache.jena.rdf.model.ResourceFactory.createResource;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
 import static org.omg.spec.api4kp._20200801.id.IdentifierConstants.VERSION_LATEST;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.OWL_2;
@@ -87,10 +88,6 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
     //
   }
 
-  public JenaSparqlDao(DataSource dataSource) {
-    this(dataSource, false);
-  }
-
   /**
    * Create a new DAO instance.
    *
@@ -127,7 +124,10 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   }
 
   protected void truncate() {
-    this.store.getTableFormatter().truncate();
+    if (store != null) {
+      // inMemoryDAOs do not have a store attached
+      this.store.getTableFormatter().truncate();
+    }
   }
 
   /**
@@ -197,10 +197,6 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
     this.store.close();
   }
 
-  public void reset() {
-    this.model.removeAll();
-  }
-
   /**
    * Store a single RDF triple S,P,O.
    *
@@ -210,9 +206,9 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
    */
   public void store(URI subject, URI predicate, URI object) {
     Statement s = ResourceFactory.createStatement(
-            ResourceFactory.createResource(subject.toString()),
+            createResource(subject.toString()),
             ResourceFactory.createProperty(predicate.toString()),
-            ResourceFactory.createResource(object.toString()));
+            createResource(object.toString()));
 
     this.model.add(s);
   }
@@ -245,8 +241,8 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   public void runSparql(String sparql, Map<String, URI> params, Map<String, Literal> literalParams, Consumer<QuerySolution> consumer) {
     ParameterizedSparqlString pss = new ParameterizedSparqlString(sparql);
 
-    params.entrySet().forEach(entry -> pss.setIri(entry.getKey(), entry.getValue().toString()));
-    literalParams.entrySet().forEach(entry -> pss.setLiteral(entry.getKey(), entry.getValue()));
+    params.forEach((key, value) -> pss.setIri(key, value.toString()));
+    literalParams.forEach(pss::setLiteral);
 
 
     try (QueryExecution qexec = QueryExecutionFactory.create(pss.toString(), this.model)) {

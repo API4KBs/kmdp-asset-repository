@@ -48,7 +48,7 @@ abstract class RepositoryTestBase {
 
   @BeforeEach
   void reset() {
-    jenaSparqlDao.reset();
+    index.reset();
   }
 
   @AfterAll

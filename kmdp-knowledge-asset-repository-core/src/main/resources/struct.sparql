@@ -1,0 +1,45 @@
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX api4kp: <https://www.omg.org/spec/API4KP/api4kp/>
+
+SELECT ?s ?p ?o
+WHERE
+{
+  # identify the struct
+  {
+    ?root api4kp:hasStructuringComponent ?o .
+    BIND( api4kp:hasStructuringComponent AS ?p )
+    BIND( ?root AS ?s )
+  }
+  UNION
+  # relate components to the root, transitive
+  {
+    ?root api4kp:hasStructuralComponent+ ?o .
+    BIND( api4kp:hasStructuralComponent AS ?p )
+    BIND( ?root AS ?s )
+  }
+  UNION
+  # relate sub-components
+  {
+    ?s ?p ?o .
+  	?p rdfs:subPropertyOf* api4kp:hasStructuralComponent .
+  	FILTER EXISTS { ?root api4kp:hasStructuralComponent* ?s . }
+  }
+  UNION
+  # relate dependencies between components
+  {
+    ?s ?p ?o .
+  	?p rdfs:subPropertyOf* api4kp:dependsOn .
+  	FILTER EXISTS { ?root api4kp:hasStructuralComponent* ?s . }
+  }
+  UNION
+  # types
+  {
+    ?s rdf:type ?o .
+    ?o rdfs:subClassOf* api4kp:KnowledgeAsset .
+  	FILTER EXISTS { ?root api4kp:hasStructuralComponent* ?s . }
+  	BIND( rdf:type AS ?p )
+  }
+
+}

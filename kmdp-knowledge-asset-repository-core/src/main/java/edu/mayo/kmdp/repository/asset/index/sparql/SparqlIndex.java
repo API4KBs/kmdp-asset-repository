@@ -1,5 +1,7 @@
 package edu.mayo.kmdp.repository.asset.index.sparql;
 
+import static org.apache.jena.rdf.model.ResourceFactory.createResource;
+import static org.apache.jena.rdf.model.ResourceFactory.createStatement;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Depends_On;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Imports;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Includes_By_Reference;
@@ -24,6 +26,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.jena.rdf.model.Literal;
+import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Statement;
@@ -38,6 +41,7 @@ import org.omg.spec.api4kp._20200801.surrogate.Annotation;
 import org.omg.spec.api4kp._20200801.surrogate.Dependency;
 import org.omg.spec.api4kp._20200801.surrogate.Derivative;
 import org.omg.spec.api4kp._20200801.surrogate.Link;
+import org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.ClinicalKnowledgeAssetTypeSeries;
 import org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRole;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRoleSeries;
@@ -272,21 +276,21 @@ public class SparqlIndex implements Index {
   }
 
   public Statement toStatement(URI subject, URI predicate, URI object) {
-    return ResourceFactory.createStatement(
+    return createStatement(
         ResourceFactory.createResource(subject.toString()),
         ResourceFactory.createProperty(predicate.toString()),
         ResourceFactory.createResource(object.toString()));
   }
 
   public Statement toStringValueStatement(URI subject, URI predicate, String object) {
-    return ResourceFactory.createStatement(
+    return createStatement(
         ResourceFactory.createResource(subject.toString()),
         ResourceFactory.createProperty(predicate.toString()),
         ResourceFactory.createStringLiteral(object));
   }
 
   public Statement toLongValueStatement(URI subject, URI predicate, Long object) {
-    return ResourceFactory.createStatement(
+    return createStatement(
         ResourceFactory.createResource(subject.toString()),
         ResourceFactory.createProperty(predicate.toString()),
         ResourceFactory.createTypedLiteral(object));
@@ -672,6 +676,8 @@ public class SparqlIndex implements Index {
   @Override
   public void reset() {
     this.jenaSparqlDao.truncate();
+
+    this.jenaSparqlDao.store(getKnowledgeBaseTriples());
   }
 
   /**
@@ -724,6 +730,43 @@ public class SparqlIndex implements Index {
       rid.setMimeType(mimeType.getString());
     }
     return rid;
+  }
+
+  /**
+   * List of T-box Statements adding semantics to the index
+   * @return
+   */
+  private List<Statement> getKnowledgeBaseTriples() {
+    List<Statement> statements = new ArrayList<>();
+    addKnowledgeAssetTriples(KnowledgeAssetTypeSeries.values(), statements);
+    addKnowledgeAssetTriples(ClinicalKnowledgeAssetTypeSeries.values(), statements);
+    addRelationshipTriples(DependencyTypeSeries.values(), statements);
+    return statements;
+  }
+
+  private void addKnowledgeAssetTriples(ConceptTerm[] values, List<Statement> statements) {
+    Arrays.stream(values)
+        .forEach(ax -> {
+          statements.add(createStatement(
+              createResource(ax.getReferentId().toString()),
+              RDFS.subClassOf,
+              createResource(ASSET_URI.toString())));
+          addHierarchy(ax, RDFS.subClassOf, statements);
+        });
+  }
+
+  private void addRelationshipTriples(ConceptTerm[] values, List<Statement> statements) {
+    Arrays.stream(values)
+        .forEach(ax ->
+            addHierarchy(ax, RDFS.subPropertyOf, statements));
+  }
+
+  private void addHierarchy(ConceptTerm ax, Property type, List<Statement> statements) {
+    Arrays.stream(ax.getAncestors()).forEach(parent ->
+        statements.add(
+            createStatement(createResource(ax.getReferentId().toString()),
+                type,
+                createResource(parent.getReferentId().toString()))));
   }
 
 }
