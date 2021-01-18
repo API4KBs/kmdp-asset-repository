@@ -195,4 +195,19 @@ public class ContentNegotiationHelper {
         .map(SyntacticRepresentation::getFormat)
         .findFirst();
   }
+
+  /**
+   * Decodes a formal MIME type and returns the Format component
+   * Uses a default value in case the decoding fails
+   * @param xAccept
+   * @param defaultFormat
+   * @return
+   */
+  public SerializationFormat decodePreferredFormat(String xAccept,
+      SerializationFormat defaultFormat) {
+    return Optional.ofNullable(xAccept)
+        .flatMap(ModelMIMECoder::decode)
+        .map(SyntacticRepresentation::getFormat)
+        .orElse(defaultFormat);
+  }
 }
