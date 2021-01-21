@@ -2112,7 +2112,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
             .withRepresentation(rep)
             .withAssetId(assetSurrogate.getAssetId())
             .withArtifactId(getSurrogateId(assetSurrogate, defaultSurrogateModel, actualFormat)
-                .orElseGet(SurrogateBuilder::randomArtifactId)),
+                .orElseGet(SurrogateBuilder::randomArtifactId))
+            .withLabel(assetSurrogate.getName()),
         Encoded_Knowledge_Expression,
         encode(rep),
         null

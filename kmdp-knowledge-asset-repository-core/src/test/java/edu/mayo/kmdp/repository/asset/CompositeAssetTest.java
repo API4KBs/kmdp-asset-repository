@@ -503,6 +503,42 @@ class CompositeAssetTest extends RepositoryTestBase {
     assertTrue(carrier.components()
         .allMatch(k -> k.asString().orElse("").matches("Foo|Bar")));
   }
+  
+
+  @Test
+  void testAnonymousCompositesWithDeepDepenedencies() {
+    ResourceIdentifier axId1 = randomAssetId();
+    ResourceIdentifier axId2 = randomAssetId();
+    ResourceIdentifier axId3 = randomAssetId();
+
+    KnowledgeAsset ka1 = new KnowledgeAsset()
+        .withAssetId(axId1).withName("Foo")
+        .withLinks(new Dependency().withRel(Depends_On).withHref(axId2));
+    KnowledgeAsset ka2 = new KnowledgeAsset()
+        .withAssetId(axId2).withName("Bar")
+        .withLinks(new Dependency().withRel(Depends_On).withHref(axId3));
+    KnowledgeAsset ka3 = new KnowledgeAsset()
+        .withAssetId(axId2).withName("Baz");
+
+    semanticRepository.setKnowledgeAssetVersion(
+        axId1.getUuid(), axId1.getVersionTag(), ka1);
+    semanticRepository.setKnowledgeAssetVersion(
+        axId2.getUuid(), axId2.getVersionTag(), ka2);
+    semanticRepository.setKnowledgeAssetVersion(
+        axId3.getUuid(), axId3.getVersionTag(), ka3);
+
+    JenaRdfParser parser = new JenaRdfParser();
+
+    Answer<KnowledgeCarrier> structAns = semanticRepository
+        .getAnonymousCompositeKnowledgeAssetStructure(
+            axId1.getUuid(), axId1.getVersionTag());
+    KnowledgeCarrier struct = structAns.orElseGet(Assertions::fail);
+    Model m = parser.applyLift(struct, Abstract_Knowledge_Expression, codedRep(OWL_2), null)
+        .flatOpt(kc -> kc.as(Model.class)).orElseGet(Assertions::fail);
+
+    assertTrue(m.contains(objA(axId1.getVersionId(), Depends_On.getReferentId(), axId2.getVersionId())));
+    assertTrue(m.contains(objA(axId2.getVersionId(), Depends_On.getReferentId(), axId3.getVersionId())));
+  }
 
 
 

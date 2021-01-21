@@ -7,9 +7,16 @@ SELECT ?s ?p ?o
 WHERE
 {
   {
-    ?root ?p ?o .
+    ?root api4kp:dependsOn+ ?o .
+    BIND( api4kp:dependsOn AS ?p )
+    BIND( ?root AS ?s )
+  }
+  UNION
+  # relate sub-components
+  {
+    ?s ?p ?o .
   	?p rdfs:subPropertyOf* api4kp:dependsOn .
-  	BIND( ?root AS ?s )
+  	FILTER EXISTS { ?root api4kp:dependsOn* ?s . }
   }
   UNION
   # types
