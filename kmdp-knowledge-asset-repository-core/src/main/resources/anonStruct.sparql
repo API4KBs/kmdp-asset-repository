@@ -1,0 +1,23 @@
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX api4kp: <https://www.omg.org/spec/API4KP/api4kp/>
+
+SELECT ?s ?p ?o
+WHERE
+{
+  {
+    ?root ?p ?o .
+  	?p rdfs:subPropertyOf* api4kp:dependsOn .
+  	BIND( ?root AS ?s )
+  }
+  UNION
+  # types
+  {
+    ?s rdf:type ?o .
+    ?o rdfs:subClassOf* api4kp:KnowledgeAsset .
+  	FILTER EXISTS { ?root api4kp:dependsOn* ?s . }
+  	BIND( rdf:type AS ?p )
+  }
+
+}

@@ -80,9 +80,6 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
     );
   }
 
-  static KnowledgeCarrier transitiveDependencies(ResourceIdentifier seedAsset) {
-    return JenaQuery.transitiveClosure(seedAsset.getVersionId(), DependencyTypeSeries.Depends_On.getReferentId());
-  }
 
   default void publish(
       KnowledgeAsset surrogate,

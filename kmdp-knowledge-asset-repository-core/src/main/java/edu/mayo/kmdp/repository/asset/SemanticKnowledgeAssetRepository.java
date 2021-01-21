@@ -45,11 +45,13 @@ import static org.omg.spec.api4kp._20200801.services.CompositeStructType.GRAPH;
 import static org.omg.spec.api4kp._20200801.services.CompositeStructType.NONE;
 import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.decode;
 import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.encode;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.assetId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.defaultSurrogateUUID;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomAssetId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getComputableSurrogateMetadata;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getSurrogateId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getSurrogateMetadata;
+import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Depends_On;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRoleSeries.Composite_Knowledge_Asset;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.JSON;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.RDF_1_1;
@@ -1009,17 +1011,18 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    *
    * @param assetId    The id of the seed Asset
    * @param versionTag The version of the seed Asset
-   * @param query      The query that selects the Components
    * @param xAccept    A content negotiation parameter to control the format in which the Components
    *                   are returned(NOT IMPLEMENTED)
    * @return a Composite Knowledge Carrier that includes the Canonical Surrogates (in AST form)
    */
   @Override
   public Answer<CompositeKnowledgeCarrier> getAnonymousCompositeKnowledgeAssetSurrogate(
-      UUID assetId, String versionTag, KnowledgeCarrier query, String xAccept) {
+      UUID assetId, String versionTag, String xAccept) {
     SerializationFormat fmt = negotiator.decodePreferredFormat(xAccept, defaultSurrogateFormat);
+    ResourceIdentifier rootId = assetId(assetId, versionTag);
 
-    return getComponentIds(query)
+    return compositeHelper.getComponentsQuery(rootId, Depends_On)
+        .flatMap(this::getComponentIds)
         .flatMap(componentIds ->
             componentIds.stream()
                 // retrieve available surrogates for components
@@ -1035,9 +1038,11 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   @Override
   public Answer<CompositeKnowledgeCarrier> getAnonymousCompositeKnowledgeAssetCarrier(
-      UUID assetId, String versionTag,
-      KnowledgeCarrier query, String xAccept) {
-    return getComponentIds(query)
+      UUID assetId, String versionTag, String xAccept) {
+    ResourceIdentifier rootId = assetId(assetId, versionTag);
+
+    return compositeHelper.getComponentsQuery(rootId, Depends_On)
+        .flatMap(this::getComponentIds)
         .flatMap(componentIds -> {
 
           Answer<Set<KnowledgeCarrier>> componentSurrogates = componentIds.stream()
@@ -1114,7 +1119,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<KnowledgeCarrier> getCompositeKnowledgeAssetStructure(UUID assetId,
       String versionTag, String xAccept) {
-    ResourceIdentifier rootId = SurrogateBuilder.assetId(assetId,versionTag);
+    ResourceIdentifier rootId = assetId(assetId,versionTag);
 
     Answer<List<Bindings>> ans = compositeHelper.getStructQuery(rootId)
         .flatMap(this::queryKnowledgeAssetGraph);
@@ -1192,7 +1197,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @see Component
    * @see edu.mayo.kmdp.knowledgebase.introspectors.struct.CompositeAssetMetadataIntrospector
    */
-  private Answer<KnowledgeCarrier> inferBasicStruct(KnowledgeAsset composite, SemanticIdentifier structId) {
+  private Answer<KnowledgeCarrier> inferBasicStruct(
+      KnowledgeAsset composite, SemanticIdentifier structId) {
     Model model = ModelFactory.createDefaultModel();
     composite.getLinks().stream()
         .flatMap(StreamUtil.filterAs(Component.class))
@@ -1210,23 +1216,54 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         null);
   }
 
-  //*****************************************************************************************/
-  //* Not yet implemented
-  //*****************************************************************************************/
-
 
   @Override
-  public Answer<List<KnowledgeCarrier>> initCompositeKnowledgeAsset(UUID assetId, String versionTag,
-      String assetRelationshipTag, Integer depth) {
-    return Answer.unsupported();
+  public Answer<KnowledgeCarrier> getAnonymousCompositeKnowledgeAssetStructure(
+      UUID assetId, String versionTag, String xAccept) {
+    ResourceIdentifier rootId = assetId(assetId, versionTag);
+    return compositeHelper.getAnonStructQuery(rootId)
+        .flatMap(this::queryKnowledgeAssetGraph)
+        .flatMap(binds -> compositeHelper.toEncodedStructGraph(randomAssetId(), binds));
   }
 
   @Override
   public Answer<CompositeKnowledgeCarrier> getCompositeKnowledgeAssetCarrier(UUID assetId,
       String versionTag,
       Boolean flat, String xAccept) {
-    return Answer.unsupported();
+    ResourceIdentifier rootId = assetId(assetId, versionTag);
+
+    Answer<KnowledgeAsset> compositeSurr = getKnowledgeAssetVersion(assetId, versionTag, xAccept);
+    if (! compositeSurr.isSuccess()) {
+      return Answer.failed(compositeSurr.getOutcomeType());
+    }
+
+    Answer<KnowledgeCarrier> struct = getCompositeKnowledgeAssetStructure(assetId, versionTag);
+    if (! struct.isSuccess()) {
+      return Answer.failedOnServer(new ServerSideException(PreconditionFailed));
+    }
+
+    return compositeHelper.getComponentsQuery(rootId, Has_Structural_Component)
+        .flatMap(this::getComponentIds)
+        .map(comps -> comps.stream()
+            .map(compId ->
+                getKnowledgeAssetVersionCanonicalCarrier(compId.getUuid(), compId.getVersionTag(),
+                    xAccept))
+            .flatMap(Answer::trimStream)
+            .collect(toList()))
+        .map(carriers -> AbstractCarrier.ofIdentifiableGraphCarriers(
+            rootId,
+            rootId,
+            compositeSurr.map(KnowledgeAsset::getName).orElse(null),
+            struct.get(),
+            carriers
+        ));
   }
+
+
+  //*****************************************************************************************/
+  //* Not yet implemented
+  //*****************************************************************************************/
+
 
   @Override
   public Answer<Void> addKnowledgeAssetCarrier(UUID assetId, String versionTag,

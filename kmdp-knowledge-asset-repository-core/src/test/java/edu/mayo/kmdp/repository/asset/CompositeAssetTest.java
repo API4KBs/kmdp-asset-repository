@@ -1,11 +1,11 @@
 /**
  * Copyright © 2018 Mayo Clinic (RSTKNOWLEDGEMGMT@mayo.edu)
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
  * or implied. See the License for the specific language governing permissions and limitations under
@@ -13,10 +13,11 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
-import static edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryService.transitiveDependencies;
 import static edu.mayo.kmdp.util.JenaUtil.objA;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
@@ -42,7 +43,6 @@ import static org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevelSe
 import static org.omg.spec.api4kp._20200801.taxonomy.structuralreltype.StructuralPartTypeSeries.Has_Structural_Component;
 import static org.omg.spec.api4kp._20200801.taxonomy.structuralreltype.StructuralPartTypeSeries.Has_Structuring_Component;
 
-import edu.mayo.kmdp.kbase.query.sparql.v1_1.JenaQuery;
 import edu.mayo.kmdp.language.parsers.rdf.JenaRdfParser;
 import edu.mayo.kmdp.util.JenaUtil;
 import java.net.URI;
@@ -60,6 +60,7 @@ import org.omg.spec.api4kp._20200801.AbstractCarrier;
 import org.omg.spec.api4kp._20200801.Answer;
 import org.omg.spec.api4kp._20200801.datatypes.Bindings;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
+import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
 import org.omg.spec.api4kp._20200801.id.Term;
 import org.omg.spec.api4kp._20200801.services.CompositeKnowledgeCarrier;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
@@ -67,7 +68,6 @@ import org.omg.spec.api4kp._20200801.surrogate.Component;
 import org.omg.spec.api4kp._20200801.surrogate.Dependency;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
-import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries;
 
 
 class CompositeAssetTest extends RepositoryTestBase {
@@ -92,7 +92,7 @@ class CompositeAssetTest extends RepositoryTestBase {
         rep(Knowledge_Asset_Surrogate_2_0),
         KnowledgeAsset::getAssetId,
         ka -> getSurrogateId(
-            ka,Knowledge_Asset_Surrogate_2_0,null)
+            ka, Knowledge_Asset_Surrogate_2_0, null)
             .orElse(randomArtifactId()),
         KnowledgeAsset::getName,
         Arrays.asList(a1, a2));
@@ -118,7 +118,7 @@ class CompositeAssetTest extends RepositoryTestBase {
     assertEquals(2, binds.size());
 
     assertEquals(
-        new HashSet<>(Arrays.asList(id1.getVersionId(),id2.getVersionId())),
+        new HashSet<>(Arrays.asList(id1.getVersionId(), id2.getVersionId())),
         binds.stream().map(b -> b.get("o")).map(x -> URI.create(x.toString())).collect(
             Collectors.toSet()));
   }
@@ -142,12 +142,12 @@ class CompositeAssetTest extends RepositoryTestBase {
     KnowledgeCarrier ckc = AbstractCarrier.ofAnonymousComposite(
         rep(Knowledge_Asset_Surrogate_2_0),
         KnowledgeAsset::getAssetId,
-        ka -> getSurrogateId(ka,Knowledge_Asset_Surrogate_2_0,null)
+        ka -> getSurrogateId(ka, Knowledge_Asset_Surrogate_2_0, null)
             .orElse(randomArtifactId()),
         Arrays.asList(a1, a2));
 
     Answer<Void> result = semanticRepository.addCanonicalKnowledgeAssetSurrogate(
-        ckc.getAssetId().getUuid(), ckc.getAssetId().getVersionTag(),ckc);
+        ckc.getAssetId().getUuid(), ckc.getAssetId().getVersionTag(), ckc);
     assertTrue(result.isSuccess());
 
     assertEquals(2,
@@ -168,7 +168,6 @@ class CompositeAssetTest extends RepositoryTestBase {
   }
 
 
-
   @Test
   void testGetAnonymousCompositeAsset() {
     ResourceIdentifier id1 = randomAssetId();
@@ -187,9 +186,9 @@ class CompositeAssetTest extends RepositoryTestBase {
         id2.getUuid(), id2.getVersionTag(), a2);
     assertTrue(ax2.isSuccess());
 
-
-    Answer<CompositeKnowledgeCarrier> kc = semanticRepository.getAnonymousCompositeKnowledgeAssetSurrogate(
-        id1.getUuid(),id1.getVersionTag(),transitiveDependencies(id1));
+    Answer<CompositeKnowledgeCarrier> kc = semanticRepository
+        .getAnonymousCompositeKnowledgeAssetSurrogate(
+            id1.getUuid(), id1.getVersionTag());
     assertTrue(kc.isSuccess());
 
     CompositeKnowledgeCarrier ckc = kc.get();
@@ -224,9 +223,9 @@ class CompositeAssetTest extends RepositoryTestBase {
         id2.getUuid(), id2.getVersionTag(), a2);
     assertTrue(ax2.isSuccess());
 
-
-    Answer<CompositeKnowledgeCarrier> kc = semanticRepository.getAnonymousCompositeKnowledgeAssetCarrier(
-        id1.getUuid(),id1.getVersionTag(),transitiveDependencies(id1));
+    Answer<CompositeKnowledgeCarrier> kc = semanticRepository
+        .getAnonymousCompositeKnowledgeAssetCarrier(
+            id1.getUuid(), id1.getVersionTag());
     assertTrue(kc.isSuccess());
 
     CompositeKnowledgeCarrier ckc = kc.get();
@@ -348,7 +347,7 @@ class CompositeAssetTest extends RepositoryTestBase {
     assertTrue(ax6.isSuccess());
 
     Answer<CompositeKnowledgeCarrier> kc =
-        semanticRepository.getCompositeKnowledgeAssetSurrogate(id1.getUuid(),id1.getVersionTag());
+        semanticRepository.getCompositeKnowledgeAssetSurrogate(id1.getUuid(), id1.getVersionTag());
     assertTrue(kc.isSuccess());
 
     CompositeKnowledgeCarrier ckc = kc.get();
@@ -385,6 +384,223 @@ class CompositeAssetTest extends RepositoryTestBase {
     assertFalse(contains(m, id6, Imports, id4));
   }
 
+  @Test
+  void testGetNamedCompositeCarriers() {
+    ResourceIdentifier axId0 = randomAssetId();
+    ResourceIdentifier sId = randomAssetId();
+    ResourceIdentifier axId1 = randomAssetId();
+    ResourceIdentifier axId2 = randomAssetId();
+    ResourceIdentifier artId1 = randomArtifactId();
+    ResourceIdentifier artId2 = randomArtifactId();
+
+    KnowledgeAsset ka0 = new KnowledgeAsset()
+        .withAssetId(axId0)
+        .withName("Comp")
+        .withRole(Composite_Knowledge_Asset)
+        .withLinks(new Component().withRel(Has_Structural_Component).withHref(axId1))
+        .withLinks(new Component().withRel(Has_Structural_Component).withHref(axId2))
+        .withLinks(new Component().withRel(Has_Structuring_Component).withHref(sId));
+
+    KnowledgeAsset ka1 = new KnowledgeAsset()
+        .withAssetId(axId1)
+        .withName("Foo")
+        .withLinks(new Dependency().withRel(Depends_On).withHref(axId2));
+    KnowledgeAsset ka2 = new KnowledgeAsset()
+        .withAssetId(axId2)
+        .withName("Bar");
+
+    semanticRepository.setKnowledgeAssetVersion(
+        axId0.getUuid(), axId0.getVersionTag(), ka0);
+
+    semanticRepository.setKnowledgeAssetVersion(
+        axId1.getUuid(), axId1.getVersionTag(), ka1);
+    semanticRepository.setKnowledgeAssetCarrierVersion(
+        axId1.getUuid(), axId1.getVersionTag(), artId1.getUuid(), artId1.getVersionTag(),
+        ka1.getName().getBytes());
+
+    semanticRepository.setKnowledgeAssetVersion(
+        axId2.getUuid(), axId2.getVersionTag(), ka2);
+    semanticRepository.setKnowledgeAssetCarrierVersion(
+        axId2.getUuid(), axId2.getVersionTag(), artId2.getUuid(), artId2.getVersionTag(),
+        ka2.getName().getBytes());
+
+    Answer<CompositeKnowledgeCarrier> carrierAns =
+        semanticRepository.getCompositeKnowledgeAssetCarrier(
+            axId0.getUuid(), axId0.getVersionTag());
+    CompositeKnowledgeCarrier carrier = carrierAns.orElseGet(Assertions::fail);
+
+    assertEquals(2, carrier.getComponent().size());
+    assertTrue(carrier.components()
+        .allMatch(k -> k.getAssetId().asKey().equals(axId1.asKey())
+            || k.getAssetId().asKey().equals(axId2.asKey())));
+    assertTrue(carrier.components()
+        .allMatch(k -> k.getArtifactId().asKey().equals(artId1.asKey())
+            || k.getArtifactId().asKey().equals(artId2.asKey())));
+    assertTrue(carrier.components()
+        .allMatch(k -> k.asString().orElse("").matches("Foo|Bar")));
+  }
+
+
+  @Test
+  void testAnonymousComposites() {
+    ResourceIdentifier axId1 = randomAssetId();
+    ResourceIdentifier axId2 = randomAssetId();
+    ResourceIdentifier artId1 = randomArtifactId();
+    ResourceIdentifier artId2 = randomArtifactId();
+
+    KnowledgeAsset ka1 = new KnowledgeAsset()
+        .withAssetId(axId1)
+        .withName("Foo")
+        .withLinks(new Dependency().withRel(Depends_On).withHref(axId2));
+    KnowledgeAsset ka2 = new KnowledgeAsset()
+        .withAssetId(axId2)
+        .withName("Bar");
+
+    semanticRepository.setKnowledgeAssetVersion(
+        axId1.getUuid(), axId1.getVersionTag(), ka1);
+    semanticRepository.setKnowledgeAssetCarrierVersion(
+        axId1.getUuid(), axId1.getVersionTag(), artId1.getUuid(), artId1.getVersionTag(),
+        ka1.getName().getBytes());
+
+    semanticRepository.setKnowledgeAssetVersion(
+        axId2.getUuid(), axId2.getVersionTag(), ka2);
+    semanticRepository.setKnowledgeAssetCarrierVersion(
+        axId2.getUuid(), axId2.getVersionTag(), artId2.getUuid(), artId2.getVersionTag(),
+        ka2.getName().getBytes());
+
+    JenaRdfParser parser = new JenaRdfParser();
+
+    Answer<CompositeKnowledgeCarrier> ckcAns =
+        semanticRepository.getAnonymousCompositeKnowledgeAssetSurrogate(
+            axId1.getUuid(), axId1.getVersionTag(), null);
+    CompositeKnowledgeCarrier ckc = ckcAns.orElseGet(Assertions::fail);
+    assertEquals(axId1.asKey(), ckc.getRootId().asKey());
+    assertEquals(2, ckc.getComponent().size());
+    assertTrue(ckc.components()
+        .allMatch(k -> k.getAssetId().asKey().equals(axId1.asKey())
+            || k.getAssetId().asKey().equals(axId2.asKey())));
+    assertNull(ckc.getStruct());
+
+    Answer<KnowledgeCarrier> structAns = semanticRepository
+        .getAnonymousCompositeKnowledgeAssetStructure(
+            axId1.getUuid(), axId1.getVersionTag());
+    KnowledgeCarrier struct = structAns.orElseGet(Assertions::fail);
+    Model m = parser.applyLift(struct, Abstract_Knowledge_Expression, codedRep(OWL_2), null)
+        .flatOpt(kc -> kc.as(Model.class)).orElseGet(Assertions::fail);
+
+    Answer<CompositeKnowledgeCarrier> carrierAns =
+        semanticRepository.getAnonymousCompositeKnowledgeAssetCarrier(
+            axId1.getUuid(), axId1.getVersionTag());
+    CompositeKnowledgeCarrier carrier = carrierAns.orElseGet(Assertions::fail);
+    assertNull(carrier.getStruct());
+    assertEquals(2, carrier.getComponent().size());
+    assertTrue(carrier.components()
+        .allMatch(k -> k.getAssetId().asKey().equals(axId1.asKey())
+            || k.getAssetId().asKey().equals(axId2.asKey())));
+    assertTrue(carrier.components()
+        .allMatch(k -> k.getArtifactId().asKey().equals(artId1.asKey())
+            || k.getArtifactId().asKey().equals(artId2.asKey())));
+    assertTrue(carrier.components()
+        .allMatch(k -> k.asString().orElse("").matches("Foo|Bar")));
+  }
+
+
+
+  @Test
+  void testNamedComposites() {
+    ResourceIdentifier axId0 = randomAssetId();
+    ResourceIdentifier sId = randomAssetId();
+    ResourceIdentifier axId1 = randomAssetId();
+    ResourceIdentifier axId2 = randomAssetId();
+    ResourceIdentifier artId1 = randomArtifactId();
+    ResourceIdentifier artId2 = randomArtifactId();
+
+    KnowledgeAsset ka0 = new KnowledgeAsset()
+        .withAssetId(axId0)
+        .withName("Comp")
+        .withRole(Composite_Knowledge_Asset)
+        .withLinks(new Component().withRel(Has_Structural_Component).withHref(axId1))
+        .withLinks(new Component().withRel(Has_Structural_Component).withHref(axId2))
+        .withLinks(new Component().withRel(Has_Structuring_Component).withHref(sId));
+
+    KnowledgeAsset ka1 = new KnowledgeAsset()
+        .withAssetId(axId1)
+        .withName("Foo")
+        .withLinks(new Dependency().withRel(Depends_On).withHref(axId2));
+    KnowledgeAsset ka2 = new KnowledgeAsset()
+        .withAssetId(axId2)
+        .withName("Bar");
+
+    semanticRepository.setKnowledgeAssetVersion(
+        axId0.getUuid(), axId0.getVersionTag(), ka0);
+
+    semanticRepository.setKnowledgeAssetVersion(
+        axId1.getUuid(), axId1.getVersionTag(), ka1);
+    semanticRepository.setKnowledgeAssetCarrierVersion(
+        axId1.getUuid(), axId1.getVersionTag(), artId1.getUuid(), artId1.getVersionTag(),
+        ka1.getName().getBytes());
+
+    semanticRepository.setKnowledgeAssetVersion(
+        axId2.getUuid(), axId2.getVersionTag(), ka2);
+    semanticRepository.setKnowledgeAssetCarrierVersion(
+        axId2.getUuid(), axId2.getVersionTag(), artId2.getUuid(), artId2.getVersionTag(),
+        ka2.getName().getBytes());
+
+    JenaRdfParser parser = new JenaRdfParser();
+
+    Answer<CompositeKnowledgeCarrier> ckcAns =
+        semanticRepository.getCompositeKnowledgeAssetSurrogate(
+            axId0.getUuid(), axId0.getVersionTag(), null,null);
+    CompositeKnowledgeCarrier ckc = ckcAns.orElseGet(Assertions::fail);
+    assertEquals(axId0.asKey(), ckc.getRootId().asKey());
+    assertEquals(axId0.asKey(), ckc.getAssetId().asKey());
+    assertEquals(3, ckc.getComponent().size());
+    assertTrue(ckc.components()
+        .allMatch(k -> k.getAssetId().asKey().equals(axId0.asKey())
+            || k.getAssetId().asKey().equals(axId1.asKey())
+            || k.getAssetId().asKey().equals(axId2.asKey())));
+    assertEquals(axId0.asKey(), ckc.mainComponent().getAssetId().asKey());
+
+    assertNotNull(ckc.getStruct());
+    assertEquals(sId.asKey(), ckc.getStruct().getAssetId().asKey());
+
+    Model m1 = parser
+        .applyLift(ckc.getStruct(), Abstract_Knowledge_Expression, codedRep(OWL_2), null)
+        .flatOpt(x -> x.as(Model.class))
+        .orElseGet(Assertions::fail);
+
+    Answer<KnowledgeCarrier> structAns = semanticRepository
+        .getCompositeKnowledgeAssetStructure(
+            axId0.getUuid(), axId0.getVersionTag());
+    KnowledgeCarrier struct = structAns.orElseGet(Assertions::fail);
+    assertEquals(sId.asKey(), struct.getAssetId().asKey());
+
+    Model m2 = parser
+        .applyLift(struct, Abstract_Knowledge_Expression, codedRep(OWL_2), null)
+        .flatOpt(kc -> kc.as(Model.class))
+        .orElseGet(Assertions::fail);
+
+    m1.listStatements().forEachRemaining(st -> assertTrue(m2.contains(st)));
+    m2.listStatements().forEachRemaining(st -> assertTrue(m1.contains(st)));
+
+    Answer<CompositeKnowledgeCarrier> carrierAns =
+        semanticRepository.getCompositeKnowledgeAssetCarrier(
+            axId0.getUuid(), axId0.getVersionTag());
+    CompositeKnowledgeCarrier carrier = carrierAns.orElseGet(Assertions::fail);
+    assertNotNull(carrier.getStruct());
+
+    assertEquals(2, carrier.getComponent().size());
+    assertTrue(carrier.components()
+        .allMatch(k -> k.getAssetId().asKey().equals(axId1.asKey())
+            || k.getAssetId().asKey().equals(axId2.asKey())));
+    assertTrue(carrier.components()
+        .allMatch(k -> k.getArtifactId().asKey().equals(artId1.asKey())
+            || k.getArtifactId().asKey().equals(artId2.asKey())));
+    assertTrue(carrier.components()
+        .allMatch(k -> k.asString().orElse("").matches("Foo|Bar")));
+  }
+
+
   private Model toGraph(List<Bindings> binds) {
     Model model = ModelFactory.createDefaultModel();
     binds.stream()
@@ -401,7 +617,7 @@ class CompositeAssetTest extends RepositoryTestBase {
 
   private boolean contains(Model m, ResourceIdentifier subj, Term pred, ResourceIdentifier obj) {
     return m.contains(
-        JenaUtil.objA(subj.getVersionId(),pred.getReferentId(),obj.getVersionId()));
+        JenaUtil.objA(subj.getVersionId(), pred.getReferentId(), obj.getVersionId()));
   }
 
 
