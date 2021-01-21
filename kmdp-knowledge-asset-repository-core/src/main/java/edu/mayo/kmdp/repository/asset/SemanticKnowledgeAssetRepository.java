@@ -580,6 +580,22 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   /**
+   * Attempts to find the best manifestation of a given asset, for the latest version of that asset,
+   * based on the client's preference, as per content standard negotiation
+   *
+   * @param assetId    the ID of the asset to find a manifestation of
+   * @param xAccept    the client's preference, as per content negotiation
+   * @return The chosen Knowledge Artifact
+   * @see SemanticKnowledgeAssetRepository#getKnowledgeAssetVersionCanonicalCarrier(UUID, String, String)
+   */
+  @Override
+  public Answer<byte[]> getKnowledgeAssetCanonicalCarrierContent(
+      UUID assetId, String xAccept) {
+    return getKnowledgeAssetCanonicalCarrier(assetId, xAccept)
+        .flatOpt(AbstractCarrier::asBinary);
+  }
+
+  /**
    * Attempts to find the best manifestation of a given asset, based on the client's preference, as
    * per content standard negotiation
    * <p>
@@ -638,6 +654,21 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         );
   }
 
+  /**
+   * Attempts to find the best manifestation of a given asset, based on the client's preference, as
+   * per content standard negotiation, in binary format
+   *
+   * @param assetId    the ID of the asset to find a manifestation of
+   * @param versionTag the version of the asset to find a manifestation of
+   * @param xAccept    the client's preference, as per content negotiation
+   * @return The chosen Knowledge Artifact, wrapped in a KnowledgeCarrier
+   */
+  @Override
+  public Answer<byte[]> getKnowledgeAssetVersionCanonicalCarrierContent(
+      UUID assetId, String versionTag, String xAccept) {
+    return getKnowledgeAssetVersionCanonicalCarrier(assetId, versionTag, xAccept)
+        .flatOpt(KnowledgeCarrier::asBinary);
+  }
 
   /**
    * Lists the Carrier Artifacts for a given Knowledge Asset version Groups the version of each
@@ -754,6 +785,29 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     } else {
       return carrier;
     }
+  }
+
+  /**
+   * Retrieves a specific version of a Knowledge Artifact, in its role of carrier of a given
+   * Knowledge Asset, in binary form
+   *
+   * @param assetId            The id of the Asset for which the Artifact is a Carrier
+   * @param versionTag         The version of the Asset for which the Artifact is a Carrier
+   * @param artifactId         The id of the Carrier Artifact
+   * @param artifactVersionTag The version of the Carrier Artifact
+   * @param xAccept            Client's preferences on the Artifact representation, which must fit
+   *                           at least one of the preferences, if preferences are specified
+   * @return The Carrier Artifact, in binary form
+   */
+  @Override
+  public Answer<byte[]> getKnowledgeAssetCarrierVersionContent(
+      UUID assetId,
+      String versionTag,
+      UUID artifactId,
+      String artifactVersionTag,
+      String xAccept) {
+    return getKnowledgeAssetCarrierVersion(assetId, versionTag, artifactId, artifactVersionTag, xAccept)
+        .flatOpt(KnowledgeCarrier::asBinary);
   }
 
 

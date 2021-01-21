@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.assetId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.defaultSurrogateUUID;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomArtifactId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomAssetId;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Care_Process_Model;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Clinical_Rule;
@@ -29,6 +30,7 @@ import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeReprese
 
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -38,6 +40,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._20200801.Answer;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetCatalogApi;
+import org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetRepositoryApi;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.client.ApiClientFactory;
 import org.omg.spec.api4kp._20200801.id.Pointer;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
@@ -50,6 +53,7 @@ import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
 class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
 
   private KnowledgeAssetCatalogApi ckac;
+  private KnowledgeAssetRepositoryApi repo;
 
   @BeforeEach
   void init() {
@@ -57,6 +61,7 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
         WithFHIR.NONE);
 
     ckac = KnowledgeAssetCatalogApi.newInstance(webClientFactory);
+    repo = KnowledgeAssetRepositoryApi.newInstance(webClientFactory);
   }
 
   @Test
@@ -255,4 +260,40 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
         );
   }
 
+
+  @Test
+  void testRawContentEndpoints() {
+    ResourceIdentifier assetId = randomAssetId();
+    ResourceIdentifier artifactId = randomArtifactId();
+    ckac.setKnowledgeAssetVersion(assetId.getUuid(), assetId.getVersionTag(),
+        new KnowledgeAsset()
+            .withAssetId(assetId)
+            .withFormalType(Care_Process_Model));
+    repo.setKnowledgeAssetCarrierVersion(
+        assetId.getUuid(), assetId.getVersionTag(),
+        artifactId.getUuid(), artifactId.getVersionTag(),
+        "Foo".getBytes());
+
+
+    Answer<byte[]> binary1 =
+        repo.getKnowledgeAssetCanonicalCarrierContent(assetId.getUuid());
+    Answer<byte[]> binary2 =
+        repo.getKnowledgeAssetVersionCanonicalCarrierContent(
+            assetId.getUuid(), assetId.getVersionTag());
+    Answer<byte[]> binary3 =
+        repo.getKnowledgeAssetCarrierVersionContent(
+            assetId.getUuid(), assetId.getVersionTag(),
+            artifactId.getUuid(), artifactId.getVersionTag());
+
+    assertTrue(binary1.isSuccess());
+    assertTrue(binary2.isSuccess());
+    assertTrue(binary3.isSuccess());
+
+    assertTrue(Arrays.equals(binary1.get(), binary2.get()));
+    assertTrue(Arrays.equals(binary1.get(), binary3.get()));
+
+    assertTrue(Arrays.equals("Foo".getBytes(), binary1.get()));
+
+    assertEquals("Foo", new String(binary1.get()));
+  }
 }
