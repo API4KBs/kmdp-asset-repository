@@ -8,6 +8,7 @@ import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.of;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.ofAst;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.defaultArtifactId;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Depends_On;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.TXT;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.OWL_2;
@@ -57,14 +58,16 @@ public class CompositeHelper {
 
   public CompositeHelper() {
     this.anonStructQuery =
-        FileUtil.read(SemanticKnowledgeAssetRepository.class.getResourceAsStream("/anonStruct.sparql"))
-            .orElseThrow(() -> new IllegalStateException("Unable to load struct.sparql"));
+        FileUtil
+            .read(SemanticKnowledgeAssetRepository.class.getResourceAsStream("/anonStruct.sparql"))
+            .orElseThrow(() -> new IllegalStateException("Unable to load anonStruct.sparql"));
     this.structQuery =
         FileUtil.read(SemanticKnowledgeAssetRepository.class.getResourceAsStream("/struct.sparql"))
             .orElseThrow(() -> new IllegalStateException("Unable to load struct.sparql"));
     this.componentsQuery =
-        FileUtil.read(SemanticKnowledgeAssetRepository.class.getResourceAsStream("/components.sparql"))
-            .orElseThrow(() -> new IllegalStateException("Unable to load struct.sparql"));
+        FileUtil
+            .read(SemanticKnowledgeAssetRepository.class.getResourceAsStream("/components.sparql"))
+            .orElseThrow(() -> new IllegalStateException("Unable to load components.sparql"));
 
     this.sparqlLifter = new SparqlLifter();
     this.rdfLowerer = new JenaRdfParser();
@@ -87,8 +90,8 @@ public class CompositeHelper {
       String srcQuery, ResourceIdentifier rootId, Term closureRel) {
     return sparqlLifter.applyLift(
         of(srcQuery)
-            .withRepresentation(rep(SPARQL_1_1,TXT,defaultCharset())),
-        Concrete_Knowledge_Expression,null, null)
+            .withRepresentation(rep(SPARQL_1_1, TXT, defaultCharset())),
+        Concrete_Knowledge_Expression, null, null)
         .flatMap(q -> bind(q,
             toBinds(
                 ROOT_ID, rootId.getVersionId(),
@@ -118,6 +121,7 @@ public class CompositeHelper {
         objA(b.get("s").toString(), b.get("p").toString(), b.get("o").toString())));
     return ofAst(model)
         .withAssetId(structId)
+        .withArtifactId(defaultArtifactId(structId, OWL_2))
         .withRepresentation(rep(OWL_2));
   }
 
@@ -129,7 +133,6 @@ public class CompositeHelper {
         codedRep(OWL_2, Turtle, TXT, defaultCharset(), Encodings.DEFAULT),
         null);
   }
-
 
 
 }
