@@ -29,9 +29,9 @@ WHERE
   UNION
   # relate dependencies between components
   {
-    ?s ?p ?o .
-  	?p rdfs:subPropertyOf* api4kp:dependsOn .
+    ?s api4kp:dependsOn+ ?o .
   	FILTER EXISTS { ?root api4kp:hasStructuralComponent* ?s . }
+  	BIND( api4kp:dependsOn AS ?p )
   }
   UNION
   # types

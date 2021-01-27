@@ -34,9 +34,11 @@ import static java.util.stream.Collectors.toList;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.of;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.ofAst;
-import static org.omg.spec.api4kp._20200801.AbstractCarrier.ofHomogeneousAnonymousComposite;
-import static org.omg.spec.api4kp._20200801.AbstractCarrier.ofIdentifiableGraphCarriers;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
+import static org.omg.spec.api4kp._20200801.AbstractCompositeCarrier.ofMixedAnonymousComposite;
+import static org.omg.spec.api4kp._20200801.AbstractCompositeCarrier.ofMixedNamedComposite;
+import static org.omg.spec.api4kp._20200801.AbstractCompositeCarrier.ofUniformAnonymousComposite;
+import static org.omg.spec.api4kp._20200801.AbstractCompositeCarrier.ofUniformNamedComposite;
 import static org.omg.spec.api4kp._20200801.id.IdentifierConstants.VERSION_ZERO;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.timedSemverComparator;
@@ -48,6 +50,7 @@ import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMI
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.assetId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.defaultSurrogateUUID;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomAssetId;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getCanonicalSurrogateId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getComputableSurrogateMetadata;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getSurrogateId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getSurrogateMetadata;
@@ -1036,20 +1039,22 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
           .map(comp -> addCanonicalKnowledgeAssetSurrogate(
               comp.getAssetId().getUuid(), comp.getAssetId().getVersionTag(), comp))
           .reduce(Answer::merge)
-          .orElseGet(Answer::failed);
+          .orElseGet(() -> Answer.of(NoContent));
 
-      if (ckc.getStructType() != null && ckc.getStructType() != NONE) {
+      // exclude aggregates with no struct
+      // exclude anonymous composites, where the 'root' Surrogate is already one of the components
+      if (ckc.getStructType() != null && ckc.getStructType() != NONE
+      && ckc.tryMainComponentAs(KnowledgeAsset.class).isEmpty()) {
         Answer<Void> compositeAns =
             compositeStructIntrospector.applyNamedIntrospectDirect(
                 CompositeAssetMetadataIntrospector.id, ckc, null)
                 .flatOpt(kc -> kc.as(KnowledgeAsset.class))
                 .flatMap(ax -> setKnowledgeAssetVersion(
                     ax.getAssetId().getUuid(), ax.getAssetId().getVersionTag(), ax));
-        return Answer.merge(ans, compositeAns);
-      } else {
-        return ans;
+        ans = Answer.merge(ans, compositeAns);
       }
 
+      return ans;
     } else {
       return liftCanonicalSurrogate(assetSurrogateCarrier)
           .flatMap(ax -> setKnowledgeAssetVersion(
@@ -1084,9 +1089,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
                     // encode
                     .flatMap(surr -> encodeCanonicalSurrogate(surr, fmt)))
                 .collect(Answer.toList())
-                // combine into a Composite
-                .map(components -> ofHomogeneousAnonymousComposite(components, GRAPH)
-                    .withRootId(toAssetId(assetId, versionTag))));
+                // combine into a Composite - NO Struct
+                .map(components -> ofUniformAnonymousComposite(
+                    toAssetId(assetId, versionTag), components)));
   }
 
 
@@ -1105,7 +1110,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
               .collect(Answer.toSet());
 
           return componentSurrogates
-              .map(AbstractCarrier::ofHeterogeneousComposite);
+              .map(comps -> ofMixedAnonymousComposite(rootId, comps));
         });
   }
 
@@ -1226,10 +1231,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
               .or(() -> inferBasicStruct(composite, structId.orElse(null)));
 
       return structure.map(struct ->
-          ofIdentifiableGraphCarriers(
+          ofUniformNamedComposite(
               composite.getAssetId(),
+              null,
               composite.getAssetId(),
-              composite.getName(),
+              compositeSurr.map(KnowledgeAsset::getName).orElse(""),
+              GRAPH,
               struct,
               components));
     });
@@ -1304,10 +1311,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
                     xAccept))
             .flatMap(Answer::trimStream)
             .collect(toList()))
-        .map(carriers -> AbstractCarrier.ofIdentifiableGraphCarriers(
+        .map(carriers -> ofMixedNamedComposite(
             rootId,
+            null,
             rootId,
             compositeSurr.map(KnowledgeAsset::getName).orElse(null),
+            GRAPH,
             struct.get(),
             carriers
         ));
@@ -1812,18 +1821,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         assetSurrogate, defaultSurrogateModel, format != null ? format : defaultSurrogateFormat)
         .or(() -> getSurrogateMetadata(assetSurrogate, defaultSurrogateModel,
             defaultSurrogateFormat));
-  }
-
-  /**
-   * Extracts the ID of the canonical surrogate, from the list of Surrogates registered in a
-   * canonical surrogate itself
-   *
-   * @param assetSurrogate The Surrogate to extract the Id from
-   * @return The id of the Surrogate it'self'
-   */
-  private Optional<ResourceIdentifier> getCanonicalSurrogateId(KnowledgeAsset assetSurrogate) {
-    return getSurrogateId(
-        assetSurrogate, defaultSurrogateModel, null);
   }
 
   /**
