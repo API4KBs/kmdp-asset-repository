@@ -17,15 +17,12 @@ import static edu.mayo.kmdp.util.JenaUtil.objA;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomArtifactId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomAssetId;
-import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getSurrogateId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.toAggregateAsset;
-import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.toAnonymousCompositeAsset;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Depends_On;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Imports;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRoleSeries.Composite_Knowledge_Asset;
@@ -38,7 +35,6 @@ import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.Knowledg
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.TXT;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HL7_ELM;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
-import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate_2_0;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.OWL_2;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.SPARQL_1_1;
 import static org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevelSeries.Abstract_Knowledge_Expression;
@@ -60,7 +56,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._20200801.AbstractCarrier;
 import org.omg.spec.api4kp._20200801.Answer;
-import org.omg.spec.api4kp._20200801.Composite;
 import org.omg.spec.api4kp._20200801.datatypes.Bindings;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.id.Term;
@@ -510,7 +505,7 @@ class CompositeAssetTest extends RepositoryTestBase {
         .withAssetId(axId2).withName("Bar")
         .withLinks(new Dependency().withRel(Depends_On).withHref(axId3));
     KnowledgeAsset ka3 = new KnowledgeAsset()
-        .withAssetId(axId2).withName("Baz");
+        .withAssetId(axId3).withName("Baz");
 
     semanticRepository.setKnowledgeAssetVersion(
         axId1.getUuid(), axId1.getVersionTag(), ka1);
@@ -528,10 +523,49 @@ class CompositeAssetTest extends RepositoryTestBase {
     Model m = parser.applyLift(struct, Abstract_Knowledge_Expression, codedRep(OWL_2), null)
         .flatOpt(kc -> kc.as(Model.class)).orElseGet(Assertions::fail);
 
-    assertTrue(m.contains(objA(axId1.getVersionId(), Depends_On.getReferentId(), axId2.getVersionId())));
-    assertTrue(m.contains(objA(axId2.getVersionId(), Depends_On.getReferentId(), axId3.getVersionId())));
+    assertTrue(
+        m.contains(objA(axId1.getVersionId(), Depends_On.getReferentId(), axId2.getVersionId())));
+    assertFalse(
+        m.contains(objA(axId2.getVersionId(), Depends_On.getReferentId(), axId3.getVersionId())));
   }
 
+
+  @Test
+  void testAnonymousCompositesWithDeepImports() {
+    ResourceIdentifier axId1 = randomAssetId();
+    ResourceIdentifier axId2 = randomAssetId();
+    ResourceIdentifier axId3 = randomAssetId();
+
+    KnowledgeAsset ka1 = new KnowledgeAsset()
+        .withAssetId(axId1).withName("Foo")
+        .withLinks(new Dependency().withRel(Imports).withHref(axId2));
+    KnowledgeAsset ka2 = new KnowledgeAsset()
+        .withAssetId(axId2).withName("Bar")
+        .withLinks(new Dependency().withRel(Imports).withHref(axId3));
+    KnowledgeAsset ka3 = new KnowledgeAsset()
+        .withAssetId(axId3).withName("Baz");
+
+    semanticRepository.setKnowledgeAssetVersion(
+        axId1.getUuid(), axId1.getVersionTag(), ka1);
+    semanticRepository.setKnowledgeAssetVersion(
+        axId2.getUuid(), axId2.getVersionTag(), ka2);
+    semanticRepository.setKnowledgeAssetVersion(
+        axId3.getUuid(), axId3.getVersionTag(), ka3);
+
+    JenaRdfParser parser = new JenaRdfParser();
+
+    Answer<KnowledgeCarrier> structAns = semanticRepository
+        .getAnonymousCompositeKnowledgeAssetStructure(
+            axId1.getUuid(), axId1.getVersionTag());
+    KnowledgeCarrier struct = structAns.orElseGet(Assertions::fail);
+    Model m = parser.applyLift(struct, Abstract_Knowledge_Expression, codedRep(OWL_2), null)
+        .flatOpt(kc -> kc.as(Model.class)).orElseGet(Assertions::fail);
+
+    assertTrue(
+        m.contains(objA(axId1.getVersionId(), Imports.getReferentId(), axId2.getVersionId())));
+    assertTrue(
+        m.contains(objA(axId2.getVersionId(), Imports.getReferentId(), axId3.getVersionId())));
+  }
 
 
   @Test
@@ -578,7 +612,7 @@ class CompositeAssetTest extends RepositoryTestBase {
 
     Answer<CompositeKnowledgeCarrier> ckcAns =
         semanticRepository.getCompositeKnowledgeAssetSurrogate(
-            axId0.getUuid(), axId0.getVersionTag(), null,null);
+            axId0.getUuid(), axId0.getVersionTag(), null, null);
     CompositeKnowledgeCarrier ckc = ckcAns.orElseGet(Assertions::fail);
     assertEquals(axId0.asKey(), ckc.getRootId().asKey());
     assertEquals(axId0.asKey(), ckc.getAssetId().asKey());
@@ -628,25 +662,9 @@ class CompositeAssetTest extends RepositoryTestBase {
         .allMatch(k -> k.asString().orElse("").matches("Foo|Bar")));
   }
 
-
-  private Model toGraph(List<Bindings> binds) {
-    Model model = ModelFactory.createDefaultModel();
-    binds.stream()
-        .filter(b -> !b.get("p").toString().contains("artifacts"))
-        .filter(b -> !b.get("s").toString().contains("artifacts"))
-        .filter(b -> !b.get("o").toString().contains("artifacts"))
-        .filter(b -> !b.get("o").toString().contains("kmdp"))
-        .filter(b -> !b.get("p").toString().contains("api4kp-series"))
-        .filter(b -> !b.get("p").toString().contains("dc/elements"))
-        .forEach(b -> model.add(
-            objA(b.get("s").toString(), b.get("p").toString(), b.get("o").toString())));
-    return model;
-  }
-
   private boolean contains(Model m, ResourceIdentifier subj, Term pred, ResourceIdentifier obj) {
     return m.contains(
         JenaUtil.objA(subj.getVersionId(), pred.getReferentId(), obj.getVersionId()));
   }
-
 
 }
