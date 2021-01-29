@@ -6,6 +6,7 @@ import com.google.common.collect.Lists;
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
+import org.apache.jena.query.ParameterizedSparqlString;
 import org.apache.jena.rdf.model.Resource;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.Test;
@@ -44,7 +45,8 @@ class JenaSparqlDaoTest {
 
     List<Resource> results = Lists.newArrayList();
 
-    dao.runSparql(query, Collections.emptyMap(), Collections.emptyMap(),
+    dao.runSparql(new ParameterizedSparqlString(query),
+        Collections.emptyMap(), Collections.emptyMap(),
         x -> results.add(x.getResource("?s")));
 
     assertEquals(1, results.size());

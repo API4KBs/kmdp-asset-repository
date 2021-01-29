@@ -1,5 +1,7 @@
 package edu.mayo.kmdp.repository.asset.index.sparql;
 
+import static edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex.InternalQueryManager.TRIPLE_OBJECT_QUERY;
+import static edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex.InternalQueryManager.TRIPLE_SUBJECT_QUERY;
 import static org.apache.jena.rdf.model.ResourceFactory.createResource;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
 import static org.omg.spec.api4kp._20200801.id.IdentifierConstants.VERSION_LATEST;
@@ -234,21 +236,20 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   /**
    * Run a custom SPARQL query.
    *
-   * @param sparql
+   * @param pss
    * @param params
    * @param consumer
    */
-  public void runSparql(String sparql, Map<String, URI> params, Map<String, Literal> literalParams, Consumer<QuerySolution> consumer) {
-    ParameterizedSparqlString pss = new ParameterizedSparqlString(sparql);
-
+  public void runSparql(ParameterizedSparqlString pss, Map<String, URI> params, Map<String, Literal> literalParams, Consumer<QuerySolution> consumer) {
     params.forEach((key, value) -> pss.setIri(key, value.toString()));
     literalParams.forEach(pss::setLiteral);
 
-
-    try (QueryExecution qexec = QueryExecutionFactory.create(pss.toString(), this.model)) {
+    try (QueryExecution qexec = QueryExecutionFactory.create(pss.asQuery(), this.model)) {
       ResultSet rs = qexec.execSelect();
       rs.forEachRemaining(consumer);
     }
+
+    pss.clearParams();
   }
 
   /**
@@ -262,15 +263,13 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
    * @return ?s
    */
   public List<Resource> readSubjectByPredicateAndObject(URI predicate, URI object) {
-    String query = "select ?s where { ?s ?p ?o . }";
-
     Map<String, URI> params = Maps.newHashMap();
     params.put("?p", predicate);
     params.put("?o", object);
 
     List<Resource> resourceList = Lists.newArrayList();
 
-    this.runSparql(query, params, Collections.emptyMap(), result -> resourceList.add(result.getResource("?s")));
+    this.runSparql(TRIPLE_SUBJECT_QUERY, params, Collections.emptyMap(), result -> resourceList.add(result.getResource("?s")));
 
     return resourceList;
   }
@@ -278,7 +277,7 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   /**
    * Read by Object by Subject and Predicate:
    *
-   * --> select ?o where { ?s ?p  ?o . }
+   * --> select ?o where { ?s ?p ?o . }
    * for given ?s and ?p
    *
    * @param subject ?s
@@ -286,7 +285,6 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
    * @return ?o
    */
   public List<Resource> readObjectBySubjectAndPredicate(URI subject, URI predicate) {
-    String query = "select ?o where { ?s ?p  ?o . }";
 
     Map<String, URI> params = Maps.newHashMap();
     params.put("?p", predicate);
@@ -294,7 +292,7 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
 
     List<Resource> resourceList = Lists.newArrayList();
 
-    this.runSparql(query, params, Collections.emptyMap(), result -> resourceList.add(result.getResource("?o")));
+    this.runSparql(TRIPLE_OBJECT_QUERY, params, Collections.emptyMap(), result -> resourceList.add(result.getResource("?o")));
 
     return resourceList;
   }
@@ -302,7 +300,7 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   /**
    * Read by Object by Subject and Predicate:
    *
-   * --> select ?o where { ?s ?p  ?o . }
+   * --> select ?o where { ?s ?p ?o . }
    * for given ?s and ?p
    *
    * @param subject ?s
@@ -310,15 +308,13 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
    * @return ?o
    */
   public List<Literal> readValueBySubjectAndPredicate(URI subject, URI predicate) {
-    String query = "select ?o where { ?s ?p  ?o . }";
-
     Map<String, URI> params = Maps.newHashMap();
     params.put("?p", predicate);
     params.put("?s", subject);
 
     List<Literal> valueList = Lists.newArrayList();
 
-    this.runSparql(query, params, Collections.emptyMap(), result -> valueList.add(result.getLiteral("?o")));
+    this.runSparql(TRIPLE_OBJECT_QUERY, params, Collections.emptyMap(), result -> valueList.add(result.getLiteral("?o")));
 
     return valueList;
   }
@@ -326,21 +322,19 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   /**
    * Read Subject by Predicate:
    *
-   * --> select ?s where { ?s ?p  ?o . }
+   * --> select ?s where { ?s ?p ?o . }
    * for given ?p
    *
    * @param predicate ?p
    * @return ?s
    */
   public List<Resource> readSubjectByPredicate(URI predicate) {
-    String query = "select ?s where { ?s ?p  ?o . }";
-
     Map<String, URI> params = Maps.newHashMap();
     params.put("?p", predicate);
 
     List<Resource> resourceList = Lists.newArrayList();
 
-    this.runSparql(query, params, Collections.emptyMap(), result -> resourceList.add(result.getResource("?s")));
+    this.runSparql(TRIPLE_SUBJECT_QUERY, params, Collections.emptyMap(), result -> resourceList.add(result.getResource("?s")));
 
     return resourceList;
   }
@@ -358,21 +352,19 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   /**
    * Read Subject by Object:
    *
-   * --> select ?s where { ?s ?p  ?o . }
+   * --> select ?s where { ?s ?p ?o . }
    * for given ?o
    * 
    * @param object ?o
    * @return ?s
    */
   public List<Resource> readSubjectByObject(URI object) {
-    String query = "select ?s where { ?s ?p  ?o . }";
-
     Map<String, URI> params = Maps.newHashMap();
     params.put("?o", object);
 
     List<Resource> resourceList = Lists.newArrayList();
 
-    this.runSparql(query, params, Collections.emptyMap(), result -> resourceList.add(result.getResource("?s")));
+    this.runSparql(TRIPLE_SUBJECT_QUERY, params, Collections.emptyMap(), result -> resourceList.add(result.getResource("?s")));
 
     return resourceList;
   }
