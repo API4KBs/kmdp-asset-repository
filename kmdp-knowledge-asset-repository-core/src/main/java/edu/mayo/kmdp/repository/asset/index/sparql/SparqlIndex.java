@@ -32,7 +32,6 @@ import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Statement;
-import org.apache.jena.vocabulary.OWL;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.omg.spec.api4kp._20200801.id.ConceptIdentifier;
@@ -301,11 +300,6 @@ public class SparqlIndex implements Index {
 
   @Override
   public Set<ResourceIdentifier> getRelatedAssets(ResourceIdentifier assetPointer, URI relation) {
-    String sparql = "" +
-        "SELECT ?o\n" +
-        "WHERE {\n" +
-        "    ?s ?p* ?o\n" +
-        "}";
 
     Map<String, URI> params = Maps.newHashMap();
     params.put("?s", assetPointer.getVersionId());
@@ -313,27 +307,24 @@ public class SparqlIndex implements Index {
 
     Set<ResourceIdentifier> related = Sets.newHashSet();
 
-    this.jenaSparqlDao.runSparql(sparql, params, Collections.emptyMap(), (
-        querySolution -> related.add(
-            this.resourceToResourceIdentifier(querySolution.getResource("?o")))));
+    this.jenaSparqlDao.runSparql(InternalQueryManager.TRANSITIVE_CLOSURE_SELECT,
+        params,
+        Collections.emptyMap(), (
+            querySolution -> related.add(
+                this.resourceToResourceIdentifier(querySolution.getResource("?o")))));
 
     return related;
   }
 
   @Override
   public Set<ResourceIdentifier> getRelatedAssets(ResourceIdentifier assetPointer) {
-    String sparql = "" +
-        "SELECT ?o\n" +
-        "WHERE {\n" +
-        "    ?s " + TRAVERSE_DEPS_SPARQL + " ?o\n" +
-        "}";
-
     Map<String, URI> params = Maps.newHashMap();
     params.put("?s", assetPointer.getVersionId());
 
     Set<ResourceIdentifier> related = Sets.newHashSet();
 
-    this.jenaSparqlDao.runSparql(sparql, params, Collections.emptyMap(), (
+    this.jenaSparqlDao.runSparql(InternalQueryManager.DEPENDENCY_CLOSURE_SELECT,
+        params, Collections.emptyMap(), (
         querySolution -> related.add(
             this.resourceToResourceIdentifier(querySolution.getResource("?o")))));
 
@@ -540,19 +531,6 @@ public class SparqlIndex implements Index {
 
   @Override
   public Optional<ResourceIdentifier> resolve(UUID assetId, String versionTag) {
-    String sparql = ""
-        + " PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n"
-        + " PREFIX lcc: <https://www.omg.org/spec/LCC/Languages/LanguageRepresentation/> \n"
-        + " PREFIX api4kp: <https://www.omg.org/spec/API4KP/api4kp/> \n"
-        + " PREFIX api4kp-series: <https://www.omg.org/spec/API4KP/api4kp-series/> \n"
-        + " PREFIX kmd: <http://ontology.mayo.edu/ontologies/kmdp/> \n"
-
-        + "SELECT ?asset ?version \n"
-        + "WHERE { \n"
-        + "  ?asset kmd:" + TAG_ID + " ?tag ; \n"
-        + "     api4kp-series:" + HAS_VERSION + " ?version . \n"
-        + "  ?version kmd:" + HAS_VERSION_TAG + " ?vTag . \n"
-        + "}";
 
     List<Resource> versions = new ArrayList<>();
     Map<String, Literal> literalParams = new HashMap<>();
@@ -561,12 +539,10 @@ public class SparqlIndex implements Index {
     literalParams.put("?vTag",
         ResourceFactory.createPlainLiteral(versionTag));
 
-    this.jenaSparqlDao.runSparql(sparql,
+    this.jenaSparqlDao.runSparql(InternalQueryManager.RESOLVE_TAG_VERSION_SELECT,
         Collections.emptyMap(),
         literalParams, (
-            querySolution -> {
-              versions.add(querySolution.getResource("?version"));
-            }));
+            querySolution -> versions.add(querySolution.getResource("?version"))));
 
     return versions.isEmpty()
         ? Optional.empty()
@@ -575,29 +551,15 @@ public class SparqlIndex implements Index {
 
   @Override
   public Optional<ResourceIdentifier> resolve(UUID assetId) {
-    String sparql = ""
-        + " PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n"
-        + " PREFIX lcc: <https://www.omg.org/spec/LCC/Languages/LanguageRepresentation/> \n"
-        + " PREFIX api4kp: <https://www.omg.org/spec/API4KP/api4kp/> \n"
-        + " PREFIX api4kp-series: <https://www.omg.org/spec/API4KP/api4kp-series/> \n"
-        + " PREFIX kmd: <http://ontology.mayo.edu/ontologies/kmdp/> \n"
-
-        + "SELECT ?asset \n"
-        + "WHERE { \n"
-        + "  ?asset kmd:" + TAG_ID + " ?tag . \n"
-        + "}";
-
     List<Resource> versions = new ArrayList<>();
     Map<String, Literal> literalParams = new HashMap<>();
     literalParams.put("?tag",
         ResourceFactory.createPlainLiteral(assetId.toString()));
 
-    this.jenaSparqlDao.runSparql(sparql,
+    this.jenaSparqlDao.runSparql(InternalQueryManager.RESOLVE_TAG_SELECT,
         Collections.emptyMap(),
         literalParams, (
-            querySolution -> {
-              versions.add(querySolution.getResource("?asset"));
-            }));
+            querySolution -> versions.add(querySolution.getResource("?asset"))));
 
     return versions.isEmpty()
         ? Optional.empty()
@@ -612,29 +574,12 @@ public class SparqlIndex implements Index {
    */
   @Override
   public List<ResourceIdentifier> getAssetVersions(UUID assetSeriesId) {
-    String sparql = ""
-        + " PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n"
-        + " PREFIX lcc: <https://www.omg.org/spec/LCC/Languages/LanguageRepresentation/> \n"
-        + " PREFIX api4kp: <https://www.omg.org/spec/API4KP/api4kp/> \n"
-        + " PREFIX api4kp-series: <https://www.omg.org/spec/API4KP/api4kp-series/> \n"
-        + " PREFIX kmd: <http://ontology.mayo.edu/ontologies/kmdp/> \n"
-
-        + "SELECT ?asset ?version ?vTag ?vTimestamp \n"
-        + "WHERE { \n"
-        + "  ?asset kmd:" + TAG_ID + " ?tag ; \n"
-        + "     api4kp-series:" + HAS_VERSION + " ?version . \n"
-        + "  ?version rdf:type api4kp:" + ASSET + " ; \n"
-        + "     kmd:" + HAS_VERSION_TAG + " ?vTag ; \n"
-        + "     api4kp-series:" + ESTABLISHED + " ?vTimestamp . \n"
-        + "} \n"
-        + "ORDER BY DESC(?vTimestamp)";
-
     List<ResourceIdentifier> versions = new ArrayList<>();
     Map<String, Literal> literalParams = new HashMap<>();
     literalParams.put("?tag",
         ResourceFactory.createPlainLiteral(assetSeriesId.toString()));
 
-    this.jenaSparqlDao.runSparql(sparql,
+    this.jenaSparqlDao.runSparql(InternalQueryManager.ASSET_VERSIONS_SELECT,
         Collections.emptyMap(),
         literalParams, (
             querySolution -> versions.add(
@@ -655,32 +600,12 @@ public class SparqlIndex implements Index {
    */
   @Override
   public List<Pointer> getSurrogateVersions(UUID surrogateSeriesId) {
-    String sparql = ""
-        + " PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n"
-        + " PREFIX lcc: <https://www.omg.org/spec/LCC/Languages/LanguageRepresentation/> \n"
-        + " PREFIX api4kp: <https://www.omg.org/spec/API4KP/api4kp/> \n"
-        + " PREFIX dc: <" + DublinCoreVocabulary.NAME_SPACE + "> \n"
-        + " PREFIX api4kp-series: <https://www.omg.org/spec/API4KP/api4kp-series/> \n"
-        + " PREFIX kmd: <http://ontology.mayo.edu/ontologies/kmdp/> \n"
-
-        + "SELECT ?surrogate ?version ?vTag ?vTimestamp ?format \n"
-        + "WHERE { \n"
-        + "  ?asset api4kp:" + HAS_SURROGATE + " ?surrogate . \n"
-        + "  ?surrogate kmd:" + TAG_ID + " ?tag ; \n"
-        + "     api4kp-series:" + HAS_VERSION + " ?version . \n"
-        + "     OPTIONAL { ?surrogate dc:" + FORMAT + " ?format } \n"
-        + "  ?version  \n"
-        + "     kmd:" + HAS_VERSION_TAG + " ?vTag ; \n"
-        + "     api4kp-series:" + ESTABLISHED + " ?vTimestamp . \n"
-        + "} \n"
-        + "ORDER BY DESC(?vTimestamp)";
-
     List<Pointer> versions = new ArrayList<>();
     Map<String, Literal> literalParams = new HashMap<>();
     literalParams.put("?tag",
         ResourceFactory.createPlainLiteral(surrogateSeriesId.toString()));
 
-    this.jenaSparqlDao.runSparql(sparql,
+    this.jenaSparqlDao.runSparql(InternalQueryManager.SURROGATE_VERSIONS_SELECT,
         Collections.emptyMap(),
         literalParams, (
             querySolution -> versions.add(
@@ -703,32 +628,12 @@ public class SparqlIndex implements Index {
    */
   @Override
   public List<Pointer> getCarrierVersions(UUID carrierSeriesId) {
-    String sparql = ""
-        + " PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n"
-        + " PREFIX lcc: <https://www.omg.org/spec/LCC/Languages/LanguageRepresentation/> \n"
-        + " PREFIX api4kp: <https://www.omg.org/spec/API4KP/api4kp/> \n"
-        + " PREFIX dc: <" + DublinCoreVocabulary.NAME_SPACE + "> \n"
-        + " PREFIX api4kp-series: <https://www.omg.org/spec/API4KP/api4kp-series/> \n"
-        + " PREFIX kmd: <http://ontology.mayo.edu/ontologies/kmdp/> \n"
-
-        + "SELECT ?carrier ?version ?vTag ?vTimestamp ?format \n"
-        + "WHERE { \n"
-        + "  ?asset api4kp:" + HAS_CARRIER + " ?carrier . \n"
-        + "  ?carrier kmd:" + TAG_ID + " ?tag ; \n"
-        + "     api4kp-series:" + HAS_VERSION + " ?version . \n"
-        + "     OPTIONAL { ?carrier dc:" + FORMAT + " ?format } \n"
-        + "  ?version  \n"
-        + "     kmd:" + HAS_VERSION_TAG + " ?vTag ; \n"
-        + "     api4kp-series:" + ESTABLISHED + " ?vTimestamp . \n"
-        + "} \n"
-        + "ORDER BY DESC(?vTimestamp)";
-
     List<Pointer> versions = new ArrayList<>();
     Map<String, Literal> literalParams = new HashMap<>();
     literalParams.put("?tag",
         ResourceFactory.createPlainLiteral(carrierSeriesId.toString()));
 
-    this.jenaSparqlDao.runSparql(sparql,
+    this.jenaSparqlDao.runSparql(InternalQueryManager.CARRIER_VERSIONS_SELECT,
         Collections.emptyMap(),
         literalParams, (
             querySolution -> versions.add(
@@ -752,7 +657,7 @@ public class SparqlIndex implements Index {
   /**
    * Returns the ID of the KnowledgeGraph underlying this index
    *
-   * @return
+   * @return a Pointer Identifier of the Graph Knowledge Asset
    */
   @Override
   public Pointer getKnowledgeBaseId() {
@@ -762,7 +667,7 @@ public class SparqlIndex implements Index {
   /**
    * Returns the KnowledgeGraph underlying this index
    *
-   * @return
+   * @return the Graph, as a API4KP KnowledgeBase
    */
   @Override
   public KnowledgeBase asKnowledgeBase() {
@@ -800,8 +705,8 @@ public class SparqlIndex implements Index {
   }
 
   /**
-   * List of T-box Statements adding semantics to the index
-   * @return
+   * List of T-box Statements adding semantics to the index graph, supporting query/inference
+   * @return the knowledge T-box triples
    */
   private List<Statement> getKnowledgeBaseTriples() {
     List<Statement> statements = new ArrayList<>();
@@ -836,4 +741,90 @@ public class SparqlIndex implements Index {
                 createResource(parent.getReferentId().toString()))));
   }
 
+
+  static class InternalQueryManager {
+
+    private static final String PREAMBLE = ""
+        + " PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n"
+        + " PREFIX lcc: <https://www.omg.org/spec/LCC/Languages/LanguageRepresentation/> \n"
+        + " PREFIX api4kp: <https://www.omg.org/spec/API4KP/api4kp/> \n"
+        + " PREFIX dc: <" + DublinCoreVocabulary.NAME_SPACE + "> \n"
+        + " PREFIX api4kp-series: <https://www.omg.org/spec/API4KP/api4kp-series/> \n"
+        + " PREFIX kmd: <http://ontology.mayo.edu/ontologies/kmdp/> \n";
+
+
+    static final String RESOLVE_TAG_SELECT =
+        PREAMBLE
+        + "SELECT ?asset \n"
+        + "WHERE { \n"
+        + "  ?asset kmd:" + TAG_ID + " ?tag . \n"
+        + "}";
+
+    static final String RESOLVE_TAG_VERSION_SELECT =
+        PREAMBLE
+        + "SELECT ?asset ?version \n"
+        + "WHERE { \n"
+        + "  ?asset kmd:" + TAG_ID + " ?tag ; \n"
+        + "     api4kp-series:" + HAS_VERSION + " ?version . \n"
+        + "  ?version kmd:" + HAS_VERSION_TAG + " ?vTag . \n"
+        + "}";
+
+    static final String CARRIER_VERSIONS_SELECT =
+        PREAMBLE
+        + "SELECT ?carrier ?version ?vTag ?vTimestamp ?format \n"
+        + "WHERE { \n"
+        + "  ?asset api4kp:" + HAS_CARRIER + " ?carrier . \n"
+        + "  ?carrier kmd:" + TAG_ID + " ?tag ; \n"
+        + "     api4kp-series:" + HAS_VERSION + " ?version . \n"
+        + "     OPTIONAL { ?carrier dc:" + FORMAT + " ?format } \n"
+        + "  ?version  \n"
+        + "     kmd:" + HAS_VERSION_TAG + " ?vTag ; \n"
+        + "     api4kp-series:" + ESTABLISHED + " ?vTimestamp . \n"
+        + "} \n"
+        + "ORDER BY DESC(?vTimestamp)";
+
+    static final String SURROGATE_VERSIONS_SELECT =
+        PREAMBLE
+        + "SELECT ?surrogate ?version ?vTag ?vTimestamp ?format \n"
+        + "WHERE { \n"
+        + "  ?asset api4kp:" + HAS_SURROGATE + " ?surrogate . \n"
+        + "  ?surrogate kmd:" + TAG_ID + " ?tag ; \n"
+        + "     api4kp-series:" + HAS_VERSION + " ?version . \n"
+        + "     OPTIONAL { ?surrogate dc:" + FORMAT + " ?format } \n"
+        + "  ?version  \n"
+        + "     kmd:" + HAS_VERSION_TAG + " ?vTag ; \n"
+        + "     api4kp-series:" + ESTABLISHED + " ?vTimestamp . \n"
+        + "} \n"
+        + "ORDER BY DESC(?vTimestamp)";
+
+    static final String ASSET_VERSIONS_SELECT =
+        PREAMBLE
+        + "SELECT ?asset ?version ?vTag ?vTimestamp \n"
+        + "WHERE { \n"
+        + "  ?asset kmd:" + TAG_ID + " ?tag ; \n"
+        + "     api4kp-series:" + HAS_VERSION + " ?version . \n"
+        + "  ?version rdf:type api4kp:" + ASSET + " ; \n"
+        + "     kmd:" + HAS_VERSION_TAG + " ?vTag ; \n"
+        + "     api4kp-series:" + ESTABLISHED + " ?vTimestamp . \n"
+        + "} \n"
+        + "ORDER BY DESC(?vTimestamp)";
+
+    static final String TRANSITIVE_CLOSURE_SELECT =
+        "SELECT ?o \n" +
+            "WHERE { \n" +
+            "    ?s ?p* ?o \n" +
+            "}";
+
+    static final String DEPENDENCY_CLOSURE_SELECT =
+        "SELECT ?o \n" +
+            "WHERE { \n" +
+            "    ?s " + TRAVERSE_DEPS_SPARQL + " ?o\n" +
+            "}";
+
+
+    private InternalQueryManager() {
+      // constants only
+    }
+
+  }
 }
