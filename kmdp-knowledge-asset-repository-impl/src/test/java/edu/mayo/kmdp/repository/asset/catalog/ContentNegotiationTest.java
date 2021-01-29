@@ -62,7 +62,7 @@ import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
 
-public class ContentNegotiationTest extends SemanticRepoAPITestBase {
+class ContentNegotiationTest extends SemanticRepoAPITestBase {
 
   private KnowledgeAssetRepositoryApi repo;
   private KnowledgeAssetCatalogApi ckac;
@@ -79,7 +79,7 @@ public class ContentNegotiationTest extends SemanticRepoAPITestBase {
 
 
   @Test
-  public void testContentNegotiation() {
+  void testContentNegotiation() {
     UUID assetId = UUID.nameUUIDFromBytes("1".getBytes());
     String versionTag = "1";
 
@@ -89,7 +89,8 @@ public class ContentNegotiationTest extends SemanticRepoAPITestBase {
 
     KnowledgeAsset asset = buildComputableAsset(assetId,versionTag,knartXML);
 
-    ckac.setKnowledgeAssetVersion(assetId,versionTag,asset);
+    Answer<Void> set = ckac.setKnowledgeAssetVersion(assetId,versionTag,asset);
+    assertTrue(set.isSuccess());
 
     Answer<KnowledgeCarrier> ans = repo.getKnowledgeAssetVersionCanonicalCarrier(
         assetId,
@@ -111,7 +112,7 @@ public class ContentNegotiationTest extends SemanticRepoAPITestBase {
 
 
   @Test
-  public void testContentNegotiationWithHTML() {
+  void testContentNegotiationWithHTML() {
     UUID assetId = UUID.nameUUIDFromBytes("2".getBytes());
     String versionTag = "2";
 

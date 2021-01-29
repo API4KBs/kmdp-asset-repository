@@ -2,6 +2,8 @@ package edu.mayo.kmdp.repository.asset.index.sparql;
 
 import static org.apache.jena.rdf.model.ResourceFactory.createResource;
 import static org.apache.jena.rdf.model.ResourceFactory.createStatement;
+import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
+import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newVersionId;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Depends_On;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Imports;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Includes_By_Reference;
@@ -30,6 +32,7 @@ import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Statement;
+import org.apache.jena.vocabulary.OWL;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.omg.spec.api4kp._20200801.id.ConceptIdentifier;
@@ -535,6 +538,72 @@ public class SparqlIndex implements Index {
     return typeConcepts;
   }
 
+  @Override
+  public Optional<ResourceIdentifier> resolve(UUID assetId, String versionTag) {
+    String sparql = ""
+        + " PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n"
+        + " PREFIX lcc: <https://www.omg.org/spec/LCC/Languages/LanguageRepresentation/> \n"
+        + " PREFIX api4kp: <https://www.omg.org/spec/API4KP/api4kp/> \n"
+        + " PREFIX api4kp-series: <https://www.omg.org/spec/API4KP/api4kp-series/> \n"
+        + " PREFIX kmd: <http://ontology.mayo.edu/ontologies/kmdp/> \n"
+
+        + "SELECT ?asset ?version \n"
+        + "WHERE { \n"
+        + "  ?asset kmd:" + TAG_ID + " ?tag ; \n"
+        + "     api4kp-series:" + HAS_VERSION + " ?version . \n"
+        + "  ?version kmd:" + HAS_VERSION_TAG + " ?vTag . \n"
+        + "}";
+
+    List<Resource> versions = new ArrayList<>();
+    Map<String, Literal> literalParams = new HashMap<>();
+    literalParams.put("?tag",
+        ResourceFactory.createPlainLiteral(assetId.toString()));
+    literalParams.put("?vTag",
+        ResourceFactory.createPlainLiteral(versionTag));
+
+    this.jenaSparqlDao.runSparql(sparql,
+        Collections.emptyMap(),
+        literalParams, (
+            querySolution -> {
+              versions.add(querySolution.getResource("?version"));
+            }));
+
+    return versions.isEmpty()
+        ? Optional.empty()
+        : Optional.of(resourceToResourceIdentifier(versions.get(0)));
+  }
+
+  @Override
+  public Optional<ResourceIdentifier> resolve(UUID assetId) {
+    String sparql = ""
+        + " PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n"
+        + " PREFIX lcc: <https://www.omg.org/spec/LCC/Languages/LanguageRepresentation/> \n"
+        + " PREFIX api4kp: <https://www.omg.org/spec/API4KP/api4kp/> \n"
+        + " PREFIX api4kp-series: <https://www.omg.org/spec/API4KP/api4kp-series/> \n"
+        + " PREFIX kmd: <http://ontology.mayo.edu/ontologies/kmdp/> \n"
+
+        + "SELECT ?asset \n"
+        + "WHERE { \n"
+        + "  ?asset kmd:" + TAG_ID + " ?tag . \n"
+        + "}";
+
+    List<Resource> versions = new ArrayList<>();
+    Map<String, Literal> literalParams = new HashMap<>();
+    literalParams.put("?tag",
+        ResourceFactory.createPlainLiteral(assetId.toString()));
+
+    this.jenaSparqlDao.runSparql(sparql,
+        Collections.emptyMap(),
+        literalParams, (
+            querySolution -> {
+              versions.add(querySolution.getResource("?asset"));
+            }));
+
+    return versions.isEmpty()
+        ? Optional.empty()
+        : Optional.of(resourceSeriesToResourceIdentifier(versions.get(0)));
+  }
+
   /**
    * Returns the known Versions of a given KnowledgeAsset, sorted by (asset) version Tag and,
    * subsequently, by timestamp
@@ -702,13 +771,11 @@ public class SparqlIndex implements Index {
 
 
   protected ResourceIdentifier resourceToResourceIdentifier(Resource resource) {
-    return SemanticIdentifier
-        .newVersionId(URI.create(resource.getURI()));
+    return newVersionId(URI.create(resource.getURI()));
   }
 
   protected ResourceIdentifier resourceSeriesToResourceIdentifier(Resource resource) {
-    return SemanticIdentifier
-        .newId(URI.create(resource.getURI()));
+    return newId(URI.create(resource.getURI()));
   }
 
   protected Pointer versionInfoToPointer(

@@ -474,7 +474,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   public Answer<List<Pointer>> listKnowledgeAssetVersions(UUID assetId, Integer offset,
       Integer limit, String beforeTag, String afterTag, String sort) {
 
-    if (!hasKnowledgeAsset(toAssetId(assetId))) {
+    if (index.resolve(assetId).isEmpty()) {
       return Answer.notFound();
     }
 
@@ -551,7 +551,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     } catch (ServerSideException sse) {
       return Answer.failedOnServer(sse);
     }
-    persistCanonicalKnowledgeAssetVersion(assetIdentifier, surrogateIdentifier, assetSurrogate);
+    persistCanonicalKnowledgeAssetVersion(
+        assetSurrogate.getAssetId(), surrogateIdentifier, assetSurrogate);
 
     return Answer.of(NoContent);
   }
@@ -637,18 +638,17 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
                   ? negotiator.negotiate(surrogate.getCarriers(), preferences)
                   : negotiator.anyCarrier(surrogate.getCarriers());
 
-
               Answer<KnowledgeCarrier> carrier = bestAvailableCarrier.isSuccess()
-                  ? bestAvailableCarrier
-                  .flatMap(artf -> getKnowledgeAssetCarrierVersion(
-                      assetId,
-                      versionTag,
-                      artf.getArtifactId().getUuid(),
-                      artf.getArtifactId().getVersionTag(),
-                      xAccept))
+                  ? bestAvailableCarrier.flatMap(artf -> getKnowledgeAssetCarrierVersion(
+                  assetId,
+                  versionTag,
+                  artf.getArtifactId().getUuid(),
+                  artf.getArtifactId().getVersionTag(),
+                  xAccept))
                   : tryConstructEphemeral(surrogate, preferences);
 
-              if (carrier.isNotFound() && withNegotiation && bestAvailableCarrier.map(this::isRedirectable).orElse(false)) {
+              if (carrier.isNotFound() && withNegotiation
+                  && bestAvailableCarrier.map(this::isRedirectable).orElse(false)) {
                 return bestAvailableCarrier.flatMap(ka -> Answer.referTo(ka.getLocator(), false));
               } else {
                 return carrier;
@@ -690,11 +690,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   public Answer<List<Pointer>> listKnowledgeAssetCarriers(UUID assetId, String versionTag,
       Integer offset, Integer limit, String beforeTag, String afterTag, String sort) {
 
-    ResourceIdentifier assetRef = toAssetId(assetId, versionTag);
+    Optional<ResourceIdentifier> assetRefOpt = index.resolve(assetId, toSemVer(versionTag));
 
-    if (! hasKnowledgeAsset(assetRef)) {
+    if (assetRefOpt.isEmpty()) {
       return Answer.notFound();
     }
+    ResourceIdentifier assetRef = assetRefOpt.get();
 
     List<Pointer> pointers = index.getArtifactsForAsset(assetRef).stream()
         .map(artifactId -> index.getCarrierVersions(artifactId.getUuid()))
@@ -920,11 +921,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<List<Pointer>> listKnowledgeAssetSurrogates(UUID assetId, String versionTag,
       Integer offset, Integer limit, String beforeTag, String afterTag, String sort) {
-    ResourceIdentifier assetRef = toAssetId(assetId, versionTag);
+    Optional<ResourceIdentifier> assetRefOpt = index.resolve(assetId, versionTag);
 
-    if (! hasKnowledgeAsset(assetRef)) {
+    if (assetRefOpt.isEmpty()) {
       return Answer.notFound();
     }
+    ResourceIdentifier assetRef = assetRefOpt.get();
 
     List<Pointer> pointers = index.getSurrogatesForAsset(assetRef).stream()
         .map(surrId -> index.getSurrogateVersions(surrId.getUuid()))
@@ -1078,9 +1080,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   public Answer<CompositeKnowledgeCarrier> getAnonymousCompositeKnowledgeAssetSurrogate(
       UUID assetId, String versionTag, String xAccept) {
     SerializationFormat fmt = negotiator.decodePreferredFormat(xAccept, defaultSurrogateFormat);
-    ResourceIdentifier rootId = assetId(assetId, versionTag);
 
-    return compositeHelper.getComponentsQuery(rootId, Depends_On)
+    return Answer.of(index.resolve(assetId, versionTag))
+        .flatMap(rootId -> compositeHelper.getComponentsQuery(rootId, Depends_On))
         .flatMap(this::getComponentIds)
         .flatMap(componentIds ->
             componentIds.stream()
@@ -1122,11 +1124,13 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   public Answer<List<Pointer>> listKnowledgeAssetSurrogateVersions(UUID assetId, String versionTag,
       UUID surrogateId, Integer offset, Integer limit, String beforeTag, String afterTag,
       String sort) {
-    ResourceIdentifier axId = toAssetId(assetId,versionTag);
+    Optional<ResourceIdentifier> axIdOpt = index.resolve(assetId,versionTag);
 
-    if (! hasKnowledgeAsset(axId)) {
+    if (axIdOpt.isEmpty()) {
       return Answer.notFound();
     }
+    ResourceIdentifier axId = axIdOpt.get();
+
     if (index.getSurrogatesForAsset(axId).stream()
         .noneMatch(cId -> cId.getUuid().equals(surrogateId))) {
       return Answer.notFound();
@@ -1151,11 +1155,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<List<Pointer>> listKnowledgeAssetCarrierVersions(UUID assetId, String versionTag,
       UUID artifactId) {
-    ResourceIdentifier axId = toAssetId(assetId,versionTag);
+    Optional<ResourceIdentifier> axIdOpt = index.resolve(assetId,versionTag);
 
-    if (! hasKnowledgeAsset(axId)) {
+    if (axIdOpt.isEmpty()) {
       return Answer.notFound();
     }
+    ResourceIdentifier axId = axIdOpt.get();
     if (index.getArtifactsForAsset(axId).stream()
         .noneMatch(cId -> cId.getUuid().equals(artifactId))) {
       return Answer.notFound();
@@ -1519,8 +1524,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   private KnowledgeCarrier buildKnowledgeCarrier(UUID assetId, String versionTag, UUID artifactId,
       String artifactVersionTag,
       SyntacticRepresentation representation, String label, byte[] bytes) {
-    ResourceIdentifier axtId = toAssetId(assetId, versionTag);
-    ResourceIdentifier artId = toArtifactId(artifactId, artifactVersionTag);
+    ResourceIdentifier axtId = index.resolve(assetId, toSemVer(versionTag))
+        .orElseThrow();
+    ResourceIdentifier artId = index.resolve(artifactId, toSemVer(artifactVersionTag))
+        .orElseThrow();
 
     SyntacticRepresentation rep = (SyntacticRepresentation) representation.clone();
 
@@ -1974,7 +1981,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   private Answer<KnowledgeAsset> retrieveLatestCanonicalSurrogateForAssetVersion(UUID assetId,
       String versionTag) {
     Optional<ResourceIdentifier> surrogateId =
-        index.getCanonicalSurrogateForAsset(toAssetId(assetId, versionTag));
+        index.resolve(assetId, versionTag)
+            .flatMap(rid -> index.getCanonicalSurrogateForAsset(rid));
     return Answer.of(surrogateId)
         .flatMap(this::retrieveLatestCanonicalSurrogate);
   }

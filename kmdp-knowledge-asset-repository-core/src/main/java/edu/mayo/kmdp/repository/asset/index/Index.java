@@ -258,4 +258,8 @@ public interface Index {
    */
   ResourceIdentifier getKnowledgeBaseId();
 
+
+  Optional<ResourceIdentifier> resolve(UUID assetId, String versionTag);
+
+  Optional<ResourceIdentifier> resolve(UUID assetId);
 }

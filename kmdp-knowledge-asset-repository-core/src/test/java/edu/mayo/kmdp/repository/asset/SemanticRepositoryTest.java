@@ -731,11 +731,12 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     ResourceIdentifier assetId = assetId(uuid("foo"), "1.0.0");
     ResourceIdentifier artifactId = artifactId(uuid("q"), "1.0.0");
 
-    semanticRepository
+    Answer<Void> ans = semanticRepository
         .setKnowledgeAssetVersion(assetId.getUuid(), assetId.getVersionTag(),
             new KnowledgeAsset()
                 .withAssetId(assetId)
                 .withFormalType(Care_Process_Model));
+    assertTrue(ans.isSuccess());
 
     semanticRepository
         .setKnowledgeAssetCarrierVersion(
@@ -764,8 +765,10 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         .setKnowledgeAssetVersion(uuid("foo"), "1",
             new KnowledgeAsset().withFormalType(Care_Process_Model)));
 
-    semanticRepository
+    Answer<Void> ans = semanticRepository
         .setKnowledgeAssetCarrierVersion(uuid("foo"), "1", uuid("q"), "z", "there".getBytes());
+    assertTrue(ans.isSuccess());
+
     List<Pointer> artifacts = semanticRepository
         .listKnowledgeAssetCarriers(uuid("foo"), "1")
         .orElse(emptyList());
@@ -1326,4 +1329,30 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     assertTrue(expl.contains("Foo"));
     assertTrue(expl.contains("Bar"));
   }
+
+  @Test
+  void testAssetIdWithURNamespace() {
+    ResourceIdentifier assetId = newId(Registry.BASE_UUID_URN_URI,UUID.randomUUID(),IdentifierConstants.VERSION_ZERO);
+    ResourceIdentifier artifactId = newId(Registry.BASE_UUID_URN_URI,UUID.randomUUID(),IdentifierConstants.VERSION_ZERO);
+    KnowledgeAsset ka1 = new KnowledgeAsset()
+        .withAssetId(assetId)
+        .withName("Foo")
+        .withCarriers(new KnowledgeArtifact()
+            .withArtifactId(artifactId));
+
+    Answer<Void> ans1 = semanticRepository.setKnowledgeAssetVersion(
+        assetId.getUuid(),assetId.getVersionTag(),ka1);
+    assertTrue(ans1.isSuccess());
+
+    Answer<Void> ans2 = semanticRepository.setKnowledgeAssetCarrierVersion(
+        assetId.getUuid(),
+        assetId.getVersionTag(),
+        artifactId.getUuid(),
+        artifactId.getVersionTag(),
+        "Foo".getBytes()
+    );
+    assertTrue(ans2.isSuccess());
+  }
+
+
 }
