@@ -78,7 +78,7 @@ class CompositeGraphTest extends RepositoryTestBase {
 
   @Test
   void testAnonymousToNamedStructFromComplexGraph() {
-    ResourceIdentifier compositeAssetId = randomAssetId();
+    ResourceIdentifier compositeAssetId = randomAssetId(testAssetNS());
 
     KnowledgeAsset[] assets = initAssetNodes(10);
 
@@ -212,7 +212,7 @@ class CompositeGraphTest extends RepositoryTestBase {
     int K = KnowledgeAssetTypeSeries.values().length;
     for (int j = 0; j < number; j++) {
       assets[j] = new KnowledgeAsset()
-          .withAssetId(randomAssetId())
+          .withAssetId(randomAssetId(testAssetNS()))
           .withFormalType(KnowledgeAssetTypeSeries.values()[j % K]);
     }
     return assets;

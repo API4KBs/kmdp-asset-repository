@@ -49,7 +49,8 @@ class SemanticRepositoryRemoteQueryTest extends SemanticRepoAPITestBase {
 
     ckac = KnowledgeAssetCatalogApi.newInstance(webClientFactory);
 
-    ResourceIdentifier assetId = assetId(UUID.nameUUIDFromBytes("aaa000".getBytes()),"1.0.0");
+    ResourceIdentifier assetId =
+        assetId(testAssetNS(), UUID.nameUUIDFromBytes("aaa000".getBytes()),"1.0.0");
     ckac.setKnowledgeAssetVersion(assetId.getUuid(),assetId.getVersionTag(),
         new KnowledgeAsset()
             .withAssetId(assetId)
@@ -75,7 +76,7 @@ class SemanticRepositoryRemoteQueryTest extends SemanticRepoAPITestBase {
     assertEquals(1, binds.size());
     Object assetId = binds.get(0).get("s");
     assertEquals(
-        assetId(UUID.nameUUIDFromBytes("aaa000".getBytes()),"1.0.0")
+        assetId(testAssetNS(), UUID.nameUUIDFromBytes("aaa000".getBytes()),"1.0.0")
             .getVersionId().toString(),
         assetId);
   }

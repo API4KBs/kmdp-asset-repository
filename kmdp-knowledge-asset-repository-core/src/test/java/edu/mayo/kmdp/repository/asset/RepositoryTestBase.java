@@ -1,7 +1,5 @@
 package edu.mayo.kmdp.repository.asset;
 
-import static java.util.Collections.singletonList;
-
 import com.google.common.util.concurrent.MoreExecutors;
 import edu.mayo.kmdp.kbase.query.sparql.v1_1.JenaQuery;
 import edu.mayo.kmdp.language.LanguageDeSerializer;
@@ -14,9 +12,11 @@ import edu.mayo.kmdp.language.translators.surrogate.v2.SurrogateV2Transcriptor;
 import edu.mayo.kmdp.language.translators.surrogate.v2.SurrogateV2toHTMLTranslator;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig;
 import edu.mayo.kmdp.repository.artifact.jcr.JcrKnowledgeArtifactRepository;
+import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.repository.asset.index.Index;
 import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDao;
 import edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.UUID;
@@ -45,6 +45,8 @@ abstract class RepositoryTestBase {
   static private JenaSparqlDao jenaSparqlDao;
 
   static private DataSource ds;
+
+  static protected KnowledgeAssetRepositoryServerConfig cfg = new KnowledgeAssetRepositoryServerConfig();
 
   @BeforeEach
   void reset() {
@@ -79,7 +81,6 @@ abstract class RepositoryTestBase {
 
     index = new SparqlIndex(jenaSparqlDao);
 
-    KnowledgeAssetRepositoryServerConfig cfg = new KnowledgeAssetRepositoryServerConfig();
     semanticRepository = new SemanticKnowledgeAssetRepository(
         repos,
         new LanguageDeSerializer(
@@ -104,6 +105,14 @@ abstract class RepositoryTestBase {
     dataSourceBuilder.password("");
 
     return dataSourceBuilder.build();
+  }
+
+  static URI testAssetNS() {
+    return cfg.getTyped(KnowledgeAssetRepositoryOptions.ASSET_NAMESPACE, URI.class);
+  }
+
+  static URI testArtifactNS() {
+    return cfg.getTyped(KnowledgeAssetRepositoryOptions.ARTIFACT_NAMESPACE, URI.class);
   }
 
   @AfterEach

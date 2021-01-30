@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright © 2018 Mayo Clinic (RSTKNOWLEDGEMGMT@mayo.edu)
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -13,6 +13,7 @@
  */
 package edu.mayo.kmdp.repository.asset.catalog;
 
+import static edu.mayo.kmdp.registry.Registry.BASE_UUID_URN_URI;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -46,7 +47,6 @@ import org.omg.spec.api4kp._20200801.id.Pointer;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.id.Term;
 import org.omg.spec.api4kp._20200801.surrogate.Applicability;
-import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
 
@@ -124,11 +124,11 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
   @Test
   void testGeKnowledgeAssetsVersions() {
     UUID uid = UUID.randomUUID();
-    ResourceIdentifier rid1 = assetId(uid, "1.0.0");
+    ResourceIdentifier rid1 = assetId(testAssetNS(), uid, "1.0.0");
     ckac.setKnowledgeAssetVersion(rid1.getUuid(), rid1.getVersionTag(),
         new KnowledgeAsset().withAssetId(rid1));
 
-    ResourceIdentifier rid2 = assetId(uid, "2.0.0");
+    ResourceIdentifier rid2 = assetId(testAssetNS(), uid, "2.0.0");
     ckac.setKnowledgeAssetVersion(rid2.getUuid(), rid2.getVersionTag(),
         new KnowledgeAsset().withAssetId(rid2));
 
@@ -146,11 +146,11 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
   void testGetLatestKnowledgeAsset() {
     UUID uid = UUID.randomUUID();
 
-    ResourceIdentifier rid2 = assetId(uid, "2.0.0");
+    ResourceIdentifier rid2 = assetId(testAssetNS(), uid, "2.0.0");
     ckac.setKnowledgeAssetVersion(rid2.getUuid(), rid2.getVersionTag(),
         new KnowledgeAsset().withAssetId(rid2));
 
-    ResourceIdentifier rid1 = assetId(uid, "1.0.0");
+    ResourceIdentifier rid1 = assetId(testAssetNS(), uid, "1.0.0");
     ckac.setKnowledgeAssetVersion(rid1.getUuid(), rid1.getVersionTag(),
         new KnowledgeAsset().withAssetId(rid1));
 
@@ -218,14 +218,17 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
         asset);
     assertTrue(ans2.isSuccess());
 
-    UUID suid = defaultSurrogateUUID(asset.getAssetId(),Knowledge_Asset_Surrogate_2_0);
+    ResourceIdentifier surrId = SurrogateBuilder.defaultArtifactId(
+        BASE_UUID_URN_URI,
+        asset.getAssetId(),
+        Knowledge_Asset_Surrogate_2_0);
 
     KnowledgeAsset surrogate = ckac.getKnowledgeAssetVersion(uuid, vTag)
         .orElseGet(Assertions::fail);
     assertEquals(1, surrogate.getSurrogate().size());
     surrogate.getSurrogate()
         .forEach(
-            surr -> assertEquals(suid, surr.getArtifactId().getUuid())
+            surr -> assertTrue(surr.getArtifactId().sameAs(surrId))
         );
   }
 

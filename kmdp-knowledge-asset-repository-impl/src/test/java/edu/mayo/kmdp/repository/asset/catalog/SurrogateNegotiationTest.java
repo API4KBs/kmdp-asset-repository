@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
 import static org.omg.spec.api4kp._20200801.id.IdentifierConstants.VERSION_LATEST;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.assetId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomArtifactId;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetcategory.KnowledgeAssetCategorySeries.Rules_Policies_And_Guidelines;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetcategory.KnowledgeAssetCategorySeries.Terminology_Ontology_And_Assertional_KBs;
@@ -46,7 +47,6 @@ import org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetCatal
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.client.ApiClientFactory;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
-import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -124,7 +124,7 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
   private KnowledgeAsset rulSurrogate(UUID assetId, String version) {
     // Rules' catalog entry in KCMS
     return new KnowledgeAsset()
-        .withAssetId(SurrogateBuilder.assetId(assetId,version))
+        .withAssetId(assetId(testAssetNS(),assetId,version))
         .withFormalCategory(Rules_Policies_And_Guidelines)
         .withFormalType(Clinical_Rule)
         .withName("Test rule")
@@ -151,7 +151,7 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
 
   private KnowledgeAsset pocSurrogate(UUID pockId, String version) {
     return new KnowledgeAsset()
-        .withAssetId(SurrogateBuilder.assetId(pockId,version))
+        .withAssetId(assetId(testAssetNS(), pockId,version))
         .withFormalCategory(Terminology_Ontology_And_Assertional_KBs)
         .withFormalType(Factual_Knowledge)
         .withName("Test section of content")

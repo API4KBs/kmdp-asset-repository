@@ -80,6 +80,7 @@ import edu.mayo.kmdp.repository.artifact.exceptions.ResourceNotFoundException;
 import edu.mayo.kmdp.repository.asset.HrefBuilder.HrefType;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.repository.asset.composite.CompositeHelper;
+import edu.mayo.kmdp.repository.asset.index.IdentityMapper;
 import edu.mayo.kmdp.repository.asset.index.Index;
 import edu.mayo.kmdp.repository.asset.index.StaticFilter;
 import edu.mayo.kmdp.repository.asset.negotiation.ContentNegotiationHelper;
@@ -201,9 +202,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   private HrefBuilder hrefBuilder;
 
-  private URI assetNamespace;
-
-  private URI artifactNamespace;
+  private IdentityMapper identityMapper;
 
   private ContentNegotiationHelper negotiator;
 
@@ -254,9 +253,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     this.repositoryId = cfg.getTyped(KnowledgeAssetRepositoryOptions.DEFAULT_REPOSITORY_ID);
 
-    this.assetNamespace = URI.create(cfg.getTyped(KnowledgeAssetRepositoryOptions.ASSET_NAMESPACE));
-    this.artifactNamespace = URI
-        .create(cfg.getTyped(KnowledgeAssetRepositoryOptions.ARTIFACT_NAMESPACE));
+    this.identityMapper = new IdentityMapper(cfg);
 
     if (artifactRepo == null ||
         !artifactRepo.getKnowledgeArtifactRepository(repositoryId)
@@ -271,19 +268,19 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   private ResourceIdentifier toAssetId(UUID assetId) {
-    return SemanticIdentifier.newId(assetNamespace, assetId);
+    return identityMapper.toAssetId(assetId);
   }
 
   private ResourceIdentifier toAssetId(UUID assetId, String versionTag) {
-    return SemanticIdentifier.newId(assetNamespace, assetId, toSemVer(versionTag));
+    return identityMapper.toAssetId(assetId, versionTag);
   }
 
-  private ResourceIdentifier toArtifactId(UUID assetId) {
-    return SemanticIdentifier.newId(artifactNamespace, assetId);
+  private ResourceIdentifier toArtifactId(UUID artifactId) {
+    return identityMapper.toArtifactId(artifactId);
   }
 
-  private ResourceIdentifier toArtifactId(UUID assetId, String versionTag) {
-    return SemanticIdentifier.newId(artifactNamespace, assetId, toSemVer(versionTag));
+  private ResourceIdentifier toArtifactId(UUID artifactId, String versionTag) {
+    return identityMapper.toArtifactId(artifactId, versionTag);
   }
 
   //*****************************************************************************************/
@@ -424,7 +421,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    */
   @Override
   public Answer<UUID> initKnowledgeAsset() {
-    ResourceIdentifier newId = randomAssetId(assetNamespace);
+    ResourceIdentifier newId = randomAssetId(identityMapper.getAssetNamespace());
 
     KnowledgeAsset surrogate = new KnowledgeAsset()
         .withAssetId(newId);
@@ -1100,7 +1097,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<CompositeKnowledgeCarrier> getAnonymousCompositeKnowledgeAssetCarrier(
       UUID assetId, String versionTag, String xAccept) {
-    ResourceIdentifier rootId = assetId(assetId, versionTag);
+    ResourceIdentifier rootId = toAssetId(assetId, versionTag);
 
     return compositeHelper.getComponentsQuery(rootId, Depends_On)
         .flatMap(this::getComponentIds)
@@ -1183,7 +1180,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<KnowledgeCarrier> getCompositeKnowledgeAssetStructure(UUID assetId,
       String versionTag, String xAccept) {
-    ResourceIdentifier rootId = assetId(assetId,versionTag);
+    ResourceIdentifier rootId = toAssetId(assetId,versionTag);
 
     Answer<List<Bindings>> ans = compositeHelper.getStructQuery(rootId)
         .flatMap(this::queryKnowledgeAssetGraph);
@@ -1286,7 +1283,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<KnowledgeCarrier> getAnonymousCompositeKnowledgeAssetStructure(
       UUID assetId, String versionTag, String xAccept) {
-    ResourceIdentifier rootId = assetId(assetId, versionTag);
+    ResourceIdentifier rootId = toAssetId(assetId, versionTag);
     return compositeHelper.getAnonStructQuery(rootId)
         .flatMap(this::queryKnowledgeAssetGraph)
         .flatMap(binds -> compositeHelper.toEncodedStructGraph(randomAssetId(), binds));
@@ -1296,7 +1293,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   public Answer<CompositeKnowledgeCarrier> getCompositeKnowledgeAssetCarrier(UUID assetId,
       String versionTag,
       Boolean flat, String xAccept) {
-    ResourceIdentifier rootId = assetId(assetId, versionTag);
+    ResourceIdentifier rootId = toAssetId(assetId, versionTag);
 
     Answer<KnowledgeAsset> compositeSurr = getKnowledgeAssetVersion(assetId, versionTag, xAccept);
     if (! compositeSurr.isSuccess()) {
@@ -1790,8 +1787,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       }
       return meta.getArtifactId();
     } else {
-      UUID uuid = defaultSurrogateUUID(assetSurrogate.getAssetId(),defaultSurrogateModel);
-      ResourceIdentifier rid = newId(artifactNamespace, uuid, VERSION_ZERO);
+      ResourceIdentifier rid = SurrogateBuilder.defaultArtifactId(
+          identityMapper.getArtifactNamespace(),
+          assetSurrogate.getAssetId(),
+          defaultSurrogateModel);
       assetSurrogate.withSurrogate(
           new KnowledgeArtifact()
               .withArtifactId(rid)

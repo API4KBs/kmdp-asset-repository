@@ -187,8 +187,8 @@ class CompositeAssetTest extends RepositoryTestBase {
 
   @Test
   void testGetAnonymousCompositeArtifact() {
-    ResourceIdentifier id1 = randomAssetId();
-    ResourceIdentifier id2 = randomAssetId();
+    ResourceIdentifier id1 = randomAssetId(testAssetNS());
+    ResourceIdentifier id2 = randomAssetId(testAssetNS());
 
     KnowledgeAsset a1 = new KnowledgeAsset()
         .withAssetId(id1)
@@ -280,12 +280,12 @@ class CompositeAssetTest extends RepositoryTestBase {
   void testGetNamedCompositeAssetStructure() {
     ResourceIdentifier structId = randomAssetId();
 
-    ResourceIdentifier id1 = randomAssetId();
-    ResourceIdentifier id2 = randomAssetId();
-    ResourceIdentifier id3 = randomAssetId();
-    ResourceIdentifier id4 = randomAssetId();
-    ResourceIdentifier id5 = randomAssetId();
-    ResourceIdentifier id6 = randomAssetId();
+    ResourceIdentifier id1 = randomAssetId(testAssetNS());
+    ResourceIdentifier id2 = randomAssetId(testAssetNS());
+    ResourceIdentifier id3 = randomAssetId(testAssetNS());
+    ResourceIdentifier id4 = randomAssetId(testAssetNS());
+    ResourceIdentifier id5 = randomAssetId(testAssetNS());
+    ResourceIdentifier id6 = randomAssetId(testAssetNS());
 
     KnowledgeAsset a6 = new KnowledgeAsset()
         .withAssetId(id6)
@@ -374,12 +374,12 @@ class CompositeAssetTest extends RepositoryTestBase {
 
   @Test
   void testGetNamedCompositeCarriers() {
-    ResourceIdentifier axId0 = randomAssetId();
-    ResourceIdentifier sId = randomAssetId();
-    ResourceIdentifier axId1 = randomAssetId();
-    ResourceIdentifier axId2 = randomAssetId();
-    ResourceIdentifier artId1 = randomArtifactId();
-    ResourceIdentifier artId2 = randomArtifactId();
+    ResourceIdentifier axId0 = randomAssetId(testAssetNS());
+    ResourceIdentifier sId = randomAssetId(testAssetNS());
+    ResourceIdentifier axId1 = randomAssetId(testAssetNS());
+    ResourceIdentifier axId2 = randomAssetId(testAssetNS());
+    ResourceIdentifier artId1 = randomArtifactId(testAssetNS());
+    ResourceIdentifier artId2 = randomArtifactId(testAssetNS());
 
     KnowledgeAsset ka0 = new KnowledgeAsset()
         .withAssetId(axId0)
@@ -431,10 +431,10 @@ class CompositeAssetTest extends RepositoryTestBase {
 
   @Test
   void testAnonymousComposites() {
-    ResourceIdentifier axId1 = randomAssetId();
-    ResourceIdentifier axId2 = randomAssetId();
-    ResourceIdentifier artId1 = randomArtifactId();
-    ResourceIdentifier artId2 = randomArtifactId();
+    ResourceIdentifier axId1 = randomAssetId(testAssetNS());
+    ResourceIdentifier axId2 = randomAssetId(testAssetNS());
+    ResourceIdentifier artId1 = randomArtifactId(testArtifactNS());
+    ResourceIdentifier artId2 = randomArtifactId(testArtifactNS());
 
     KnowledgeAsset ka1 = new KnowledgeAsset()
         .withAssetId(axId1)
@@ -494,9 +494,9 @@ class CompositeAssetTest extends RepositoryTestBase {
 
   @Test
   void testAnonymousCompositesWithDeepDepenedencies() {
-    ResourceIdentifier axId1 = randomAssetId();
-    ResourceIdentifier axId2 = randomAssetId();
-    ResourceIdentifier axId3 = randomAssetId();
+    ResourceIdentifier axId1 = randomAssetId(testAssetNS());
+    ResourceIdentifier axId2 = randomAssetId(testAssetNS());
+    ResourceIdentifier axId3 = randomAssetId(testAssetNS());
 
     KnowledgeAsset ka1 = new KnowledgeAsset()
         .withAssetId(axId1).withName("Foo")
@@ -532,9 +532,9 @@ class CompositeAssetTest extends RepositoryTestBase {
 
   @Test
   void testAnonymousCompositesWithDeepImports() {
-    ResourceIdentifier axId1 = randomAssetId();
-    ResourceIdentifier axId2 = randomAssetId();
-    ResourceIdentifier axId3 = randomAssetId();
+    ResourceIdentifier axId1 = randomAssetId(testAssetNS());
+    ResourceIdentifier axId2 = randomAssetId(testAssetNS());
+    ResourceIdentifier axId3 = randomAssetId(testAssetNS());
 
     KnowledgeAsset ka1 = new KnowledgeAsset()
         .withAssetId(axId1).withName("Foo")
@@ -570,12 +570,12 @@ class CompositeAssetTest extends RepositoryTestBase {
 
   @Test
   void testNamedComposites() {
-    ResourceIdentifier axId0 = randomAssetId();
-    ResourceIdentifier sId = randomAssetId();
-    ResourceIdentifier axId1 = randomAssetId();
-    ResourceIdentifier axId2 = randomAssetId();
-    ResourceIdentifier artId1 = randomArtifactId();
-    ResourceIdentifier artId2 = randomArtifactId();
+    ResourceIdentifier axId0 = randomAssetId(testAssetNS());
+    ResourceIdentifier sId = randomAssetId(testAssetNS());
+    ResourceIdentifier axId1 = randomAssetId(testAssetNS());
+    ResourceIdentifier axId2 = randomAssetId(testAssetNS());
+    ResourceIdentifier artId1 = randomArtifactId(testArtifactNS());
+    ResourceIdentifier artId2 = randomArtifactId(testArtifactNS());
 
     KnowledgeAsset ka0 = new KnowledgeAsset()
         .withAssetId(axId0)

@@ -135,7 +135,7 @@ class ContentNegotiationTest extends SemanticRepoAPITestBase {
 
   private KnowledgeAsset buildComputableAsset(UUID assetId, String versionTag, String inlined) {
     return new KnowledgeAsset()
-        .withAssetId(assetId(assetId, versionTag))
+        .withAssetId(assetId(testAssetNS(), assetId, versionTag))
         .withFormalCategory(Rules_Policies_And_Guidelines)
         .withFormalType(Clinical_Rule)
         .withName("Mock Rule")
@@ -150,7 +150,7 @@ class ContentNegotiationTest extends SemanticRepoAPITestBase {
 
   private KnowledgeAsset buildAssetWithHTMLCarrier(UUID assetId, String versionTag) {
     return new KnowledgeAsset()
-        .withAssetId(assetId(assetId, versionTag))
+        .withAssetId(assetId(testAssetNS(), assetId, versionTag))
         .withFormalCategory(Terminology_Ontology_And_Assertional_KBs)
         .withFormalType(Factual_Knowledge)
         .withName("Stuff")
