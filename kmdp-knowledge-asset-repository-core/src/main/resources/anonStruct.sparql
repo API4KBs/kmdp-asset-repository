@@ -7,33 +7,31 @@ PREFIX api4kp-rel: <https://www.omg.org/spec/API4KP/api4kp-rel/>
 SELECT ?s ?p ?o
 WHERE
 {
-  # transitive closure of imports
+  # imports chain
   {
     ?root api4kp-rel:imports+ ?o .
     BIND( api4kp-rel:imports AS ?p )
-    BIND( ?root AS ?s )
+  	BIND( ?root AS ?s )
   }
   UNION
-  # imports chain
   {
+    ?root api4kp-rel:imports* ?s .
     ?s api4kp-rel:imports ?o .
   	BIND( api4kp-rel:imports AS ?p )
-  	FILTER EXISTS { ?root api4kp-rel:imports* ?s . }
   }
   UNION
   # additional dependencies of imports closure
   {
-    ?s ?x ?o .
-  	?x rdfs:subPropertyOf* api4kp:dependsOn .
-  	BIND( api4kp:dependsOn AS ?p )
-  	FILTER EXISTS { ?root api4kp-rel:imports* ?s . }
+    ?root api4kp-rel:imports* ?s .
+    ?s api4kp:dependsOn ?o .
+    BIND( api4kp:dependsOn AS ?p )
   }
   UNION
   # non-trivial asset types
   {
+    ?root api4kp:dependsOn* ?s .
     ?s rdf:type ?o .
     ?o rdfs:subClassOf+ api4kp:KnowledgeAsset .
-  	FILTER EXISTS { ?root api4kp:dependsOn* ?s . }
   	BIND( rdf:type AS ?p )
   }
 

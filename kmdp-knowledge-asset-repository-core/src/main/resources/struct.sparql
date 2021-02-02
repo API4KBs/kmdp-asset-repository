@@ -23,30 +23,30 @@ WHERE
   UNION
   # relate sub-components
   {
-    ?s ?p ?o .
-  	?p rdfs:subPropertyOf* api4kp:hasStructuralComponent .
-  	FILTER EXISTS { ?root api4kp:hasStructuralComponent* ?s . }
+    ?root api4kp:hasStructuralComponent* ?s .
+    ?s api4kp:hasStructuralComponent ?o .
+  	BIND( api4kp:hasStructuralComponent AS ?p ).
   }
   UNION
   # relate dependencies between components
   {
+    ?root api4kp:hasStructuralComponent* ?s .
     ?s api4kp:dependsOn ?o .
-  	FILTER EXISTS { ?root api4kp:hasStructuralComponent* ?s . }
   	BIND( api4kp:dependsOn AS ?p )
   }
   UNION
   # carry over the imports
   {
+    ?root api4kp:hasStructuralComponent* ?s .
     ?s api4kp-rel:imports+ ?o .
-  	FILTER EXISTS { ?root api4kp:hasStructuralComponent* ?s . }
   	BIND( api4kp-rel:imports AS ?p )
   }
   UNION
   # types
   {
+    ?root api4kp:hasStructuralComponent* ?s .
     ?s rdf:type ?o .
     ?o rdfs:subClassOf* api4kp:KnowledgeAsset .
-  	FILTER EXISTS { ?root api4kp:hasStructuralComponent* ?s . }
   	BIND( rdf:type AS ?p )
   }
 
