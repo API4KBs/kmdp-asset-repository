@@ -1,9 +1,9 @@
 package edu.mayo.kmdp.repository.asset.catalog;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
@@ -53,6 +53,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._20200801.AbstractCarrier;
+import org.omg.spec.api4kp._20200801.AbstractCarrier.Encodings;
 import org.omg.spec.api4kp._20200801.Answer;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetCatalogApi;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.client.ApiClientFactory;
@@ -297,11 +298,12 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
         "text/html");
     assertTrue(str.startsWith("<html>"));
 
-    assertThrows(StatusCodeException.class, () -> {
-      tryExecuteRequest(
-          "/cat/assets/" + assetId + "/versions/" + VERSION_ZERO + "/carrier",
-          "application/json");
-    });
+    // the application/json applies to the KnowledgeCarrier, not to the actual content
+    // the available carrier, in HTML, will be wrapped in JSON and returned
+    assertDoesNotThrow(() -> tryExecuteRequest(
+        "/cat/assets/" + assetId + "/versions/" + VERSION_ZERO + "/carrier",
+        "application/json"));
+
   }
 
 

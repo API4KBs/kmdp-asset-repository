@@ -3,12 +3,15 @@ package edu.mayo.kmdp.repository.asset.negotiation;
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.NotAcceptable;
 import static java.util.Collections.singletonList;
 import static org.omg.spec.api4kp._20200801.contrastors.SyntacticRepresentationContrastor.theRepContrastor;
+import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.WEIGHT_UNSPECIFIED;
+import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.decodeAll;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
 
 import edu.mayo.kmdp.repository.asset.HrefBuilder;
 import edu.mayo.kmdp.util.StreamUtil;
 import edu.mayo.kmdp.util.Util;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -32,11 +35,11 @@ public class ContentNegotiationHelper {
       KnowledgeAsset surrogate, String xAccept,
       SyntacticRepresentation defaultSurrogateRepresentation) {
     // only support HTML (by redirection), or the default surrogate
-    List<SyntacticRepresentation> acceptable =
+    List<WeightedRepresentation> acceptable =
         decodePreferences(xAccept, defaultSurrogateRepresentation).stream()
-            .filter(rep ->
-                HTML.sameAs(rep.getLanguage()) ||
-                    (defaultSurrogateRepresentation.getLanguage().sameAs(rep.getLanguage())))
+            .filter(wrep ->
+                HTML.sameAs(wrep.getRep().getLanguage()) ||
+                    (defaultSurrogateRepresentation.getLanguage().sameAs(wrep.getRep().getLanguage())))
             .collect(Collectors.toList());
 
     if (acceptable.isEmpty()) {
@@ -50,7 +53,7 @@ public class ContentNegotiationHelper {
 
     if (redirectUri.isPresent()) {
       return Answer.referTo(redirectUri.get(), false);
-    } else if (HTML.sameAs(acceptable.get(0).getLanguage())) {
+    } else if (HTML.sameAs(acceptable.get(0).getRep().getLanguage())) {
       return Answer.referTo(hrefBuilder.getRelativeURL("/surrogate"),false);
     } else {
       return Answer.of(surrogate);
@@ -62,22 +65,64 @@ public class ContentNegotiationHelper {
    * preferred representations. If no suitable candidate is found, will return
    * one of the candidates, non-deterministically
    *
-   * @see ContentNegotiationHelper#negotiate(List, List)
+   * @see ContentNegotiationHelper#negotiateOrDefault(List, List, Float)
    *
    * @param artifacts The candidate artifact surrogates
+   * @param reps The user-provided, weighted preferences
    * @return The first artifact that matches a representation that is first in order of preference,
    * or an artifact chosen non-deterministically
    */
   public Answer<KnowledgeArtifact> negotiateOrDefault(
       List<KnowledgeArtifact> artifacts,
-      List<SyntacticRepresentation> reps) {
+      List<WeightedRepresentation> reps) {
+    return negotiateOrDefault(artifacts, reps, getDefaultTolerance(reps));
+  }
+
+  /**
+   * Selects the best Artifact (surrogate), given an ordered list of preferred representations. If
+   * no suitable candidate is found, will return one of the candidates, non-deterministically
+   * <p>
+   * A weight threshold determines whether any candidate is still acceptable when the client
+   * preferences cannot be honored. In particular, any candidate is considered acceptable if no
+   * preference can be honored, but the strongest client-provided preference is below the threshold.
+   * A low threshold implies strictness: even less than optimal client preferences must be honored
+   *
+   * @param artifacts                 The candidate artifact surrogates
+   * @param reps                      The user-provided, weighted preferences
+   * @param acceptAnyCarrierThreshold A weight threshold: the lower, the more a user preference must
+   *                                  be honored
+   * @return The first artifact that matches a representation that is first in order of preference,
+   * or an artifact chosen non-deterministically
+   * @see ContentNegotiationHelper#negotiate(List, List)
+   */
+  public Answer<KnowledgeArtifact> negotiateOrDefault(
+      List<KnowledgeArtifact> artifacts,
+      List<WeightedRepresentation> reps,
+      Float acceptAnyCarrierThreshold) {
+
     Answer<KnowledgeArtifact> chosen = Answer.of(reps.stream()
         .map(rep -> getBestCandidateForRepresentation(artifacts, rep))
         .flatMap(StreamUtil::trimStream)
         .findFirst());
-    return chosen.isSuccess()
+
+    return (chosen.isSuccess() || getStrongestPreference(reps) > acceptAnyCarrierThreshold)
         ? chosen
         : anyCarrier(artifacts);
+  }
+
+  private Float getDefaultTolerance(List<WeightedRepresentation> reps) {
+    // HTML is treated with special regards, and always honored
+    if (reps.isEmpty() || ! HTML.sameAs(reps.get(0).getRep().getLanguage())) {
+      return WEIGHT_UNSPECIFIED;
+    } else {
+      return 0.0f;
+    }
+  }
+
+  private Float getStrongestPreference(List<WeightedRepresentation> reps) {
+    return reps.isEmpty()
+        ? ModelMIMECoder.WEIGHT_UNSPECIFIED
+        : reps.get(0).getWeight();
   }
 
   /**
@@ -95,7 +140,7 @@ public class ContentNegotiationHelper {
    * Selects the best Artifact (surrogate), given an ordered list of
    * preferred representations
    *
-   * @see ContentNegotiationHelper#getBestCandidateForRepresentation(List, SyntacticRepresentation)
+   * @see ContentNegotiationHelper#getBestCandidateForRepresentation(List, WeightedRepresentation)
    *
    * @param artifacts The candidate artifact surrogates
    * @param reps The preferred representations, in order of preference
@@ -103,7 +148,7 @@ public class ContentNegotiationHelper {
    */
   public Answer<KnowledgeArtifact> negotiate(
       List<KnowledgeArtifact> artifacts,
-      List<SyntacticRepresentation> reps) {
+      List<WeightedRepresentation> reps) {
     return Answer.of(reps.stream()
         .map(rep -> getBestCandidateForRepresentation(artifacts, rep))
         .flatMap(StreamUtil::trimStream)
@@ -121,10 +166,10 @@ public class ContentNegotiationHelper {
    */
   public Optional<KnowledgeArtifact> getBestCandidateForRepresentation(
       List<KnowledgeArtifact> artifacts,
-      SyntacticRepresentation rep) {
+      WeightedRepresentation rep) {
     return artifacts.stream()
         .flatMap(StreamUtil.filterAs(KnowledgeArtifact.class))
-        .filter(x -> theRepContrastor.isBroaderOrEqual(rep, x.getRepresentation()))
+        .filter(x -> theRepContrastor.isBroaderOrEqual(rep.getRep(), x.getRepresentation()))
         .findAny();
   }
 
@@ -137,20 +182,16 @@ public class ContentNegotiationHelper {
    *                               can be extracted from the MIME code
    * @return a list of SyntacticRepresentations, ordered by weight
    */
-  public static List<SyntacticRepresentation> decodePreferences(String xAccept,
+  public static List<WeightedRepresentation> decodePreferences(String xAccept,
       SyntacticRepresentation fallbackRepresentation) {
 
     List<WeightedRepresentation> acceptableMimes
-        = ModelMIMECoder.decodeAll(xAccept, fallbackRepresentation);
+        = new ArrayList<>(decodeAll(xAccept, fallbackRepresentation));
 
-    List<SyntacticRepresentation> reps = acceptableMimes.stream()
-        .map(WeightedRepresentation::getRep)
-        .flatMap(StreamUtil::trimStream)
-        .collect(Collectors.toList());
-    if (reps.isEmpty() && fallbackRepresentation != null) {
-      reps.add(fallbackRepresentation);
+    if (acceptableMimes.isEmpty() && fallbackRepresentation != null) {
+      acceptableMimes.add(new WeightedRepresentation(fallbackRepresentation));
     }
-    return reps;
+    return acceptableMimes;
   }
 
   /**
@@ -160,7 +201,7 @@ public class ContentNegotiationHelper {
    * @param xAccept the formal MIME code
    * @return a list of SyntacticRepresentations, ordered by weight
    */
-  public static List<SyntacticRepresentation> decodePreferences(String xAccept) {
+  public static List<WeightedRepresentation> decodePreferences(String xAccept) {
     return decodePreferences(xAccept,null);
   }
 
@@ -176,9 +217,11 @@ public class ContentNegotiationHelper {
    * at least one of the preferences
    */
   public boolean isAcceptable(KnowledgeArtifact descriptor, String xAccept) {
-    if (! Util.isEmpty(xAccept)) {
+    if (!Util.isEmpty(xAccept)) {
       Answer<KnowledgeArtifact> negotiatedCarrier =
-          negotiate(singletonList(descriptor),decodePreferences(xAccept));
+          negotiateOrDefault(
+              singletonList(descriptor),
+              decodePreferences(xAccept));
       return negotiatedCarrier.isSuccess();
     }
     return true;
@@ -190,8 +233,9 @@ public class ContentNegotiationHelper {
    * @param preferences
    * @return
    */
-  public Optional<SerializationFormat> getPreferredFormat(List<SyntacticRepresentation> preferences) {
+  public Optional<SerializationFormat> getPreferredFormat(List<WeightedRepresentation> preferences) {
     return preferences.stream()
+        .map(WeightedRepresentation::getRep)
         .map(SyntacticRepresentation::getFormat)
         .findFirst();
   }

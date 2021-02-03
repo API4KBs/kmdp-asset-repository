@@ -89,6 +89,7 @@ class ContentNegotiationTest extends SemanticRepoAPITestBase {
 
     KnowledgeAsset asset = buildComputableAsset(assetId,versionTag,knartXML);
 
+
     Answer<Void> set = ckac.setKnowledgeAssetVersion(assetId,versionTag,asset);
     assertTrue(set.isSuccess());
 
@@ -108,6 +109,15 @@ class ContentNegotiationTest extends SemanticRepoAPITestBase {
     assertTrue(ans2.isSuccess());
     String txEd = ans2.flatOpt(AbstractCarrier::asString).orElse("");
     assertTrue(txEd.startsWith("<html>"));
+
+
+    Answer<KnowledgeCarrier> ans3 = repo.getKnowledgeAssetVersionCanonicalCarrier(
+        assetId,
+        versionTag);
+
+    assertTrue(ans3.isSuccess());
+    assertTrue(ans3.getOptionalValue().isPresent());
+    assertTrue(KNART_1_3.sameAs(ans3.get().getRepresentation().getLanguage()));
   }
 
 

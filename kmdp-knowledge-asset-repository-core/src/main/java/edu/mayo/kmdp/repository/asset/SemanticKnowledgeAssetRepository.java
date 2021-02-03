@@ -39,16 +39,13 @@ import static org.omg.spec.api4kp._20200801.AbstractCompositeCarrier.ofMixedAnon
 import static org.omg.spec.api4kp._20200801.AbstractCompositeCarrier.ofMixedNamedComposite;
 import static org.omg.spec.api4kp._20200801.AbstractCompositeCarrier.ofUniformAnonymousComposite;
 import static org.omg.spec.api4kp._20200801.AbstractCompositeCarrier.ofUniformNamedComposite;
-import static org.omg.spec.api4kp._20200801.id.IdentifierConstants.VERSION_ZERO;
-import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.timedSemverComparator;
 import static org.omg.spec.api4kp._20200801.id.VersionIdentifier.toSemVer;
 import static org.omg.spec.api4kp._20200801.services.CompositeStructType.GRAPH;
 import static org.omg.spec.api4kp._20200801.services.CompositeStructType.NONE;
+import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.WEIGHT_UNSPECIFIED;
 import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.decode;
 import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.encode;
-import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.assetId;
-import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.defaultSurrogateUUID;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomAssetId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getCanonicalSurrogateId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getComputableSurrogateMetadata;
@@ -126,6 +123,7 @@ import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._20200801.services.SyntacticRepresentation;
 import org.omg.spec.api4kp._20200801.services.repository.KnowledgeAssetCatalog;
 import org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder;
+import org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.WeightedRepresentation;
 import org.omg.spec.api4kp._20200801.surrogate.Component;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
@@ -626,13 +624,13 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     return retrieveLatestCanonicalSurrogateForAssetVersion(assetId, toSemVer(versionTag))
         .flatMap(
             surrogate -> {
-              List<SyntacticRepresentation> preferences = withNegotiation
+              List<WeightedRepresentation> preferences = withNegotiation
                   ? decodePreferences(xAccept)
                   : Collections.emptyList();
               // tries to honor the client's preferences,
               // or returns one of the artifacts non-deterministically (usually the first)
               Answer<KnowledgeArtifact> bestAvailableCarrier = withNegotiation
-                  ? negotiator.negotiate(surrogate.getCarriers(), preferences)
+                  ? negotiator.negotiateOrDefault(surrogate.getCarriers(), preferences)
                   : negotiator.anyCarrier(surrogate.getCarriers());
 
               Answer<KnowledgeCarrier> carrier = bestAvailableCarrier.isSuccess()
@@ -883,7 +881,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   public Answer<KnowledgeCarrier> getKnowledgeAssetVersionCanonicalSurrogate(UUID assetId,
       String versionTag, String xAccept) {
     boolean withNegotiation = !Util.isEmpty(xAccept);
-    List<SyntacticRepresentation> preferences =
+    List<WeightedRepresentation> preferences =
         decodePreferences(xAccept, defaultSurrogateRepresentation);
     SerializationFormat preferredFormat = negotiator.getPreferredFormat(preferences).orElse(null);
 
@@ -900,9 +898,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
               return withNegotiation ?
                   binaryCarrier.flatMap(bin ->
-                      Answer.anyDo(
+                      Answer.firstDo(
                           preferences,
-                          preferredRep -> attemptTranslation(bin, preferredRep)))
+                          preferredRep -> attemptTranslation(bin, preferredRep.getRep())))
                   : binaryCarrier;
             }
         );
@@ -1002,7 +1000,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
                       attemptTranslation(
                           assetMetadata.get(),
                           canonicalSurrogateMeta,
-                          rep(tgtRep.getLanguage(), tgtRep.getFormat(),
+                          rep(tgtRep.getRep().getLanguage(), tgtRep.getRep().getFormat(),
                               defaultCharset(), Encodings.DEFAULT))))
           .findFirst()
           .orElse(Answer.unacceptable());
@@ -1424,14 +1422,14 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * Knowledge Artifact
    */
   private Answer<KnowledgeCarrier> tryConstructEphemeral(KnowledgeAsset asset,
-      List<SyntacticRepresentation> preferences) {
+      List<WeightedRepresentation> preferences) {
     if (translator == null) {
       return Answer.unacceptable();
     }
     return Answer.firstDo(
         preferences,
-        preferred -> attemptTranslation(asset, preferred),
-        () -> Answer.unacceptable());
+        preferred -> attemptTranslation(asset, preferred.getRep()),
+        Answer::unacceptable);
   }
 
   /**

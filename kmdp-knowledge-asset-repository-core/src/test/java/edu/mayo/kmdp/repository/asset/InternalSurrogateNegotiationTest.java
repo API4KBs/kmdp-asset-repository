@@ -14,6 +14,8 @@
 package edu.mayo.kmdp.repository.asset;
 
 import static edu.mayo.kmdp.repository.asset.negotiation.ContentNegotiationHelper.decodePreferences;
+import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.OK;
+import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.SeeOther;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
@@ -37,6 +39,7 @@ import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._20200801.Answer;
 import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
 import org.omg.spec.api4kp._20200801.services.SyntacticRepresentation;
+import org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.WeightedRepresentation;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 
@@ -62,15 +65,15 @@ class InternalSurrogateNegotiationTest extends RepositoryTestBase {
 
     Answer<KnowledgeAsset> a3 = semanticRepository.getKnowledgeAsset(pockId,
         "application/json, text/html;q=0.9");
-    assertEquals(ResponseCodeSeries.OK,a3.getOutcomeType());
+    assertTrue(OK.sameAs(a3.getOutcomeType()));
 
     Answer<KnowledgeAsset> a1 = semanticRepository.getKnowledgeAsset(pockId,
         "text/html, application/xhtml+xml, application/xml;q=0.9, image/webp, */*;q=0.8");
-    assertEquals(ResponseCodeSeries.SeeOther,a1.getOutcomeType());
+    assertTrue(SeeOther.sameAs(a1.getOutcomeType()));
 
     Answer<KnowledgeAsset> a2 = semanticRepository.getKnowledgeAsset(pockId,
         "application/json");
-    assertEquals(ResponseCodeSeries.OK,a2.getOutcomeType());
+    assertTrue(OK.sameAs(a2.getOutcomeType()));
 
   }
 
@@ -141,7 +144,7 @@ class InternalSurrogateNegotiationTest extends RepositoryTestBase {
 
   @Test
   void testFormalMIMEDecoding() {
-    List<SyntacticRepresentation> reps;
+    List<WeightedRepresentation> reps;
 
     reps = decodePreferences("");
     assertTrue(reps.isEmpty());
@@ -151,7 +154,7 @@ class InternalSurrogateNegotiationTest extends RepositoryTestBase {
 
     reps = decodePreferences("model/bpmn+xml;q=0.9,model/dmn-v12+xml,model/cmmn-v11+xml;q=0.6");
     assertEquals(3,reps.size());
-    assertTrue(DMN_1_2.sameAs(reps.get(0).getLanguage()));
+    assertTrue(DMN_1_2.sameAs(reps.get(0).getRep().getLanguage()));
   }
 
 }
