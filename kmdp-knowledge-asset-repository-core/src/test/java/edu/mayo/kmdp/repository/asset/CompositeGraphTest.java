@@ -129,6 +129,33 @@ class CompositeGraphTest extends RepositoryTestBase {
     assertFalse(contains(m, 8, Imports, 9, assets));
   }
 
+  @Test
+  void testAnonymousStructWithNonExistingAsset() {
+    ResourceIdentifier rootId = randomAssetId(testAssetNS());
+    Answer<KnowledgeCarrier> struct =
+        semanticRepository.getAnonymousCompositeKnowledgeAssetStructure(
+            rootId.getUuid(), rootId.getVersionTag());
+    assertTrue(struct.isNotFound());
+  }
+
+  @Test
+  void testAnonymousCarrierWithNonExistingAsset() {
+    ResourceIdentifier rootId = randomAssetId(testAssetNS());
+    Answer<CompositeKnowledgeCarrier> carrier =
+        semanticRepository.getAnonymousCompositeKnowledgeAssetCarrier(
+            rootId.getUuid(), rootId.getVersionTag());
+    assertTrue(carrier.isNotFound());
+  }
+
+  @Test
+  void testAnonymousSurrogateWithNonExistingAsset() {
+    ResourceIdentifier rootId = randomAssetId(testAssetNS());
+    Answer<CompositeKnowledgeCarrier> surrogate =
+        semanticRepository.getAnonymousCompositeKnowledgeAssetSurrogate(
+            rootId.getUuid(), rootId.getVersionTag());
+    assertTrue(surrogate.isNotFound());
+  }
+
   private Model seedCompositeAsset(
       ResourceIdentifier compositeAssetId,
       ResourceIdentifier rootId,

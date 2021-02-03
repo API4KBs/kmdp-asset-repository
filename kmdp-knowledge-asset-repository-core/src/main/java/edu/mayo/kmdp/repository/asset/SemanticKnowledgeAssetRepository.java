@@ -1096,6 +1096,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   public Answer<CompositeKnowledgeCarrier> getAnonymousCompositeKnowledgeAssetCarrier(
       UUID assetId, String versionTag, String xAccept) {
     ResourceIdentifier rootId = toAssetId(assetId, versionTag);
+    if (!index.isKnownAsset(rootId)) {
+      return Answer.notFound();
+    }
 
     return compositeHelper.getComponentsQuery(rootId, Depends_On)
         .flatMap(this::getComponentIds)
@@ -1282,6 +1285,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   public Answer<KnowledgeCarrier> getAnonymousCompositeKnowledgeAssetStructure(
       UUID assetId, String versionTag, String xAccept) {
     ResourceIdentifier rootId = toAssetId(assetId, versionTag);
+    if (!index.isKnownAsset(rootId)) {
+      return Answer.notFound();
+    }
     return compositeHelper.getAnonStructQuery(rootId)
         .flatMap(this::queryKnowledgeAssetGraph)
         .flatMap(binds -> compositeHelper.toEncodedStructGraph(randomAssetId(), binds));
