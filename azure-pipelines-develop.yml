@@ -175,6 +175,24 @@ steps:
     DEPLOY_REPO: $(deploymentRepo)
     DEPLOY_REPO_PATH: $(deploymentRepoPath)
 
+# Write SLM version to variable group for assetRepoWarVersion
+- task: PowerShell@2
+  displayName: 'Update Variable Group by Id'
+  inputs:
+    targetType: 'inline'
+    script: |
+      # Write your PowerShell commands here.
+      $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("{0}:{1}" -f "",$env:SYSTEM_ACCESSTOKEN)))
+      $url = "https://dev.azure.com/mclm/KMD/_apis/distributedtask/variablegroups/19?api-version=6.1-preview.1"
+      $variables = Invoke-RestMethod -Uri $url -Method Get -ContentType "application/json" -Headers @{Authorization=("Basic {0}" -f $base64AuthInfo)}
+      $variables.variables.assetRepoWarVersion.value = $env:PROJECT_SLM_VERSION
+      $jsonFile = @($variables) | ConvertTo-Json -Depth 99
+      $pipeline = Invoke-RestMethod -Uri $url -Method Put -Body $jsonFile -ContentType "application/json" -Headers @{Authorization=("Basic {0}" -f $base64AuthInfo)}
+      Write-Host "New Variable Value:" $pipeline.variables.assetRepoWarVersion.value
+  env:
+    SYSTEM_ACCESSTOKEN: $(system.accesstoken)
+    PROJECT_SLM_VERSION: $(projectSlmVersionFinal)
+
 # Copy War File to build
 - task: CopyFiles@2
   displayName: 'Copy Files to: $(build.artifactstagingdirectory)'
