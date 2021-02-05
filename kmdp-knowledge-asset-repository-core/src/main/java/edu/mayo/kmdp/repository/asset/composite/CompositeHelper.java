@@ -9,6 +9,7 @@ import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.of;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.ofAst;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
+import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newVersionId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.defaultArtifactId;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Depends_On;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.TXT;
@@ -50,6 +51,8 @@ public class CompositeHelper {
 
   private final String componentsQuery;
 
+  private final String rootQuery;
+
   private final _applyLift sparqlLifter;
 
   private final _applyLower rdfLowerer;
@@ -69,6 +72,10 @@ public class CompositeHelper {
         FileUtil
             .read(SemanticKnowledgeAssetRepository.class.getResourceAsStream("/components.sparql"))
             .orElseThrow(() -> new IllegalStateException("Unable to load components.sparql"));
+   this.rootQuery =
+        FileUtil
+            .read(SemanticKnowledgeAssetRepository.class.getResourceAsStream("/root.sparql"))
+            .orElseThrow(() -> new IllegalStateException("Unable to load components.sparql"));
 
     this.sparqlLifter = new SparqlLifter();
     this.rdfLowerer = new JenaRdfParser();
@@ -85,6 +92,10 @@ public class CompositeHelper {
   public Answer<KnowledgeCarrier> getComponentsQuery(
       ResourceIdentifier rootId, Term closureRel) {
     return prepareQuery(componentsQuery, rootId, closureRel);
+  }
+
+  public Answer<KnowledgeCarrier> getRootQuery(ResourceIdentifier compositeId) {
+    return prepareQuery(rootQuery, compositeId, Depends_On);
   }
 
   private Answer<KnowledgeCarrier> prepareQuery(
@@ -114,6 +125,15 @@ public class CompositeHelper {
         .map(Link::getHref)
         .flatMap(StreamUtil.filterAs(ResourceIdentifier.class))
         .findFirst();
+  }
+
+  public Optional<ResourceIdentifier> getRootId(List<Bindings> bindings) {
+    if (bindings.size() != 1) {
+      return Optional.empty();
+    }
+    return Optional.ofNullable(
+        newVersionId(
+            URI.create(bindings.get(0).get("comp").toString())));
   }
 
   public KnowledgeCarrier toStructGraph(ResourceIdentifier structId, List<Bindings> bindings) {

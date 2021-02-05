@@ -264,7 +264,7 @@ class CompositeAssetTest extends RepositoryTestBase {
     CompositeKnowledgeCarrier ckc = kc.get();
     assertEquals(3, ckc.getComponent().size());
     assertEquals(id1, ckc.getAssetId());
-    assertEquals(id1, ckc.getRootId());
+    assertEquals(null, ckc.getRootId());
 
     Model m = new JenaRdfParser()
         .applyLift(ckc.getStruct(), Abstract_Knowledge_Expression, codedRep(OWL_2), null)
@@ -341,7 +341,7 @@ class CompositeAssetTest extends RepositoryTestBase {
     CompositeKnowledgeCarrier ckc = kc.get();
     assertEquals(4, ckc.getComponent().size());
     assertEquals(id1, ckc.getAssetId());
-    assertEquals(id1, ckc.getRootId());
+    assertEquals(id2, ckc.getRootId());
 
     Model m = new JenaRdfParser()
         .applyLift(ckc.getStruct(), Abstract_Knowledge_Expression, codedRep(OWL_2), null)
@@ -426,6 +426,9 @@ class CompositeAssetTest extends RepositoryTestBase {
             || k.getArtifactId().asKey().equals(artId2.asKey())));
     assertTrue(carrier.components()
         .allMatch(k -> k.asString().orElse("").matches("Foo|Bar")));
+
+    assertNotNull(carrier.getRootId());
+    assertEquals(carrier.mainComponent().getAssetId().asKey(), axId1.asKey());
   }
 
 
@@ -614,14 +617,14 @@ class CompositeAssetTest extends RepositoryTestBase {
         semanticRepository.getCompositeKnowledgeAssetSurrogate(
             axId0.getUuid(), axId0.getVersionTag(), null, null);
     CompositeKnowledgeCarrier ckc = ckcAns.orElseGet(Assertions::fail);
-    assertEquals(axId0.asKey(), ckc.getRootId().asKey());
+    assertEquals(axId1.asKey(), ckc.getRootId().asKey());
     assertEquals(axId0.asKey(), ckc.getAssetId().asKey());
     assertEquals(3, ckc.getComponent().size());
     assertTrue(ckc.components()
         .allMatch(k -> k.getAssetId().asKey().equals(axId0.asKey())
             || k.getAssetId().asKey().equals(axId1.asKey())
             || k.getAssetId().asKey().equals(axId2.asKey())));
-    assertEquals(axId0.asKey(), ckc.mainComponent().getAssetId().asKey());
+    assertEquals(axId1.asKey(), ckc.mainComponent().getAssetId().asKey());
 
     assertNotNull(ckc.getStruct());
     assertEquals(sId.asKey(), ckc.getStruct().getAssetId().asKey());

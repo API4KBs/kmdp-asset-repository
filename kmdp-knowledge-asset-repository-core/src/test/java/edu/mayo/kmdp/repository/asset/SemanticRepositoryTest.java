@@ -30,11 +30,14 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
+import static org.omg.spec.api4kp._20200801.id.IdentifierConstants.VERSION_ZERO;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.artifactId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.assetId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomArtifactId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomAssetId;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getCanonicalSurrogateId;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getComputableSurrogateMetadata;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Depends_On;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRoleSeries.Operational_Concept_Definition;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Care_Process_Model;
@@ -54,6 +57,7 @@ import edu.mayo.kmdp.registry.Registry;
 import edu.mayo.kmdp.util.DateTimeUtil;
 import edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -75,6 +79,7 @@ import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateDiffer;
+import org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper;
 
 
 class SemanticRepositoryTest extends RepositoryTestBase {
@@ -1333,8 +1338,8 @@ class SemanticRepositoryTest extends RepositoryTestBase {
 
   @Test
   void testAssetIdWithURNamespace() {
-    ResourceIdentifier assetId = newId(BASE_UUID_URN_URI,UUID.randomUUID(),IdentifierConstants.VERSION_ZERO);
-    ResourceIdentifier artifactId = newId(BASE_UUID_URN_URI,UUID.randomUUID(),IdentifierConstants.VERSION_ZERO);
+    ResourceIdentifier assetId = newId(BASE_UUID_URN_URI,UUID.randomUUID(), VERSION_ZERO);
+    ResourceIdentifier artifactId = newId(BASE_UUID_URN_URI,UUID.randomUUID(), VERSION_ZERO);
     KnowledgeAsset ka1 = new KnowledgeAsset()
         .withAssetId(assetId)
         .withName("Foo")
@@ -1353,6 +1358,123 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         "Foo".getBytes()
     );
     assertTrue(ans2.isSuccess());
+  }
+
+  @Test
+  void testUpdateSurrogateVersion() {
+    ResourceIdentifier axId =
+        assetId(testAssetNS(), uuid("testSurrogateVersion"), VERSION_ZERO);
+    KnowledgeAsset surr = SurrogateBuilder.newSurrogate(axId)
+        .withName("Test", "")
+        .get();
+
+    Answer<Void> ans1 =
+        semanticRepository.setKnowledgeAssetVersion(axId.getUuid(), axId.getVersionTag(), surr);
+    assertTrue(ans1.isSuccess());
+
+    KnowledgeArtifact self = getCanonicalSurrogateId(surr)
+        .flatMap(sid -> getComputableSurrogateMetadata(sid.getUuid(), sid.getVersionTag(), surr))
+        .orElseGet(Assertions::fail);
+
+    surr.setName("Changed name");
+
+    Answer<Void> ans2 =
+        semanticRepository.setKnowledgeAssetVersion(axId.getUuid(), axId.getVersionTag(), surr);
+    assertTrue(ans2.isFailure());
+
+    ResourceIdentifier oldSurrogateId = self.getArtifactId();
+    ResourceIdentifier newSurrogateId = newId(
+        oldSurrogateId.getNamespaceUri(),
+        oldSurrogateId.getUuid(),
+        oldSurrogateId.getSemanticVersionTag().incrementMinorVersion().toString());
+    self.setArtifactId(newSurrogateId);
+
+    Answer<Void> ans3 =
+        semanticRepository.setKnowledgeAssetVersion(axId.getUuid(), axId.getVersionTag(), surr);
+    assertTrue(ans3.isSuccess());
+
+    KnowledgeAsset latestSurr =
+        semanticRepository.getKnowledgeAsset(axId.getUuid(), axId.getVersionTag())
+            .orElseGet(Assertions::fail);
+    assertEquals("Changed name", latestSurr.getName());
+    assertEquals(newSurrogateId.asKey(),
+        getCanonicalSurrogateId(latestSurr).orElseGet(Assertions::fail).asKey());
+
+  }
+
+
+  @Test
+  void testAddCarrier() {
+    ResourceIdentifier axId =
+        assetId(testAssetNS(), uuid("testAddCarrier"), VERSION_ZERO);
+    ResourceIdentifier carrId1 =
+        artifactId(testArtifactNS(), uuid("art1"), VERSION_ZERO);
+    ResourceIdentifier carrId2 =
+        artifactId(testArtifactNS(), uuid("art2"), VERSION_ZERO);
+
+    KnowledgeAsset surr = SurrogateBuilder.newSurrogate(axId)
+        .withName("Test", "")
+        .get();
+    KnowledgeCarrier artifact1 = AbstractCarrier.of("Foo")
+        .withAssetId(axId)
+        .withArtifactId(carrId1)
+        .withRepresentation(rep(HTML,TXT, Charset.defaultCharset()));
+    KnowledgeCarrier artifact2 = AbstractCarrier.of("Bar")
+        .withAssetId(axId)
+        .withArtifactId(carrId2)
+        .withRepresentation(rep(HTML,TXT, Charset.defaultCharset()));
+
+    ResourceIdentifier surrogateId = getCanonicalSurrogateId(surr).orElseGet(Assertions::fail);
+
+    // Just set the Asset (Surrogate)
+    Answer<Void> ans1 =
+        semanticRepository.setKnowledgeAssetVersion(axId.getUuid(), axId.getVersionTag(), surr);
+    assertTrue(ans1.isSuccess());
+    KnowledgeAsset surr1 =
+        semanticRepository.getKnowledgeAsset(axId.getUuid(), axId.getVersionTag())
+        .orElseGet(Assertions::fail);
+    assertTrue(surr1.getCarriers().isEmpty());
+    assertEquals(1, surr1.getSurrogate().size());
+
+    // Add a first carrier
+    Answer<Void> ans2 =
+        semanticRepository.addKnowledgeAssetCarrier(axId.getUuid(), axId.getVersionTag(), artifact1);
+    assertTrue(ans2.isSuccess());
+    KnowledgeAsset surr2 =
+        semanticRepository.getKnowledgeAsset(axId.getUuid(), axId.getVersionTag())
+            .orElseGet(Assertions::fail);
+    assertEquals(1, surr2.getCarriers().size());
+    assertEquals(1, surr2.getSurrogate().size());
+    ResourceIdentifier surrogateId2 = getCanonicalSurrogateId(surr2).orElseGet(Assertions::fail);
+    assertEquals(surrogateId2.getSemanticVersionTag(),
+        surrogateId.getSemanticVersionTag().incrementMinorVersion());
+
+    // Re-add the same carrier - should be idempotent
+    Answer<Void> ans3 =
+        semanticRepository.addKnowledgeAssetCarrier(axId.getUuid(), axId.getVersionTag(), artifact1);
+    assertTrue(ans3.isSuccess());
+    KnowledgeAsset surr3 =
+        semanticRepository.getKnowledgeAsset(axId.getUuid(), axId.getVersionTag())
+            .orElseGet(Assertions::fail);
+    assertEquals(1, surr3.getCarriers().size());
+    assertEquals(1, surr3.getSurrogate().size());
+    ResourceIdentifier surrogateId3 = getCanonicalSurrogateId(surr3).orElseGet(Assertions::fail);
+    assertEquals(surrogateId3.getSemanticVersionTag(),
+        surrogateId.getSemanticVersionTag().incrementMinorVersion());
+
+    // Add an additional carrier
+    Answer<Void> ans4 =
+        semanticRepository.addKnowledgeAssetCarrier(axId.getUuid(), axId.getVersionTag(), artifact2);
+    assertTrue(ans4.isSuccess());
+    KnowledgeAsset surr4 =
+        semanticRepository.getKnowledgeAsset(axId.getUuid(), axId.getVersionTag())
+            .orElseGet(Assertions::fail);
+    assertEquals(2, surr4.getCarriers().size());
+    assertEquals(1, surr4.getSurrogate().size());
+    ResourceIdentifier surrogateId4 = getCanonicalSurrogateId(surr4).orElseGet(Assertions::fail);
+    assertEquals(
+        surrogateId.getSemanticVersionTag().incrementMinorVersion().incrementMinorVersion(),
+        surrogateId4.getSemanticVersionTag());
   }
 
 
