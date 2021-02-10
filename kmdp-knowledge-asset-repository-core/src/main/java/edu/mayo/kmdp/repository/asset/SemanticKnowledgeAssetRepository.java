@@ -1302,7 +1302,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     }
     return compositeHelper.getAnonStructQuery(rootId)
         .flatMap(this::queryKnowledgeAssetGraph)
-        .flatMap(binds -> compositeHelper.toEncodedStructGraph(randomAssetId(), binds));
+        .flatMap(binds -> compositeHelper.toEncodedStructGraph(binds));
   }
 
   @Override

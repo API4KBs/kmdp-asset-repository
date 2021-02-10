@@ -1331,7 +1331,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     assertTrue(Conflict.sameAs(ans2.getOutcomeType()));
 
     String expl = ans2.getExplanation().asString().orElse("");
-    assertTrue(expl.contains(axId.getResourceId().toString()));
+    assertTrue(expl.contains(axId.asKey().toString()));
     assertTrue(expl.contains("Foo"));
     assertTrue(expl.contains("Bar"));
   }

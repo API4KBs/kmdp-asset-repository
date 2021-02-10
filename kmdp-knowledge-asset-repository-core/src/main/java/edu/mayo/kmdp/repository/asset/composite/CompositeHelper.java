@@ -146,8 +146,17 @@ public class CompositeHelper {
         .withRepresentation(rep(OWL_2));
   }
 
-  public Answer<KnowledgeCarrier> toEncodedStructGraph(ResourceIdentifier structId,
-      List<Bindings> bindings) {
+  public Answer<KnowledgeCarrier> toEncodedStructGraph(List<Bindings> bindings) {
+    ResourceIdentifier structId = bindings.stream()
+        .map(b -> b.get("s").toString())
+        .map(URI::create)
+        .map(SemanticIdentifier::newVersionId)
+        .reduce(SemanticIdentifier::hashIdentifiers)
+        .orElseThrow();
+    return toEncodedStructGraph(structId, bindings);
+  }
+
+  public Answer<KnowledgeCarrier> toEncodedStructGraph(ResourceIdentifier structId, List<Bindings> bindings) {
     return rdfLowerer.applyLower(
         toStructGraph(structId, bindings),
         Encoded_Knowledge_Expression,
