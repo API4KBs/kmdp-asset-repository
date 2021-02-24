@@ -56,13 +56,12 @@
     <dependency>
       <groupId>org.apache.jackrabbit</groupId>
       <artifactId>oak-store-document</artifactId>
-      <version>1.24.0</version>
+      <version>${oak.version}</version>
     </dependency>
 
     <dependency>
       <groupId>com.h2database</groupId>
       <artifactId>h2</artifactId>
-      <version>1.4.199</version>
     </dependency>
 
     <dependency>
@@ -74,7 +73,6 @@
     <dependency>
       <groupId>com.microsoft.sqlserver</groupId>
       <artifactId>mssql-jdbc</artifactId>
-      <version>8.4.1.jre11</version>
     </dependency>
 
     <dependency>
