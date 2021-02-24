@@ -21,6 +21,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.sql.DataSource;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.jena.graph.GraphEvents;
 import org.apache.jena.query.ParameterizedSparqlString;
 import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
@@ -201,6 +202,7 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
 
   /**
    * Store a single RDF triple S,P,O.
+   * Used in testing only
    *
    * @param subject S
    * @param predicate P
@@ -212,16 +214,12 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
             ResourceFactory.createProperty(predicate.toString()),
             createResource(object.toString()));
 
-    this.model.add(s);
-  }
-
-  /**
-   * Store a singe RDF Statement.
-   *
-   * @param statement the triple to store
-   */
-  public void store(Statement statement) {
-    this.model.add(statement);
+    this.model.notifyEvent(GraphEvents.startRead);
+    try {
+      this.model.add(s);
+    } finally {
+      this.model.notifyEvent(GraphEvents.finishRead);
+    }
   }
 
   /**
@@ -230,7 +228,12 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
    * @param statements the triples to store
    */
   public void store(List<Statement> statements) {
-    this.model.add(statements);
+    this.model.notifyEvent(GraphEvents.startRead);
+    try {
+      this.model.add(statements);
+    } finally {
+      this.model.notifyEvent(GraphEvents.finishRead);
+    }
   }
 
   /**
