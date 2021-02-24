@@ -529,7 +529,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<Void> setKnowledgeAssetVersion(UUID assetId, String versionTag,
       KnowledgeAsset assetSurrogate) {
-    logger.debug("INITIALIZING ASSET {} : {}", assetId, versionTag);
+    logger.error("SET KA Version - Surrogate {} : {}", assetId, versionTag);
     String semVerTag = toSemVer(versionTag);
 
     setIdAndVersionIfMissing(assetSurrogate, assetId, semVerTag);
@@ -1788,20 +1788,24 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       ResourceIdentifier assetId,
       ResourceIdentifier surrogateId,
       KnowledgeAsset assetSurrogate) {
+    long t0 = System.currentTimeMillis();
+    logger.error("SAVING SURROGATE {} : {}", assetId.getUuid(), assetId.getVersionTag());
 
-    logger.debug("SAVING ASSET {} : {}", assetId.getUuid(), assetId.getVersionTag());
-
+    long t1 = System.currentTimeMillis();
     Answer<KnowledgeCarrier> surrogateBinary = encodeCanonicalSurrogate(assetSurrogate);
 
+    long t2 = System.currentTimeMillis();
     if (surrogateBinary.isSuccess()) {
       this.knowledgeArtifactApi.setKnowledgeArtifactVersion(
           repositoryId,
           surrogateId.getUuid(),
           surrogateId.getVersionTag(),
           surrogateBinary.flatOpt(AbstractCarrier::asBinary).get());
+      long delta1 = System.currentTimeMillis() - t2;
 
-      logger.debug("REGISTERING ASSET {} : {}", assetId.getUuid(), assetId.getVersionTag());
+      logger.error("PERSISTED IN {}, NOW REGISTERING ASSET AS TRIPLES {} : {}", delta1, assetId.getUuid(), assetId.getVersionTag());
 
+      long t3 = System.currentTimeMillis();
       Index.registerAssetByCanonicalSurrogate(
           assetSurrogate,
           surrogateId,
@@ -1809,6 +1813,11 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
               .map(ModelMIMECoder::encode)
               .orElseThrow(IllegalStateException::new),
           index);
+      long t4 = System.currentTimeMillis() - t0;
+      long delta2 = System.currentTimeMillis() - t3;
+      long t5 = System.currentTimeMillis();
+      System.err.println("\t\tTriple store registration took " + delta2);
+      logger.error("DONE w/ TRIPLES {} : {} took {}", assetId.getUuid(), assetId.getVersionTag(), delta2);
     }
   }
 
