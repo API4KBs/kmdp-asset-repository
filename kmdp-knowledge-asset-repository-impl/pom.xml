@@ -54,12 +54,6 @@
     </dependency>
 
     <dependency>
-      <groupId>org.apache.jackrabbit</groupId>
-      <artifactId>oak-store-document</artifactId>
-      <version>${oak.version}</version>
-    </dependency>
-
-    <dependency>
       <groupId>com.h2database</groupId>
       <artifactId>h2</artifactId>
     </dependency>
@@ -78,7 +72,6 @@
     <dependency>
       <groupId>com.zaxxer</groupId>
       <artifactId>HikariCP</artifactId>
-      <version>3.2.0</version>
     </dependency>
 
     <dependency>

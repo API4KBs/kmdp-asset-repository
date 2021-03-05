@@ -25,7 +25,7 @@ import edu.mayo.kmdp.language.TransionApiOperator;
 import edu.mayo.kmdp.language.TransrepresentationExecutor;
 import edu.mayo.kmdp.language.ValidateApiOperator;
 import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
-import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
+import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDao;
 import edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex;
 import java.util.Collections;
@@ -35,7 +35,6 @@ import org.omg.spec.api4kp._20200801.api.repository.asset.v4.server.KnowledgeAss
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
-import org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries;
 
 public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogApiInternal,
     KnowledgeAssetRepositoryApiInternal {
@@ -47,7 +46,7 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
   static KnowledgeAssetRepositoryService selfContainedRepository(KnowledgeAssetRepositoryServerConfig cfg) {
     JenaSparqlDao dao = JenaSparqlDao.inMemoryDao();
     return new SemanticKnowledgeAssetRepository(
-        KnowledgeArtifactRepositoryService.inMemoryArtifactRepository(),
+        JPAKnowledgeArtifactRepositoryService.inMemoryArtifactRepository(),
         new LanguageDeSerializer(Collections.singletonList(new Surrogate2Parser())),
         new LanguageDetector(Collections.emptyList()),
         new LanguageValidator(Collections.emptyList()),
@@ -68,7 +67,7 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
     JenaSparqlDao dao = JenaSparqlDao.inMemoryDao();
     KnowledgeAssetRepositoryServerConfig cfg = new KnowledgeAssetRepositoryServerConfig();
     return new SemanticKnowledgeAssetRepository(
-        KnowledgeArtifactRepositoryService.inMemoryArtifactRepository(),
+        JPAKnowledgeArtifactRepositoryService.inMemoryArtifactRepository(),
         new LanguageDeSerializer(parsers),
         new LanguageDetector(detectors),
         new LanguageValidator(validators),

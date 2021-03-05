@@ -1,6 +1,5 @@
 package edu.mayo.kmdp.repository.asset;
 
-import com.google.common.util.concurrent.MoreExecutors;
 import edu.mayo.kmdp.kbase.query.sparql.v1_1.JenaQuery;
 import edu.mayo.kmdp.language.LanguageDeSerializer;
 import edu.mayo.kmdp.language.LanguageDetector;
@@ -11,7 +10,8 @@ import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
 import edu.mayo.kmdp.language.translators.surrogate.v2.SurrogateV2Transcriptor;
 import edu.mayo.kmdp.language.translators.surrogate.v2.SurrogateV2toHTMLTranslator;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig;
-import edu.mayo.kmdp.repository.artifact.jcr.JcrKnowledgeArtifactRepository;
+import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
+import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepository;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.repository.asset.index.Index;
 import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDao;
@@ -20,14 +20,7 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.UUID;
-import javax.jcr.Repository;
 import javax.sql.DataSource;
-import org.apache.jackrabbit.oak.Oak;
-import org.apache.jackrabbit.oak.jcr.Jcr;
-import org.apache.jackrabbit.oak.plugins.document.DocumentNodeStore;
-import org.apache.jackrabbit.oak.plugins.document.rdb.RDBDocumentNodeStoreBuilder;
-import org.apache.jackrabbit.oak.plugins.document.rdb.RDBOptions;
-import org.apache.jackrabbit.oak.spi.security.OpenSecurityProvider;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -38,7 +31,7 @@ abstract class RepositoryTestBase {
 
   static SemanticKnowledgeAssetRepository semanticRepository;
 
-  static private JcrKnowledgeArtifactRepository repos;
+  static private KnowledgeArtifactRepositoryService repos;
 
   static Index index;
 
@@ -56,25 +49,16 @@ abstract class RepositoryTestBase {
   @AfterAll
   static void tearDownRepos() {
     jenaSparqlDao.shutdown();
+    if (repos != null) {
+      repos.shutdown();
+    }
   }
 
   @BeforeAll
   static void setUpRepos() {
     ds = getDataSource();
 
-    RDBOptions options = new RDBOptions().tablePrefix("pre");
-
-    RDBDocumentNodeStoreBuilder b = new RDBDocumentNodeStoreBuilder().newRDBDocumentNodeStoreBuilder();
-    b.setExecutor(MoreExecutors.directExecutor());
-
-    b.setRDBConnection(ds, options);
-
-    DocumentNodeStore dns = b.build();
-
-    Repository jcr = new Jcr(new Oak(dns)).with(new OpenSecurityProvider()).createRepository();
-
-    repos = new JcrKnowledgeArtifactRepository(
-        jcr,
+    repos = new JPAKnowledgeArtifactRepository(ds,
         new KnowledgeArtifactRepositoryServerConfig());
 
     jenaSparqlDao = new JenaSparqlDao(ds, true);
@@ -113,13 +97,6 @@ abstract class RepositoryTestBase {
 
   static URI testArtifactNS() {
     return cfg.getTyped(KnowledgeAssetRepositoryOptions.ARTIFACT_NAMESPACE, URI.class);
-  }
-
-  @AfterEach
-  void shutdown() {
-    if (repos != null) {
-      repos.shutdown();
-    }
   }
 
 }
