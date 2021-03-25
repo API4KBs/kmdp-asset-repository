@@ -340,7 +340,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       return Answer.unsupported();
     }
     ResourceIdentifier kbId = index.getKnowledgeBaseId();
-    return queryExecutor.askQuery(kbId.getUuid(), kbId.getVersionTag(), graphQuery);
+    return queryExecutor.askQuery(kbId.getUuid(), kbId.getVersionTag(), graphQuery, null);
   }
 
   /**

@@ -381,7 +381,7 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   }
 
   @Override
-  public Answer<KnowledgeBase> getKnowledgeBase(UUID kbaseId, String versionTag) {
+  public Answer<KnowledgeBase> getKnowledgeBase(UUID kbaseId, String versionTag, String params) {
     if (this.getKnowledgeBase().getKbaseId().getUuid().equals(kbaseId)) {
       return Answer.of(getKnowledgeBase());
     }
