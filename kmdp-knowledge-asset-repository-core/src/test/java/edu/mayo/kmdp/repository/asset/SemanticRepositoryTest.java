@@ -625,6 +625,18 @@ class SemanticRepositoryTest extends RepositoryTestBase {
   }
 
   @Test
+  void initAndGetAssetByUnknownType() {
+    assertNotNull(semanticRepository
+        .setKnowledgeAssetVersion(uuid("foo"), "1",
+            new KnowledgeAsset().withFormalType(Care_Process_Model)));
+    List<Pointer> assets = semanticRepository
+        .listKnowledgeAssets(UUID.randomUUID().toString(), null, null, -1, -1)
+        .orElse(emptyList());
+
+    assertEquals(0, assets.size());
+  }
+
+  @Test
   void addAndGetAssetByType() {
     KnowledgeAsset axx = new KnowledgeAsset().withFormalType(Care_Process_Model);
     assertNotNull(
@@ -730,6 +742,25 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         .orElse(emptyList());
     assertNotNull(pointers);
     assertEquals(0, pointers.size());
+  }
+
+  @Test
+  void initAndGetAssetByUnknownAnnotation() {
+    assertNotNull(semanticRepository.setKnowledgeAssetVersion(uuid("1"), "1",
+        new KnowledgeAsset().withAnnotation(
+            new Annotation()
+                .withRel(In_Terms_Of.asConceptIdentifier())
+                .withRef(Term.newTerm("http://something").asConceptIdentifier()))));
+
+    List<Pointer> pointers = semanticRepository
+        .listKnowledgeAssets(null, UUID.randomUUID().toString(), null, 0, -1)
+        .orElseGet(Assertions::fail);
+    assertEquals(0, pointers.size());
+
+    List<Pointer> pointers2 = semanticRepository
+        .listKnowledgeAssets(null, null, UUID.randomUUID().toString(), 0, -1)
+        .orElseGet(Assertions::fail);
+    assertEquals(0, pointers2.size());
   }
 
   @Test

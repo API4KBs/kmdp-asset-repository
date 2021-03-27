@@ -5,6 +5,7 @@ import edu.mayo.kmdp.util.URIUtil;
 import edu.mayo.kmdp.util.Util;
 import edu.mayo.ontology.taxonomies.kmdo.semanticannotationreltype.SemanticAnnotationRelTypeSeries;
 import java.net.URI;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
@@ -78,26 +79,42 @@ public class StaticFilter {
 
   private static Optional<Set<ResourceIdentifier>> filterByAnnotation(String assetAnnotationTag,
       String assetAnnotationConcept, Index index) {
+    if (Util.isEmpty(assetAnnotationConcept) && Util.isEmpty(assetAnnotationTag)) {
+      // no annotation filter -> empty
+      return Optional.empty();
+    }
+
     Optional<URI> annotationURI = resolveAnnotationTag(assetAnnotationTag);
     Optional<URI> annotationValueURI = URIUtil.asUri(assetAnnotationConcept);
 
     Set<ResourceIdentifier> filteredResources;
     if (annotationURI.isPresent() && annotationValueURI.isPresent()) {
+      // rel/ann filter -> restricted set
       filteredResources = index
           .getAssetIdsByAnnotation(annotationURI.get(), annotationValueURI.get());
     } else if (annotationURI.isPresent()) {
+      // rel filter -> restricted set
       filteredResources = index.getAssetIdsByAnnotation(annotationURI.get());
+    } else if (annotationValueURI.isPresent()) {
+      // ann filter -> restricted set
+      filteredResources = index.getAssetIdsByAnnotationValue(annotationValueURI.get());
     } else {
-      filteredResources = annotationValueURI
-          .map(index::getAssetIdsByAnnotationValue)
-          .orElse(null);
+      // unknown filter -> empty set
+      filteredResources = Collections.emptySet();
     }
     return Optional.ofNullable(filteredResources);
   }
 
   private static Optional<Set<ResourceIdentifier>> filterByType(String assetTypeTag, Index index) {
-    return resolveTypeTag(assetTypeTag)
-        .map(index::getAssetIdsByType);
+    return Util.isNotEmpty(assetTypeTag)
+        ? Optional.of(
+            // type filter -> restricted set
+            resolveTypeTag(assetTypeTag)
+                .map(index::getAssetIdsByType)
+                // unknown type filter -> empty set
+                .orElse(Collections.emptySet()))
+        // no type filter -> empty
+        : Optional.empty();
   }
 
   private static Optional<URI> resolveTypeTag(String assetTypeTag) {
