@@ -14,6 +14,7 @@
 package edu.mayo.kmdp.repository.asset;
 
 import static edu.mayo.kmdp.id.helper.DatatypeHelper.getDefaultVersionId;
+import static edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions.CLEARABLE;
 import static edu.mayo.kmdp.repository.asset.negotiation.ContentNegotiationHelper.decodePreferences;
 import static edu.mayo.kmdp.util.JenaUtil.objA;
 import static edu.mayo.kmdp.util.StreamUtil.filterAs;
@@ -40,7 +41,10 @@ import static org.omg.spec.api4kp._20200801.AbstractCompositeCarrier.ofMixedName
 import static org.omg.spec.api4kp._20200801.AbstractCompositeCarrier.ofUniformAnonymousComposite;
 import static org.omg.spec.api4kp._20200801.AbstractCompositeCarrier.ofUniformNamedComposite;
 import static org.omg.spec.api4kp._20200801.Answer.conflict;
+import static org.omg.spec.api4kp._20200801.Answer.failed;
+import static org.omg.spec.api4kp._20200801.Answer.notFound;
 import static org.omg.spec.api4kp._20200801.Answer.succeed;
+import static org.omg.spec.api4kp._20200801.Answer.unsupported;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.timedSemverComparator;
 import static org.omg.spec.api4kp._20200801.id.VersionIdentifier.toSemVer;
 import static org.omg.spec.api4kp._20200801.services.CompositeStructType.GRAPH;
@@ -68,6 +72,8 @@ import static org.omg.spec.api4kp._20200801.taxonomy.krserialization.KnowledgeRe
 import static org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevelSeries.Abstract_Knowledge_Expression;
 import static org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevelSeries.Encoded_Knowledge_Expression;
 import static org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevelSeries.Serialized_Knowledge_Expression;
+import static org.omg.spec.api4kp._20200801.taxonomy.publicationstatus.PublicationStatusSeries.Draft;
+import static org.omg.spec.api4kp._20200801.taxonomy.publicationstatus.PublicationStatusSeries.asEnum;
 import static org.omg.spec.api4kp._20200801.taxonomy.structuralreltype.StructuralPartTypeSeries.Has_Structural_Component;
 
 import edu.mayo.kmdp.knowledgebase.introspectors.struct.CompositeAssetMetadataIntrospector;
@@ -88,6 +94,7 @@ import edu.mayo.kmdp.util.StreamUtil;
 import edu.mayo.kmdp.util.URIUtil;
 import edu.mayo.kmdp.util.Util;
 import edu.mayo.ontology.taxonomies.kmdo.semanticannotationreltype.SemanticAnnotationRelTypeSeries;
+import edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
@@ -97,6 +104,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import javax.annotation.PostConstruct;
 import javax.inject.Named;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -107,6 +115,7 @@ import org.omg.spec.api4kp._20200801.ServerSideException;
 import org.omg.spec.api4kp._20200801.api.inference.v4.server.ReasoningApiInternal._askQuery;
 import org.omg.spec.api4kp._20200801.api.knowledgebase.v4.server.TranscreateApiInternal._applyNamedIntrospectDirect;
 import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactApiInternal;
+import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactSeriesApiInternal;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.server.KnowledgeAssetRepositoryApiInternal;
 import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.DeserializeApiInternal;
 import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.DetectApiInternal;
@@ -129,15 +138,18 @@ import org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder
 import org.omg.spec.api4kp._20200801.surrogate.Component;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
+import org.omg.spec.api4kp._20200801.surrogate.Publication;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateDiffer;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries;
 import org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormat;
 import org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguage;
+import org.omg.spec.api4kp._20200801.taxonomy.publicationstatus.PublicationStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 
 
 /**
@@ -183,6 +195,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   /* Knowledge Artifact Repository Service Client*/
   private KnowledgeArtifactApiInternal knowledgeArtifactApi;
+  private KnowledgeArtifactSeriesApiInternal knowledgeArtifactSeriesApi;
 
   /* Language Service Client */
   private DeserializeApiInternal parser;
@@ -207,6 +220,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   private ContentNegotiationHelper negotiator;
 
   private CompositeHelper compositeHelper;
+
+  /**
+   * IMPORTANT! If true this will expose an endpoint to clear all tables.
+   */
+  @Value("${allowClearAll:false}")
+  private boolean allowClearAll = false;
 
   /**
    * Initializes a new Knowledge Asset Repository Server
@@ -236,6 +255,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     super();
 
     this.knowledgeArtifactApi = artifactRepo;
+    this.knowledgeArtifactSeriesApi = artifactRepo;
 
     this.index = index;
     this.hrefBuilder = hrefBuilder != null
@@ -264,8 +284,25 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     this.compositeHelper = new CompositeHelper();
 
+    if (!allowClearAll && cfg.containsKey(CLEARABLE.getName())) {
+      allowClearAll = cfg.getTyped(CLEARABLE);
+    }
+
     index.reset();
   }
+
+  @PostConstruct
+  private void logClearAll() {
+    if (this.allowClearAll) {
+      logger.warn(
+          "!!! WARNING !!! The REST endpoint to clear all Asset Repository content is ACTIVE! "
+              + "If you did not intend this,"
+              + " ensure the environment variable `allowClearAll` is either unset or set to false.");
+    } else {
+      logger.info("The REST endpoint to clear all Asset Repository content is INACTIVE.");
+    }
+  }
+
 
   private ResourceIdentifier toAssetId(UUID assetId) {
     return identityMapper.toAssetId(assetId);
@@ -322,6 +359,16 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         rep(Knowledge_Asset_Surrogate_2_0, RDF_1_1),
         rep(HTML, TXT),
         rep(FHIR_STU3, JSON));
+  }
+
+  @Override
+  public Answer<Void> clearKnowledgeAssetCatalog() {
+    if (this.allowClearAll) {
+      clear();
+      return succeed();
+    } else {
+      return unsupported();
+    }
   }
 
   //*****************************************************************************************/
@@ -432,6 +479,27 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   /**
+   * Lists Assets in this Repository, possibly filtering by type or annotation. For each asset in
+   * the collection, deletes it
+   *
+   * @param assetTypeTag           filter to include assets that have type or role denoted by this
+   *                               tag
+   * @param assetAnnotationTag     filter to include assets annotated with the asset/concept
+   *                               relationship denoted by this tag
+   * @param assetAnnotationConcept filter to include assets annotated with this concept
+   * @return Success, or the most severe error
+   * @see SemanticKnowledgeAssetRepository#deleteKnowledgeAsset(UUID)
+   */
+  @Override
+  public Answer<Void> deleteKnowledgeAssets(String assetTypeTag, String assetAnnotationTag,
+      String assetAnnotationConcept) {
+    return listKnowledgeAssets(assetTypeTag, assetAnnotationTag, assetAnnotationConcept, 0, -1)
+        .mapList(Pointer.class, ptr -> deleteKnowledgeAsset(ptr.getUuid()))
+        .flatMap(l -> l.stream().reduce(Answer::merge)
+            .orElseGet(() -> Answer.of(NoContent)));
+  }
+
+  /**
    * Retrieves the latest version of the canonical surrogate for the latest version of a knowledge
    * asset, in AST/object form
    * <p>
@@ -457,7 +525,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   /**
-   * Returns a list of (pointers to the) versions of a given Knowledge Asset *
+   * Returns a list of (pointers to the) versions of a given Knowledge Asset
    *
    * @param assetId   The ID of the asset (series)
    * @param offset    (Pagination: start at element offset)
@@ -486,6 +554,31 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         paginate(pointers, offset, limit, SemanticIdentifier.mostRecentFirstComparator()));
   }
 
+
+  /**
+   * Iterates over the (pointers to the) versions of a given Knowledge Asset, attempting to delete
+   * each one
+   *
+   * @param assetId The ID of the asset (series)
+   * @return Success, or the most severe error
+   */
+  @Override
+  public Answer<Void> deleteKnowledgeAsset(UUID assetId) {
+    return listKnowledgeAssetVersions(assetId).flatMap(
+        versions -> {
+          Optional<Pointer> assetSeriesId = versions.stream().findAny();
+          if (assetSeriesId.isEmpty()) {
+            return notFound();
+          }
+          return versions.stream()
+              .map(ptr -> deleteKnowledgeAssetVersion(ptr.getUuid(), ptr.getVersionTag()))
+              .reduce(Answer::merge)
+              .map(ans -> {
+                index.unregisterAsset(assetSeriesId.get());
+                return ans;
+              }).orElse(failed());
+        });
+  }
 
   /**
    * Retrieves the latest version of the Surrogate for a specific version of a knowledge asset, in
@@ -551,6 +644,62 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         assetSurrogate.getAssetId(), surrogateIdentifier, assetSurrogate);
 
     return Answer.of(NoContent);
+  }
+
+
+  @Override
+  public Answer<Void> deleteKnowledgeAssetVersion(UUID assetId, String versionTag) {
+    Answer<KnowledgeAsset> asset =
+        retrieveLatestCanonicalSurrogateForAssetVersion(assetId, toSemVer(versionTag));
+    if (asset.isNotFound()) {
+      // nothing to delete
+      return succeed();
+    }
+
+    PublicationStatus status = asset
+        .map(KnowledgeAsset::getLifecycle)
+        .map(Publication::getPublicationStatus)
+        .orElse(Draft);
+    switch (asEnum(status)) {
+      case Archived:
+        return asset.flatMap(ax -> removeAssetVersion(ax, !allowClearAll));
+      case Published:
+        if (!allowClearAll) {
+          return Answer.of(ResponseCodeSeries.Unauthorized);
+        }
+        return asset.flatMap(ax -> removeAssetVersion(ax, allowClearAll));
+      default:
+        return asset.flatMap(ax -> removeAssetVersion(ax, true));
+    }
+  }
+
+  private Answer<Void> removeAssetVersion(KnowledgeAsset asset, boolean hardDelete) {
+    Answer<Void> artfs = asset.getCarriers().stream()
+        .map(carrier -> removeArtifact(carrier, hardDelete))
+        .reduce(Answer::merge)
+        // succeed automatically if no artifact to delete
+        .orElseGet(Answer::succeed);
+
+    Answer<Void> surrs = asset.getSurrogate().stream()
+        .map(surrogate -> removeArtifact(surrogate, hardDelete))
+        .reduce(Answer::merge)
+        // it should be impossible for no surrogate to exist
+        .orElseGet(Answer::failed);
+
+    index.unregisterAssetVersion(asset.getAssetId());
+    return Answer.merge(artfs, surrs);
+  }
+
+  private Answer<Void> removeArtifact(KnowledgeArtifact artifact, boolean hardDelete) {
+    ResourceIdentifier id = artifact.getArtifactId();
+    Answer<Void> ans = knowledgeArtifactApi.deleteKnowledgeArtifactVersion(
+        repositoryId,
+        id.getUuid(), id.getVersionTag(),
+        hardDelete);
+    if (knowledgeArtifactSeriesApi.isKnowledgeArtifactSeries(repositoryId,id.getUuid(),hardDelete).isSuccess()) {
+      knowledgeArtifactSeriesApi.deleteKnowledgeArtifact(repositoryId, id.getUuid(), hardDelete);
+    }
+    return ans;
   }
 
   //*****************************************************************************************/
@@ -766,7 +915,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       return Answer.notFound();
     }
     if (!negotiator.isAcceptable(artifactMetadata.get(), xAccept)) {
-      return Answer.failed(NotAcceptable);
+      return failed(NotAcceptable);
     }
 
     Answer<KnowledgeCarrier> carrier = artifactMetadata
@@ -1196,7 +1345,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         ans.flatOpt(compositeHelper::getStructId);
 
     if (!structId.isSuccess()) {
-      return Answer.failed(new IllegalStateException("Unable to find structuring asset ID"));
+      return failed(new IllegalStateException("Unable to find structuring asset ID"));
     }
 
     return ans.flatMap(binds -> compositeHelper.toEncodedStructGraph(structId.get(), binds));
@@ -1216,7 +1365,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     Answer<KnowledgeAsset> compositeSurr = getKnowledgeAssetVersion(assetId, versionTag, xAccept);
     if (!compositeSurr.isSuccess()) {
-      return Answer.failed(compositeSurr.getOutcomeType());
+      return failed(compositeSurr.getOutcomeType());
     }
 
     Answer<ResourceIdentifier> structId = compositeSurr.flatOpt(compositeHelper::getStructId);
@@ -1312,7 +1461,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     Answer<KnowledgeAsset> compositeSurr = getKnowledgeAssetVersion(assetId, versionTag, xAccept);
     if (!compositeSurr.isSuccess()) {
-      return Answer.failed(compositeSurr.getOutcomeType());
+      return failed(compositeSurr.getOutcomeType());
     }
 
     Answer<KnowledgeCarrier> struct = getCompositeKnowledgeAssetStructure(assetId, versionTag);
@@ -1348,7 +1497,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       KnowledgeCarrier assetCarrier) {
     Answer<KnowledgeAsset> currentSurrogate = getKnowledgeAsset(assetId, versionTag);
     if (!currentSurrogate.isSuccess()) {
-      return Answer.failed(currentSurrogate);
+      return failed(currentSurrogate);
     }
 
     ResourceIdentifier artifactId = assetCarrier.getArtifactId();
@@ -1380,7 +1529,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     Answer<Void> a1 = setKnowledgeAssetVersion(assetId, versionTag, surr);
     if (!a1.isSuccess()) {
-      return Answer.failed(a1);
+      return failed(a1);
     }
 
     Answer<Void> a2 = assetCarrier.asBinary().map(binary ->
@@ -1392,7 +1541,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     return Answer.merge(a1, a2);
   }
-
 
   //*****************************************************************************************/
   //* Not yet implemented
@@ -2187,7 +2335,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * Disruptive method that clears the underlying Knowledge Artifact Repository, as well as the
    * index/knowledge graph - effectively resetting this Asset Repository to an empty state
    */
-  public void clear() {
+  private void clear() {
     if (this.knowledgeArtifactApi instanceof ClearableKnowledgeArtifactRepositoryService) {
       ((ClearableKnowledgeArtifactRepositoryService) (this.knowledgeArtifactApi)).clear();
       this.index.reset();

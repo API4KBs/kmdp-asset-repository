@@ -1,5 +1,6 @@
 package edu.mayo.kmdp.repository.asset.index.sparql;
 
+import static edu.mayo.kmdp.util.JenaUtil.objA;
 import static org.apache.jena.rdf.model.ResourceFactory.createResource;
 import static org.apache.jena.rdf.model.ResourceFactory.createStatement;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
@@ -20,6 +21,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,6 +35,7 @@ import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
+import org.apache.jena.rdf.model.SimpleSelector;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
@@ -63,7 +67,8 @@ import org.springframework.stereotype.Component;
 public class SparqlIndex implements Index {
 
   private static final Set<DependencyTypeSeries> TRAVERSE_DEPS =
-      Util.newEnumSet(Arrays.asList(Imports, Includes_By_Reference, Depends_On), DependencyTypeSeries.class);
+      Util.newEnumSet(Arrays.asList(Imports, Includes_By_Reference, Depends_On),
+          DependencyTypeSeries.class);
 
   private static final String TRAVERSE_DEPS_SPARQL;
 
@@ -154,19 +159,19 @@ public class SparqlIndex implements Index {
     // related
     statements.addAll(related.stream()
         .flatMap(StreamUtil.filterAs(Dependency.class))
-        .flatMap(dependency -> toDependencyStatements(assetVersionId,dependency))
+        .flatMap(dependency -> toDependencyStatements(assetVersionId, dependency))
         .collect(Collectors.toList()));
 
     // composites
     statements.addAll(related.stream()
         .flatMap(StreamUtil.filterAs(org.omg.spec.api4kp._20200801.surrogate.Component.class))
-        .flatMap(part -> toParthoodStatements(assetVersionId,part))
+        .flatMap(part -> toParthoodStatements(assetVersionId, part))
         .collect(Collectors.toList()));
 
     // derivation
     statements.addAll(related.stream()
         .flatMap(StreamUtil.filterAs(Derivative.class))
-        .flatMap(derivative -> toDerivationStatements(assetVersionId,derivative))
+        .flatMap(derivative -> toDerivationStatements(assetVersionId, derivative))
         .collect(Collectors.toList()));
 
     // type of Asset
@@ -253,21 +258,22 @@ public class SparqlIndex implements Index {
     ConceptDescriptor dependencyType = ConceptDescriptor.toConceptDescriptor(dependency.getRel());
     URI tgt = dependency.getHref().getVersionId();
 
-    return toRelatedStatements(subj,dependencyType,tgt);
+    return toRelatedStatements(subj, dependencyType, tgt);
   }
 
   private Stream<Statement> toDerivationStatements(URI subj, Derivative derivative) {
     ConceptDescriptor derivationType = ConceptDescriptor.toConceptDescriptor(derivative.getRel());
     URI tgt = derivative.getHref().getVersionId();
 
-    return toRelatedStatements(subj,derivationType,tgt);
+    return toRelatedStatements(subj, derivationType, tgt);
   }
 
-  private Stream<Statement> toParthoodStatements(URI subj, org.omg.spec.api4kp._20200801.surrogate.Component part) {
+  private Stream<Statement> toParthoodStatements(URI subj,
+      org.omg.spec.api4kp._20200801.surrogate.Component part) {
     ConceptDescriptor partType = ConceptDescriptor.toConceptDescriptor(part.getRel());
     URI tgt = part.getHref().getVersionId();
 
-    return toRelatedStatements(subj,partType,tgt);
+    return toRelatedStatements(subj, partType, tgt);
   }
 
   private Stream<Statement> toRelatedStatements(URI subj, ConceptDescriptor rel, URI tgt) {
@@ -326,8 +332,8 @@ public class SparqlIndex implements Index {
 
     this.jenaSparqlDao.runSparql(InternalQueryManager.DEPENDENCY_CLOSURE_QUERY,
         params, Collections.emptyMap(), (
-        querySolution -> related.add(
-            this.resourceToResourceIdentifier(querySolution.getResource("?o")))));
+            querySolution -> related.add(
+                this.resourceToResourceIdentifier(querySolution.getResource("?o")))));
 
     Set<ResourceIdentifier> downstream = Sets.union(related,
         related.stream()
@@ -353,7 +359,62 @@ public class SparqlIndex implements Index {
       List<KnowledgeAssetType> types, List<KnowledgeAssetRole> roles, List<Annotation> annotations,
       List<Link> related) {
     this.jenaSparqlDao
-        .store(this.toRdf(asset, assetName, surrogate, surrogateMimeType, types, roles, annotations, related));
+        .store(this.toRdf(asset, assetName, surrogate, surrogateMimeType, types, roles, annotations,
+            related));
+  }
+
+
+  @Override
+  public void unregisterAsset(ResourceIdentifier asset) {
+    String assetId = asset.getResourceId().toString();
+    List<Statement> stats = new LinkedList<>();
+    jenaSparqlDao.getModel().listStatements(
+        new SimpleSelector() {
+          @Override
+          public boolean test(Statement s) {
+            return s.getSubject().getURI().equals(assetId);
+          }
+        }).forEachRemaining(stats::add);
+
+    jenaSparqlDao.getModel().remove(stats);
+  }
+
+  @Override
+  public void unregisterAssetVersion(ResourceIdentifier asset) {
+    Set<ResourceIdentifier> surrs = getSurrogatesForAsset(asset);
+    Set<ResourceIdentifier> carrs = getArtifactsForAsset(asset);
+
+    Set<String> ids = new HashSet<>();
+    ids.add(asset.getVersionId().toString());
+
+    surrs.forEach(surr -> {
+      ids.add(surr.getResourceId().toString());
+      getSurrogateVersions(surr.getUuid())
+          .forEach(surrV ->
+              ids.add(surrV.getVersionId().toString()));
+    });
+
+    carrs.forEach(carr -> {
+      ids.add(carr.getResourceId().toString());
+      getCarrierVersions(carr.getUuid())
+          .forEach(carrV ->
+              ids.add(carrV.getVersionId().toString()));
+    });
+
+    List<Statement> stats = new LinkedList<>();
+    surrs.forEach(surr -> jenaSparqlDao.getModel().listStatements(
+        new SimpleSelector() {
+          @Override
+          public boolean test(Statement s) {
+            return ids.stream().anyMatch(id -> s.getSubject().getURI().equals(id));
+          }
+        }).forEachRemaining(stats::add));
+
+    jenaSparqlDao.getModel().remove(stats);
+    jenaSparqlDao.getModel().remove(objA(
+        asset.getResourceId().toString(),
+        HAS_VERSION_URI.toString(),
+        asset.getVersionId().toString()));
   }
 
   @Override
@@ -363,12 +424,13 @@ public class SparqlIndex implements Index {
         toStatement(assetPointer.getVersionId(), HAS_CARRIER_URI, artifact.getResourceId()),
         toStatement(artifact.getResourceId(), HAS_VERSION_URI, artifact.getVersionId()),
         toStringValueStatement(artifact.getResourceId(), TAG_ID_URI, artifact.getUuid().toString()),
-        toStringValueStatement(artifact.getVersionId(), HAS_VERSION_TAG_URI, artifact.getVersionTag()),
+        toStringValueStatement(artifact.getVersionId(), HAS_VERSION_TAG_URI,
+            artifact.getVersionTag()),
         toStringValueStatement(artifact.getResourceId(), FORMAT_URI,
             Util.isNotEmpty(mimeType) ? mimeType : "/"),
         toLongValueStatement(artifact.getVersionId(),
             ESTABLISHED_URI, artifact.getEstablishedOn().toInstant().toEpochMilli())
-        );
+    );
     this.jenaSparqlDao.store(statements);
   }
 
@@ -378,10 +440,12 @@ public class SparqlIndex implements Index {
     List<Statement> statements = Arrays.asList(
         toStatement(assetPointer.getVersionId(), HAS_SURROGATE_URI, surrogate.getResourceId()),
         toStatement(surrogate.getResourceId(), HAS_VERSION_URI, surrogate.getVersionId()),
-        toStringValueStatement(surrogate.getResourceId(), TAG_ID_URI, surrogate.getUuid().toString()),
+        toStringValueStatement(surrogate.getResourceId(), TAG_ID_URI,
+            surrogate.getUuid().toString()),
         toStringValueStatement(surrogate.getResourceId(), FORMAT_URI,
             Util.isNotEmpty(mimeType) ? mimeType : null),
-        toStringValueStatement(surrogate.getVersionId(), HAS_VERSION_TAG_URI, surrogate.getVersionTag()),
+        toStringValueStatement(surrogate.getVersionId(), HAS_VERSION_TAG_URI,
+            surrogate.getVersionTag()),
         toLongValueStatement(surrogate.getVersionId(),
             ESTABLISHED_URI, surrogate.getEstablishedOn().toInstant().toEpochMilli())
     );
@@ -616,10 +680,9 @@ public class SparqlIndex implements Index {
                     querySolution.getLiteral("?vTag"),
                     querySolution.getLiteral("?vTimestamp"),
                     querySolution.getLiteral("?format")
-                    ))));
+                ))));
     return versions;
   }
-
 
 
   /**
@@ -644,7 +707,7 @@ public class SparqlIndex implements Index {
                     querySolution.getLiteral("?vTag"),
                     querySolution.getLiteral("?vTimestamp"),
                     querySolution.getLiteral("?format")
-                    ))));
+                ))));
     return versions;
   }
 
@@ -707,6 +770,7 @@ public class SparqlIndex implements Index {
 
   /**
    * List of T-box Statements adding semantics to the index graph, supporting query/inference
+   *
    * @return the knowledge T-box triples
    */
   private List<Statement> getKnowledgeBaseTriples() {
@@ -756,71 +820,71 @@ public class SparqlIndex implements Index {
 
     static final String RESOLVE_TAG_SELECT =
         PREAMBLE
-        + "SELECT ?asset \n"
-        + "WHERE { \n"
-        + "  ?asset kmd:" + TAG_ID + " ?tag . \n"
-        + "}";
+            + "SELECT ?asset \n"
+            + "WHERE { \n"
+            + "  ?asset kmd:" + TAG_ID + " ?tag . \n"
+            + "}";
 
     public static final ParameterizedSparqlString RESOLVE_TAG_QUERY
         = new ParameterizedSparqlString(RESOLVE_TAG_SELECT);
 
     static final String RESOLVE_TAG_VERSION_SELECT =
         PREAMBLE
-        + "SELECT ?asset ?version \n"
-        + "WHERE { \n"
-        + "  ?asset kmd:" + TAG_ID + " ?tag ; \n"
-        + "     api4kp-series:" + HAS_VERSION + " ?version . \n"
-        + "  ?version kmd:" + HAS_VERSION_TAG + " ?vTag . \n"
-        + "}";
+            + "SELECT ?asset ?version \n"
+            + "WHERE { \n"
+            + "  ?asset kmd:" + TAG_ID + " ?tag ; \n"
+            + "     api4kp-series:" + HAS_VERSION + " ?version . \n"
+            + "  ?version kmd:" + HAS_VERSION_TAG + " ?vTag . \n"
+            + "}";
 
     public static final ParameterizedSparqlString RESOLVE_TAG_VERSION_QUERY
         = new ParameterizedSparqlString(RESOLVE_TAG_VERSION_SELECT);
 
     static final String CARRIER_VERSIONS_SELECT =
         PREAMBLE
-        + "SELECT ?carrier ?version ?vTag ?vTimestamp ?format \n"
-        + "WHERE { \n"
-        + "  ?asset api4kp:" + HAS_CARRIER + " ?carrier . \n"
-        + "  ?carrier kmd:" + TAG_ID + " ?tag ; \n"
-        + "     api4kp-series:" + HAS_VERSION + " ?version . \n"
-        + "     OPTIONAL { ?carrier dc:" + FORMAT + " ?format } \n"
-        + "  ?version  \n"
-        + "     kmd:" + HAS_VERSION_TAG + " ?vTag ; \n"
-        + "     api4kp-series:" + ESTABLISHED + " ?vTimestamp . \n"
-        + "} \n"
-        + "ORDER BY DESC(?vTimestamp)";
+            + "SELECT ?carrier ?version ?vTag ?vTimestamp ?format \n"
+            + "WHERE { \n"
+            + "  ?asset api4kp:" + HAS_CARRIER + " ?carrier . \n"
+            + "  ?carrier kmd:" + TAG_ID + " ?tag ; \n"
+            + "     api4kp-series:" + HAS_VERSION + " ?version . \n"
+            + "     OPTIONAL { ?carrier dc:" + FORMAT + " ?format } \n"
+            + "  ?version  \n"
+            + "     kmd:" + HAS_VERSION_TAG + " ?vTag ; \n"
+            + "     api4kp-series:" + ESTABLISHED + " ?vTimestamp . \n"
+            + "} \n"
+            + "ORDER BY DESC(?vTimestamp)";
 
     public static final ParameterizedSparqlString CARRIER_VERSIONS_QUERY
         = new ParameterizedSparqlString(CARRIER_VERSIONS_SELECT);
 
     static final String SURROGATE_VERSIONS_SELECT =
         PREAMBLE
-        + "SELECT ?surrogate ?version ?vTag ?vTimestamp ?format \n"
-        + "WHERE { \n"
-        + "  ?asset api4kp:" + HAS_SURROGATE + " ?surrogate . \n"
-        + "  ?surrogate kmd:" + TAG_ID + " ?tag ; \n"
-        + "     api4kp-series:" + HAS_VERSION + " ?version . \n"
-        + "     OPTIONAL { ?surrogate dc:" + FORMAT + " ?format } \n"
-        + "  ?version  \n"
-        + "     kmd:" + HAS_VERSION_TAG + " ?vTag ; \n"
-        + "     api4kp-series:" + ESTABLISHED + " ?vTimestamp . \n"
-        + "} \n"
-        + "ORDER BY DESC(?vTimestamp)";
+            + "SELECT ?surrogate ?version ?vTag ?vTimestamp ?format \n"
+            + "WHERE { \n"
+            + "  ?asset api4kp:" + HAS_SURROGATE + " ?surrogate . \n"
+            + "  ?surrogate kmd:" + TAG_ID + " ?tag ; \n"
+            + "     api4kp-series:" + HAS_VERSION + " ?version . \n"
+            + "     OPTIONAL { ?surrogate dc:" + FORMAT + " ?format } \n"
+            + "  ?version  \n"
+            + "     kmd:" + HAS_VERSION_TAG + " ?vTag ; \n"
+            + "     api4kp-series:" + ESTABLISHED + " ?vTimestamp . \n"
+            + "} \n"
+            + "ORDER BY DESC(?vTimestamp)";
 
     public static final ParameterizedSparqlString SURROGATE_VERSIONS_QUERY
         = new ParameterizedSparqlString(SURROGATE_VERSIONS_SELECT);
 
     static final String ASSET_VERSIONS_SELECT =
         PREAMBLE
-        + "SELECT ?asset ?version ?vTag ?vTimestamp \n"
-        + "WHERE { \n"
-        + "  ?asset kmd:" + TAG_ID + " ?tag ; \n"
-        + "     api4kp-series:" + HAS_VERSION + " ?version . \n"
-        + "  ?version rdf:type api4kp:" + ASSET + " ; \n"
-        + "     kmd:" + HAS_VERSION_TAG + " ?vTag ; \n"
-        + "     api4kp-series:" + ESTABLISHED + " ?vTimestamp . \n"
-        + "} \n"
-        + "ORDER BY DESC(?vTimestamp)";
+            + "SELECT ?asset ?version ?vTag ?vTimestamp \n"
+            + "WHERE { \n"
+            + "  ?asset kmd:" + TAG_ID + " ?tag ; \n"
+            + "     api4kp-series:" + HAS_VERSION + " ?version . \n"
+            + "  ?version rdf:type api4kp:" + ASSET + " ; \n"
+            + "     kmd:" + HAS_VERSION_TAG + " ?vTag ; \n"
+            + "     api4kp-series:" + ESTABLISHED + " ?vTimestamp . \n"
+            + "} \n"
+            + "ORDER BY DESC(?vTimestamp)";
 
     public static final ParameterizedSparqlString ASSET_VERSIONS_QUERY
         = new ParameterizedSparqlString(ASSET_VERSIONS_SELECT);

@@ -22,24 +22,25 @@ import java.util.Collections;
 import java.util.UUID;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 
 abstract class RepositoryTestBase {
 
-  static SemanticKnowledgeAssetRepository semanticRepository;
+  protected static SemanticKnowledgeAssetRepository semanticRepository;
 
-  static private KnowledgeArtifactRepositoryService repos;
+  protected static KnowledgeArtifactRepositoryService repos;
 
-  static Index index;
+  protected static Index index;
 
-  static private JenaSparqlDao jenaSparqlDao;
+  protected static JenaSparqlDao jenaSparqlDao;
 
-  static private DataSource ds;
+  protected static DataSource ds;
 
-  static protected KnowledgeAssetRepositoryServerConfig cfg = new KnowledgeAssetRepositoryServerConfig();
+  protected static KnowledgeAssetRepositoryServerConfig cfg =
+      new KnowledgeAssetRepositoryServerConfig()
+          .with(KnowledgeAssetRepositoryOptions.CLEARABLE, true);
 
   @BeforeEach
   void reset() {

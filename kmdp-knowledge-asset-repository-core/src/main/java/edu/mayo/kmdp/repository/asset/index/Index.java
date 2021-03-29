@@ -85,6 +85,20 @@ public interface Index {
       List<KnowledgeAssetRole> roles, List<Annotation> annotations, List<Link> related);
 
   /**
+   * Unregisters an Asset
+   * Removes the specific version, and the Asset series if no other version is left.
+   * @param assetId
+   */
+  void unregisterAssetVersion(ResourceIdentifier assetId);
+
+  /**
+   * Unregisters an Asset
+   * Removes the specific version, and the Asset series if no other version is left.
+   * @param assetId
+   */
+  void unregisterAsset(ResourceIdentifier assetId);
+
+  /**
    * Link an Artifact to an Asset.
    *
    * @param assetPointer

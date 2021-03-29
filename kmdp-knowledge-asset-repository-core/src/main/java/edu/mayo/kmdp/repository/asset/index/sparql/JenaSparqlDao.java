@@ -343,6 +343,17 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   }
 
   /**
+   * Read All:
+   *
+   * --> select ?s ?p ?o
+   *
+   * @return ?s
+   */
+  public List<Statement> readAll() {
+    return model.listStatements().toList();
+  }
+
+  /**
    * Returns true if a statement (s,p,o) exists
    *
    * @param st The (s,p,o) statement

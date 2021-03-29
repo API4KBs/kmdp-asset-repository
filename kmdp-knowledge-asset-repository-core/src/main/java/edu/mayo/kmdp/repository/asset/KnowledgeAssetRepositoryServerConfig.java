@@ -44,6 +44,13 @@ public class KnowledgeAssetRepositoryServerConfig extends
   public enum KnowledgeAssetRepositoryOptions implements
       Option<KnowledgeAssetRepositoryOptions> {
 
+    CLEARABLE(
+        Opt.of("allowClearAll",
+            Boolean.FALSE.toString(),
+            "Flag that, when true, allows clients to perform certain DELETE operations",
+            Boolean.class,
+            false)),
+
     DEFAULT_REPOSITORY_ID(
         Opt.of("http://edu.mayo.kmdp/assetRepository/artifactRepositoryIdentifier",
             getDefaultRepositoryId(),
