@@ -24,6 +24,7 @@ import static edu.mayo.kmdp.util.Util.isEmpty;
 import static edu.mayo.kmdp.util.Util.paginate;
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.Conflict;
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.Created;
+import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.Forbidden;
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.NoContent;
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.NotAcceptable;
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.OK;
@@ -367,7 +368,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       clear();
       return succeed();
     } else {
-      return unsupported();
+      return Answer.of(Forbidden);
     }
   }
 
@@ -493,6 +494,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<Void> deleteKnowledgeAssets(String assetTypeTag, String assetAnnotationTag,
       String assetAnnotationConcept) {
+    if (! this.allowClearAll) {
+      return Answer.of(Forbidden);
+    }
     return listKnowledgeAssets(assetTypeTag, assetAnnotationTag, assetAnnotationConcept, 0, -1)
         .mapList(Pointer.class, ptr -> deleteKnowledgeAsset(ptr.getUuid()))
         .flatMap(l -> l.stream().reduce(Answer::merge)
@@ -564,6 +568,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    */
   @Override
   public Answer<Void> deleteKnowledgeAsset(UUID assetId) {
+    if (! this.allowClearAll) {
+      return Answer.of(Forbidden);
+    }
     return listKnowledgeAssetVersions(assetId).flatMap(
         versions -> {
           Optional<Pointer> assetSeriesId = versions.stream().findAny();
@@ -649,6 +656,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   @Override
   public Answer<Void> deleteKnowledgeAssetVersion(UUID assetId, String versionTag) {
+    if (! this.allowClearAll) {
+      return Answer.of(Forbidden);
+    }
+
     Answer<KnowledgeAsset> asset =
         retrieveLatestCanonicalSurrogateForAssetVersion(assetId, toSemVer(versionTag));
     if (asset.isNotFound()) {
