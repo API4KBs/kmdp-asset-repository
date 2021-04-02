@@ -147,22 +147,6 @@ steps:
   env:
     PROJECT_SLM_VERSION: $(projectSlmVersionFinal)
 
-# GitHub Super-Linter
-# - script: |
-#     mkdir super-linter.report
-#     docker pull github/super-linter:latest
-#     docker run -e RUN_LOCAL=true -e DISABLE_ERRORS=true -e OUTPUT_DETAILS=detailed -e OUTPUT_FORMAT=tap -v $(System.DefaultWorkingDirectory):/tmp/lint/ --name my-vol github/super-linter
-#     docker cp my-vol:/tmp/lint/super-linter.report $(build.artifactstagingdirectory)
-#   displayName: 'Code Scan using GitHub Super-Linter'
-
-# Publish GitHub Results to Azure Pipelines
-- task: PublishBuildArtifacts@1
-  displayName: 'Publish Artifact: deploy'
-  inputs:
-    PathtoPublish: '$(build.artifactstagingdirectory)'
-    ArtifactName: githublinter
-  condition: succeededOrFailed()
-
 # Runs Maven Goal: deploy 
 # Deploys to Azure DevOps Artifacts
 - task: PowerShell@2
@@ -215,6 +199,34 @@ steps:
     PathtoPublish: '$(build.artifactstagingdirectory)'
     ArtifactName: deploy
   condition: succeededOrFailed()
+
+# Make veracode directory
+- task: PowerShell@2
+  displayName: 'Make veracode directory'
+  inputs:
+    targetType: 'inline'
+    script: |
+      mkdir $(build.artifactstagingdirectory)/veracode
+
+# Copy Jars and war File to veracode folder
+- task: CopyFiles@2
+  displayName: 'Copy Files to: $(build.artifactstagingdirectory)'
+  inputs:
+      SourceFolder: '$(system.defaultworkingdirectory)'
+      Contents: |
+        **/*.jar
+        **/*.war
+      TargetFolder: '$(build.artifactstagingdirectory)/veracode'
+
+# Veracode Upload and Scan Task
+- task: Veracode@3
+  inputs:
+    ConnectionDetailsSelection: 'Endpoint'
+    AnalysisService: 'KMD-Veracode'
+    veracodeAppProfile: 'mea-app-gateway'
+    version: '$(projectSlmVersionFinal)'
+    filepath: '$(build.artifactstagingdirectory)/veracode'
+    maximumWaitTime: '360'
 
 # ------------------ END PIPELINE  ------------------
 - script: |
