@@ -24,7 +24,9 @@ import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.Knowledg
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Formal_Ontology;
 
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
+import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.apache.jena.rdf.model.Statement;
 import org.junit.jupiter.api.AfterEach;
@@ -37,6 +39,8 @@ import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
+import org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper;
+import org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.VersionIncrement;
 import org.springframework.test.context.TestPropertySource;
 
 
@@ -162,6 +166,52 @@ class AssetRemovalTest extends RepositoryTestBase {
             .orElseGet(Assertions::fail));
   }
 
+  @Test
+  void testAssetRemovalWithIncrementalSurrogate() {
+    UUID assetId = uuid("foo3");
+    String assetV = "1.0.0";
+
+    KnowledgeAsset surr;
+    surr = semanticRepository.getKnowledgeAsset(assetId, assetV)
+        .orElseGet(Assertions::fail);
+    surr.setDescription("Add something");
+    SurrogateHelper.incrementVersion(surr, VersionIncrement.MINOR);
+    semanticRepository.setKnowledgeAssetVersion(assetId, assetV, surr);
+
+    surr = semanticRepository.getKnowledgeAsset(assetId, assetV)
+        .orElseGet(Assertions::fail);
+    surr.setDescription("Add something else");
+    SurrogateHelper.incrementVersion(surr, VersionIncrement.MINOR);
+    semanticRepository.setKnowledgeAssetVersion(assetId, assetV, surr);
+
+    surr = semanticRepository.getKnowledgeAsset(assetId, assetV)
+        .orElseGet(Assertions::fail);
+    assertEquals("1.2.0",
+        surr.getSurrogate().get(0).getArtifactId().getVersionTag());
+    assertTrue(surr.getDescription().contains("else"));
+
+    List<Pointer> metas = semanticRepository.listKnowledgeAssetSurrogates(assetId, assetV)
+        .orElseGet(Assertions::fail);
+    assertEquals(1, metas.size());
+
+    List<Pointer> history = semanticRepository
+        .listKnowledgeAssetSurrogateVersions(assetId, assetV, metas.get(0).getUuid())
+        .orElseGet(Assertions::fail);
+    assertEquals(3, history.size());
+    assertEquals(Arrays.asList("1.2.0", "1.1.0", "1.0.0"),
+        history.stream().map(ResourceIdentifier::getVersionTag).collect(Collectors.toList()));
+
+    assertTrue(
+        semanticRepository.deleteKnowledgeAsset(assetId).isSuccess());
+    Answer<List<Pointer>> history2 = semanticRepository
+        .listKnowledgeAssetSurrogateVersions(assetId, assetV, metas.get(0).getUuid());
+    assertTrue(history2.isNotFound());
+
+    semanticRepository.deleteKnowledgeAsset(uuid("foo"));
+    semanticRepository.deleteKnowledgeAsset(uuid("foo2"));
+
+    checkEmpty();
+  }
 
   private void prepopulate() {
     ResourceIdentifier id11 = SemanticIdentifier.newId(uuid("foo"), "1.0.0");
