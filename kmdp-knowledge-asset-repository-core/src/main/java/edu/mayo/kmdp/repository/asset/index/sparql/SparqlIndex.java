@@ -579,7 +579,8 @@ public class SparqlIndex implements Index {
 
     types.stream()
         .map(type -> URI.create(type.getURI()))
-        .map(KnowledgeAssetTypeSeries::resolveRef)
+        .map(uri -> KnowledgeAssetTypeSeries.resolveRef(uri)
+            .or(() -> ClinicalKnowledgeAssetTypeSeries.resolveRef(uri)))
         .flatMap(StreamUtil::trimStream)
         .map(ConceptTerm::asConceptIdentifier)
         .forEach(typeConcepts::add);

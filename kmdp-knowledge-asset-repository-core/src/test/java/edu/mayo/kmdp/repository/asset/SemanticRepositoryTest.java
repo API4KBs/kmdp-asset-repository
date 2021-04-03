@@ -38,6 +38,7 @@ import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomArt
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomAssetId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getCanonicalSurrogateId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getComputableSurrogateMetadata;
+import static org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.ClinicalKnowledgeAssetTypeSeries.Clinical_Guidance_Rule;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Depends_On;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRoleSeries.Operational_Concept_Definition;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Care_Process_Model;
@@ -1553,6 +1554,28 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         .orElseGet(Assertions::fail);
     assertEquals(1,asset.getFormalType().size());
     assertTrue(Cognitive_Care_Process_Model.isAnyOf(asset.getFormalType()));
+  }
+
+  @Test
+  void testAssetWithDomainSpecificType() {
+    ResourceIdentifier axId =
+        assetId(testAssetNS(), uuid("testAssetWithDomainSpecificType"), VERSION_ZERO);
+
+    KnowledgeAsset surr = SurrogateBuilder.newSurrogate(axId)
+        .withName("Test", "")
+        .get()
+        .withFormalType(Clinical_Guidance_Rule);
+    semanticRepository.setKnowledgeAssetVersion(axId.getUuid(),axId.getVersionTag(),surr);
+
+    assertEquals(1,
+        semanticRepository.listKnowledgeAssets()
+            .orElseGet(Assertions::fail)
+            .size());
+
+    assertEquals(1,
+        semanticRepository.listKnowledgeAssets(Clinical_Guidance_Rule.getTag(), null, null, 0, -1)
+            .orElseGet(Assertions::fail)
+            .size());
   }
 
 

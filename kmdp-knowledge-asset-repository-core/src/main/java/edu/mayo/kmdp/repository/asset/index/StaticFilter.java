@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
+import org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.ClinicalKnowledgeAssetTypeSeries;
 import org.omg.spec.api4kp._20200801.terms.ConceptTerm;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRole;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRoleSeries;
@@ -121,7 +122,8 @@ public class StaticFilter {
     if (Util.isEmpty(assetTypeTag)) {
       return Optional.empty();
     }
-    Optional<KnowledgeAssetType> type = KnowledgeAssetTypeSeries.resolve(assetTypeTag);
+    Optional<KnowledgeAssetType> type = KnowledgeAssetTypeSeries.resolve(assetTypeTag)
+        .or(() -> ClinicalKnowledgeAssetTypeSeries.resolve(assetTypeTag));
     if (type.isPresent()) {
       return type.map(ConceptTerm::getReferentId);
     }
