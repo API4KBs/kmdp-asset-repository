@@ -1,0 +1,171 @@
+### Develop Pipeline
+### Snapshot Branch Versioning Stategy: X.X.X-SNAPSHOT
+### Project :: kmdp-knowledge-asset-repository-service-veracode
+   
+# Sets Virtual Machine to Run Pipeline on
+pool:
+  vmImage: 'ubuntu-latest'
+
+# Gets Variables from Azure DevOps Library
+variables: 
+  - group: kmdp-platform-variables
+  - group: kmdp-platform-dev-variables
+
+# ------------------ PIPELINE STEPS  ------------------
+steps:
+# Outputs pipeline steps have started
+- script: |
+    echo Starting Develop Branch Build Pipeline!
+    echo Project :: kmdp-knowledge-asset-repository-service-veracode
+  displayName: 'Starting Pipeline Steps'
+
+# Reads Root pom.xml File
+# Gets/Sets GAV from POM to Pipeline Variables
+- task: PowerShell@2
+  displayName: 'Get/Set POM Variables'
+  inputs:
+    targetType: 'inline'
+    script: |
+      [xml]$pomXml = Get-Content .\pom.xml
+      Write-Host --------------------------------
+      Write-Host POM Variables:
+      Write-Host GroupId: $pomXml.project.groupId
+      Write-Host ArtifactId: $pomXml.project.artifactId
+      Write-Host Version: $pomXml.project.version
+      Write-Host --------------------------------
+      Write-Host Setting GAV to local task variables
+      $groupId=$pomXml.project.groupId
+      $artifactId=$pomXml.project.artifactId
+      $version=$pomXml.project.version
+      Write-Host --------------------------------
+      Write-Host Setting GAV to pipeline variables
+      Write-Host "##vso[task.setvariable variable=projectSnapShotVersion]$version"
+      Write-Host "##vso[task.setvariable variable=projectGroupId]$groupId"
+      Write-Host "##vso[task.setvariable variable=projectArtifactId]$artifactId"
+
+# Gets .m2 Settings File from Azure DevOps Library
+# Downloads File for use in Pipeline
+- task: DownloadSecureFile@1
+  displayName: 'Downloads Secure .m2 Settings File'
+  name: settingsxml
+  inputs:
+    secureFile: settings-dev.xml
+
+# Write settings file to Build Server
+- task: PowerShell@2
+  displayName: 'Update m2 Settings File'
+  inputs:
+    targetType: 'inline'
+    script: |
+      New-Item -Type Directory -Force "${HOME}/.m2"
+      Copy-Item -Force "$(settingsxml.secureFilePath)" "${HOME}/.m2/settings.xml"
+
+# Authenticate to Maven Feed 
+- task: MavenAuthenticate@0
+  displayName: 'Maven Authenticate'
+  inputs:
+    artifactsFeeds: 'KMD'
+
+# Sets JDK 11 for Pipeline
+# Runs Maven Goal: validate
+- task: Maven@3
+  displayName: 'Sets Pipeline to JDK 11'
+  inputs:
+    mavenPomFile: 'pom.xml'
+    goals: 'validate'
+    options: '-ntp'
+    javaHomeOption: 'JDKVersion'
+    jdkVersionOption: '1.11'
+
+# Sets ALM/SLM Versioning Policy on War
+# Sets Version Tranformation: preprod
+- task: AlmVersioning@4
+  displayName: 'SLM Update .war Version and Build Number'
+  inputs:
+    projectType: java
+    versionFilePath: kmdp-knowledge-asset-repository-impl/pom.xml
+    versionTransformation: 'preprod'
+
+# Update Build Number by removing Snapshots
+- task: PowerShell@2
+  displayName: 'Update Build # Remove Snapshot'
+  inputs:
+    targetType: 'inline'
+    script: |
+      Write-Host AfterSlmBuild: $Env:BUILD_BUILDNUMBER
+      $buildNumber = $Env:BUILD_BUILDNUMBER
+      $finalBuildNumber = $buildNumber.replace("-SNAPSHOT","")
+      Write-Host AfterSLMBuildRemoveSnap: $finalBuildNumber
+      Write-Host "##vso[build.updatebuildnumber]$finalBuildNumber"
+  env:
+    BUILD_BUILDNUMBER: $(build.buildNumber)
+
+# Retrieve SLM preprod version
+- task: PowerShell@2
+  displayName: 'Retrieve SLM Preprod Version'
+  inputs:
+    targetType: 'inline'
+    script: |
+        Write-Host ALM Version: $env:ALM_VERSION
+        $projectSlmVersion=$env:ALM_VERSION.replace("-SNAPSHOT","")
+        Write-Host Project Version: $projectSlmVersion
+        Write-Host "##vso[task.setvariable variable=projectSlmVersionFinal]$projectSlmVersion"
+  env:
+    ALM_VERSION: $(AlmVersioning.Project.Version)
+
+# Runs Maven Goal: versions:set 
+# Set Version of Deployable War
+- task: PowerShell@2
+  displayName: 'Maven Set Version Deployable War'
+  inputs:
+    targetType: 'inline'
+    script: |
+        mvn versions:set -pl kmdp-knowledge-asset-repository-impl "-DnewVersion=$env:PROJECT_SLM_VERSION" -ntp
+  env:
+    PROJECT_SLM_VERSION: $(projectSlmVersionFinal)
+
+# Runs Maven Goal: deploy 
+# Deploys to Azure DevOps Artifacts
+- task: PowerShell@2
+  displayName: 'Maven Deploy to Artifacts'
+  inputs:
+    targetType: 'inline'
+    script: |
+      mvn deploy "-DaltDeploymentRepository=$env:DEPLOY_REPO::default::$env:DEPLOY_REPO_PATH" -ntp
+  env:
+    DEPLOY_REPO: $(deploymentRepo)
+    DEPLOY_REPO_PATH: $(deploymentRepoPath)
+
+# Make veracode directory
+- task: PowerShell@2
+  displayName: 'Make veracode directory'
+  inputs:
+    targetType: 'inline'
+    script: |
+      mkdir $(build.artifactstagingdirectory)/veracode
+
+# Copy Jars and war File to veracode folder
+- task: CopyFiles@2
+  displayName: 'Copy Files to: $(build.artifactstagingdirectory)'
+  inputs:
+      SourceFolder: '$(system.defaultworkingdirectory)'
+      Contents: |
+        **/*.jar
+        **/*.war
+      TargetFolder: '$(build.artifactstagingdirectory)/veracode'
+
+# Veracode Upload and Scan Task
+- task: Veracode@3
+  inputs:
+    ConnectionDetailsSelection: 'Endpoint'
+    AnalysisService: 'KMD-Veracode'
+    veracodeAppProfile: 'kmdp-knowledge-asset-repository-service'
+    version: '$(projectSlmVersionFinal)'
+    filepath: '$(build.artifactstagingdirectory)/veracode'
+    maximumWaitTime: '360'
+
+# ------------------ END PIPELINE  ------------------
+# Outputs pipeline steps have ended
+- script: |
+    echo Ending Develop Branch Pipeline!
+  displayName: 'Ending Pipeline Steps' 
