@@ -200,34 +200,6 @@ steps:
     ArtifactName: deploy
   condition: succeededOrFailed()
 
-# Make veracode directory
-- task: PowerShell@2
-  displayName: 'Make veracode directory'
-  inputs:
-    targetType: 'inline'
-    script: |
-      mkdir $(build.artifactstagingdirectory)/veracode
-
-# Copy Jars and war File to veracode folder
-- task: CopyFiles@2
-  displayName: 'Copy Files to: $(build.artifactstagingdirectory)'
-  inputs:
-      SourceFolder: '$(system.defaultworkingdirectory)'
-      Contents: |
-        **/*.jar
-        **/*.war
-      TargetFolder: '$(build.artifactstagingdirectory)/veracode'
-
-# Veracode Upload and Scan Task
-- task: Veracode@3
-  inputs:
-    ConnectionDetailsSelection: 'Endpoint'
-    AnalysisService: 'KMD-Veracode'
-    veracodeAppProfile: 'mea-app-gateway'
-    version: '$(projectSlmVersionFinal)'
-    filepath: '$(build.artifactstagingdirectory)/veracode'
-    maximumWaitTime: '360'
-
 # ------------------ END PIPELINE  ------------------
 - script: |
     echo Ending Develop Branch Pipeline!
