@@ -20,7 +20,7 @@ class SparqlIndexTest {
     ds.setUser("sa");
     ds.setPassword("sa");
 
-    JenaSparqlDao dao = new JenaSparqlDao(ds, true);
+    JenaSparqlDao dao = new JenaSparqlDao(ds);
 
     this.dao = dao;
 

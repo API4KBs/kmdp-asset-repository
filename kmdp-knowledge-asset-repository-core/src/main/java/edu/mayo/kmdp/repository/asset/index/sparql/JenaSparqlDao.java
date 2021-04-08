@@ -71,13 +71,6 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   @Value("${databaseType:}")
   private String databaseType;
 
-  /**
-   * IMPORTANT!
-   * If true this will drop and recreate all tables.
-   */
-  @Value("${clearAndCreateTables:false}")
-  private boolean clearAndCreateTables = false;
-
   @Autowired
   private DataSource dataSource;
 
@@ -94,24 +87,18 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   /**
    * Create a new DAO instance.
    *
-   * IMPORTANT: setting 'clearAndCreateTables' to true will really drop and recreate all tables.
-   * Don't set that to true unless you REALLY need to (for example, for testing only).
-   * If you set this to true you will lose any existing data.
-   *
-   * @param dataSource a SQL data source for persistence
-   * @param clearAndCreateTables if true, resets the DB
+   * @param dataSource           a SQL data source for persistence
    */
-  public JenaSparqlDao(DataSource dataSource, boolean clearAndCreateTables) {
+  public JenaSparqlDao(DataSource dataSource) {
     this.dataSource = dataSource;
-    this.clearAndCreateTables = clearAndCreateTables;
     this.init();
   }
 
   /**
    * Create a completely in-memory Jena store.
-   *
-   * NOTE: This should be only used for testing purposes. For
-   * general use, see the constructors with the {@link DataSource} arguments.
+   * <p>
+   * NOTE: This should be only used for testing purposes. For general use, see the constructors with
+   * the {@link DataSource} arguments.
    *
    * @return a self-contained DAO that does not require a DB connection
    */
@@ -122,11 +109,8 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
     return dao;
   }
 
-  protected void clearAndCreateTables() {
-    this.store.getTableFormatter().create();
-  }
 
-  protected void truncate() {
+  protected void reinitialize() {
     if (store != null) {
       // inMemoryDAOs do not have a store attached
       this.store.getTableFormatter().truncate();
@@ -146,7 +130,8 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
       type = DatabaseType.fetch(this.databaseType);
     } else {
       try {
-        type = DatabaseType.fetch(JdbcUtils.extractDatabaseMetaData(this.dataSource, "getDatabaseProductName"));
+        type = DatabaseType
+            .fetch(JdbcUtils.extractDatabaseMetaData(this.dataSource, "getDatabaseProductName"));
       } catch (MetaDataAccessException e) {
         throw new BeanInitializationException("Could not determine database type.", e);
       }
@@ -163,31 +148,22 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
 
     this.store = SDBFactory.connectStore(conn, storeDesc);
 
-
-    if (this.clearAndCreateTables) {
-      logger.warn("!!! Clearing and recreating all RDF tables. !!!");
-      this.clearAndCreateTables();
-    } else {
-      try {
-        long n = store.getSize();
-        logger.info("TRIPLE store detected, with {} triples", n);
-      } catch (SDBExceptionSQL sqle) {
-        logger.warn(sqle.getMessage());
-        logger.warn("Please check that your DB is setup properly, "
-            + "and that the environment configuration variable "
-            + "'clearAndCreateTables' is set properly");
-        logger.warn("The TRIPLES tables and indexes will be (re)created.");
-        this.clearAndCreateTables();
-      }
+    try {
+      long n = store.getSize();
+      logger.info("TRIPLE store detected, with {} triples", n);
+    } catch (SDBExceptionSQL sqle) {
+      logger.warn(sqle.getMessage());
+      logger.warn("Please check that your DB is setup properly");
+      this.store.getTableFormatter().create();
     }
 
     this.model = SDBFactory.connectDefaultModel(store);
-
   }
 
   /**
-   * Subclasses can register database types that aren't included here in the
-   * Jetan {@link DatabaseType} enum.
+   * Subclasses can register database types that aren't included here in the Jetan {@link
+   * DatabaseType} enum.
+   *
    * @param consumer a function that registers a MS SQL Database type
    */
   protected void registerNewDatabaseTypes(BiConsumer<String, DatabaseType> consumer) {
@@ -201,18 +177,17 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   }
 
   /**
-   * Store a single RDF triple S,P,O.
-   * Used in testing only
+   * Store a single RDF triple S,P,O. Used in testing only
    *
-   * @param subject S
+   * @param subject   S
    * @param predicate P
-   * @param object O
+   * @param object    O
    */
   public void store(URI subject, URI predicate, URI object) {
     Statement s = ResourceFactory.createStatement(
-            createResource(subject.toString()),
-            ResourceFactory.createProperty(predicate.toString()),
-            createResource(object.toString()));
+        createResource(subject.toString()),
+        ResourceFactory.createProperty(predicate.toString()),
+        createResource(object.toString()));
 
     this.model.notifyEvent(GraphEvents.startRead);
     try {
@@ -243,7 +218,8 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
    * @param params
    * @param consumer
    */
-  public void runSparql(ParameterizedSparqlString pss, Map<String, URI> params, Map<String, Literal> literalParams, Consumer<QuerySolution> consumer) {
+  public void runSparql(ParameterizedSparqlString pss, Map<String, URI> params,
+      Map<String, Literal> literalParams, Consumer<QuerySolution> consumer) {
     params.forEach((key, value) -> pss.setIri(key, value.toString()));
     literalParams.forEach(pss::setLiteral);
 
@@ -257,12 +233,11 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
 
   /**
    * Read Subject by Predicate and Object:
+   * <p>
+   * -> select ?s where { ?s ?p ?o . } for given ?p and ?o
    *
-   * -> select ?s where { ?s ?p ?o . } 
-   * for given ?p and ?o
-   * 
    * @param predicate ?p
-   * @param object ?o
+   * @param object    ?o
    * @return ?s
    */
   public List<Resource> readSubjectByPredicateAndObject(URI predicate, URI object) {
@@ -272,18 +247,18 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
 
     List<Resource> resourceList = Lists.newArrayList();
 
-    this.runSparql(TRIPLE_SUBJECT_QUERY, params, Collections.emptyMap(), result -> resourceList.add(result.getResource("?s")));
+    this.runSparql(TRIPLE_SUBJECT_QUERY, params, Collections.emptyMap(),
+        result -> resourceList.add(result.getResource("?s")));
 
     return resourceList;
   }
 
   /**
    * Read by Object by Subject and Predicate:
+   * <p>
+   * --> select ?o where { ?s ?p ?o . } for given ?s and ?p
    *
-   * --> select ?o where { ?s ?p ?o . }
-   * for given ?s and ?p
-   *
-   * @param subject ?s
+   * @param subject   ?s
    * @param predicate ?p
    * @return ?o
    */
@@ -295,18 +270,18 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
 
     List<Resource> resourceList = Lists.newArrayList();
 
-    this.runSparql(TRIPLE_OBJECT_QUERY, params, Collections.emptyMap(), result -> resourceList.add(result.getResource("?o")));
+    this.runSparql(TRIPLE_OBJECT_QUERY, params, Collections.emptyMap(),
+        result -> resourceList.add(result.getResource("?o")));
 
     return resourceList;
   }
 
   /**
    * Read by Object by Subject and Predicate:
+   * <p>
+   * --> select ?o where { ?s ?p ?o . } for given ?s and ?p
    *
-   * --> select ?o where { ?s ?p ?o . }
-   * for given ?s and ?p
-   *
-   * @param subject ?s
+   * @param subject   ?s
    * @param predicate ?p
    * @return ?o
    */
@@ -317,16 +292,16 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
 
     List<Literal> valueList = Lists.newArrayList();
 
-    this.runSparql(TRIPLE_OBJECT_QUERY, params, Collections.emptyMap(), result -> valueList.add(result.getLiteral("?o")));
+    this.runSparql(TRIPLE_OBJECT_QUERY, params, Collections.emptyMap(),
+        result -> valueList.add(result.getLiteral("?o")));
 
     return valueList;
   }
 
   /**
    * Read Subject by Predicate:
-   *
-   * --> select ?s where { ?s ?p ?o . }
-   * for given ?p
+   * <p>
+   * --> select ?s where { ?s ?p ?o . } for given ?p
    *
    * @param predicate ?p
    * @return ?s
@@ -337,14 +312,15 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
 
     List<Resource> resourceList = Lists.newArrayList();
 
-    this.runSparql(TRIPLE_SUBJECT_QUERY, params, Collections.emptyMap(), result -> resourceList.add(result.getResource("?s")));
+    this.runSparql(TRIPLE_SUBJECT_QUERY, params, Collections.emptyMap(),
+        result -> resourceList.add(result.getResource("?s")));
 
     return resourceList;
   }
 
   /**
    * Read All:
-   *
+   * <p>
    * --> select ?s ?p ?o
    *
    * @return ?s
@@ -362,13 +338,12 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   public boolean checkStatementExists(Statement st) {
     return model.contains(st);
   }
-  
+
   /**
    * Read Subject by Object:
+   * <p>
+   * --> select ?s where { ?s ?p ?o . } for given ?o
    *
-   * --> select ?s where { ?s ?p ?o . }
-   * for given ?o
-   * 
    * @param object ?o
    * @return ?s
    */
@@ -378,7 +353,8 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
 
     List<Resource> resourceList = Lists.newArrayList();
 
-    this.runSparql(TRIPLE_SUBJECT_QUERY, params, Collections.emptyMap(), result -> resourceList.add(result.getResource("?s")));
+    this.runSparql(TRIPLE_SUBJECT_QUERY, params, Collections.emptyMap(),
+        result -> resourceList.add(result.getResource("?s")));
 
     return resourceList;
   }
@@ -400,7 +376,7 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   }
 
   public KnowledgeBase getKnowledgeBase() {
-    if (this.kBase == null ) {
+    if (this.kBase == null) {
       lazyInitializeKnowledgeBase();
     }
     return kBase;

@@ -44,7 +44,7 @@ abstract class RepositoryTestBase {
 
   @BeforeEach
   void reset() {
-    index.reset();
+    semanticRepository.clearKnowledgeAssetCatalog();
   }
 
   @AfterAll
@@ -62,7 +62,7 @@ abstract class RepositoryTestBase {
     repos = new JPAKnowledgeArtifactRepository(ds,
         new KnowledgeArtifactRepositoryServerConfig());
 
-    jenaSparqlDao = new JenaSparqlDao(ds, true);
+    jenaSparqlDao = new JenaSparqlDao(ds);
 
     index = new SparqlIndex(jenaSparqlDao);
 

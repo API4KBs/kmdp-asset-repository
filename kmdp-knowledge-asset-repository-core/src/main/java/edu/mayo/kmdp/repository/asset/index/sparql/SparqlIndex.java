@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.PostConstruct;
 import org.apache.jena.query.ParameterizedSparqlString;
 import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.Property;
@@ -714,8 +715,7 @@ public class SparqlIndex implements Index {
 
   @Override
   public void reset() {
-    this.jenaSparqlDao.truncate();
-
+    this.jenaSparqlDao.reinitialize();
     this.jenaSparqlDao.store(getKnowledgeBaseTriples());
   }
 

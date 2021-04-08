@@ -53,7 +53,6 @@ import org.springframework.boot.jdbc.DataSourceBuilder;
 class RemoteRepoTest {
 
   static DB_TYPE dbType = DB_TYPE.IN_MEM;
-  static boolean clearJena = false;
 
   static final String USER = "USEME";
 
@@ -121,7 +120,7 @@ class RemoteRepoTest {
 
     artifactRepo = jpaRepository(ds);
 
-    jenaSparqlDao = new JenaSparqlDao(ds, clearJena);
+    jenaSparqlDao = new JenaSparqlDao(ds);
 
     index = new SparqlIndex(jenaSparqlDao);
 

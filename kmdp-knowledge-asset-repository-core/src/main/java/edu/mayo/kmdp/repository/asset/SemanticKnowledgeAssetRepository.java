@@ -45,7 +45,6 @@ import static org.omg.spec.api4kp._20200801.Answer.conflict;
 import static org.omg.spec.api4kp._20200801.Answer.failed;
 import static org.omg.spec.api4kp._20200801.Answer.notFound;
 import static org.omg.spec.api4kp._20200801.Answer.succeed;
-import static org.omg.spec.api4kp._20200801.Answer.unsupported;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.timedSemverComparator;
 import static org.omg.spec.api4kp._20200801.id.VersionIdentifier.toSemVer;
 import static org.omg.spec.api4kp._20200801.services.CompositeStructType.GRAPH;
@@ -223,7 +222,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   private CompositeHelper compositeHelper;
 
   /**
-   * IMPORTANT! If true this will expose an endpoint to clear all tables.
+   * IMPORTANT! If true this will allow to delete content, including clearing all tables.
    */
   @Value("${allowClearAll:false}")
   private boolean allowClearAll = false;
@@ -289,18 +288,17 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       allowClearAll = cfg.getTyped(CLEARABLE);
     }
 
-    index.reset();
   }
 
   @PostConstruct
-  private void logClearAll() {
-    if (this.allowClearAll) {
+  private void logClearAllEnabled() {
+    if (isDeleteAllowed()) {
       logger.warn(
-          "!!! WARNING !!! The REST endpoint to clear all Asset Repository content is ACTIVE! "
-              + "If you did not intend this,"
-              + " ensure the environment variable `allowClearAll` is either unset or set to false.");
+          "!!! WARNING !!! This Repository supports the deletion of content. "
+              + "If this is not the desired behavior, ensure the environment "
+              + "variable `allowClearAll` is either unset or set to false.");
     } else {
-      logger.info("The REST endpoint to clear all Asset Repository content is INACTIVE.");
+      logger.info("This repository does not support DELETE operations");
     }
   }
 
@@ -364,12 +362,14 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   @Override
   public Answer<Void> clearKnowledgeAssetCatalog() {
-    if (this.allowClearAll) {
-      clear();
-      return succeed();
-    } else {
+    if (! isDeleteAllowed()) {
       return Answer.of(Forbidden);
+    } else {
+      logger.warn("CLEAR ALL Knowledge Assets");
     }
+
+    clear();
+    return succeed();
   }
 
   //*****************************************************************************************/
@@ -494,9 +494,13 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<Void> deleteKnowledgeAssets(String assetTypeTag, String assetAnnotationTag,
       String assetAnnotationConcept) {
-    if (! this.allowClearAll) {
+    if (! isDeleteAllowed()) {
       return Answer.of(Forbidden);
+    } else {
+      logger.warn("DELETE Knowledge Assets, type={}, {}={}",
+          assetTypeTag, assetAnnotationTag, assetAnnotationConcept);
     }
+
     return listKnowledgeAssets(assetTypeTag, assetAnnotationTag, assetAnnotationConcept, 0, -1)
         .mapList(Pointer.class, ptr -> deleteKnowledgeAsset(ptr.getUuid()))
         .flatMap(l -> l.stream().reduce(Answer::merge)
@@ -568,9 +572,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    */
   @Override
   public Answer<Void> deleteKnowledgeAsset(UUID assetId) {
-    if (! this.allowClearAll) {
+    if (! isDeleteAllowed()) {
       return Answer.of(Forbidden);
+    } else {
+      logger.warn("DELETE all versions of Knowledge Asset {}", assetId);
     }
+
     return listKnowledgeAssetVersions(assetId).flatMap(
         versions -> {
           Optional<Pointer> assetSeriesId = versions.stream().findAny();
@@ -656,8 +663,11 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   @Override
   public Answer<Void> deleteKnowledgeAssetVersion(UUID assetId, String versionTag) {
-    if (! this.allowClearAll) {
+    if (! isDeleteAllowed()) {
       return Answer.of(Forbidden);
+    } else {
+      logger.warn("DELETE Version {} of Knowledge Asset {}",
+          versionTag, assetId);
     }
 
     Answer<KnowledgeAsset> asset =
@@ -673,12 +683,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .orElse(Draft);
     switch (asEnum(status)) {
       case Archived:
-        return asset.flatMap(ax -> removeAssetVersion(ax, !allowClearAll));
+        return asset.flatMap(ax -> removeAssetVersion(ax, !isDeleteAllowed()));
       case Published:
-        if (!allowClearAll) {
+        if (!isDeleteAllowed()) {
           return Answer.of(ResponseCodeSeries.Unauthorized);
         }
-        return asset.flatMap(ax -> removeAssetVersion(ax, allowClearAll));
+        return asset.flatMap(ax -> removeAssetVersion(ax, isDeleteAllowed()));
       default:
         return asset.flatMap(ax -> removeAssetVersion(ax, true));
     }
@@ -2343,12 +2353,23 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   /**
+   * Method that encapsulates the logic used to determine whether or not
+   * this repository should allow the DELETEion of content.
+   * @return
+   */
+  protected boolean isDeleteAllowed() {
+    return this.allowClearAll;
+  }
+
+  /**
    * Disruptive method that clears the underlying Knowledge Artifact Repository, as well as the
    * index/knowledge graph - effectively resetting this Asset Repository to an empty state
    */
   private void clear() {
     if (this.knowledgeArtifactApi instanceof ClearableKnowledgeArtifactRepositoryService) {
-      ((ClearableKnowledgeArtifactRepositoryService) (this.knowledgeArtifactApi)).clear();
+      ClearableKnowledgeArtifactRepositoryService clearable =
+          (ClearableKnowledgeArtifactRepositoryService) this.knowledgeArtifactApi;
+      clearable.clear();
       this.index.reset();
     } else {
       logger.warn("Clear requested, but clearable Artifact Repository instance was not found,.");

@@ -47,9 +47,6 @@ import org.springframework.jdbc.support.MetaDataAccessException;
 @PropertySource(value = {"classpath:application.properties"})
 public class KnowledgeAssetRepositoryComponentConfig {
 
-  @Value("${artifactTablePrefix:artifacts}")
-  private String artifactTablePrefix;
-
   private static final Logger logger = LoggerFactory
           .getLogger(KnowledgeAssetRepositoryComponentConfig.class);
 

@@ -9,6 +9,7 @@ import java.util.List;
 import org.apache.jena.query.ParameterizedSparqlString;
 import org.apache.jena.rdf.model.Resource;
 import org.h2.jdbcx.JdbcDataSource;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class JenaSparqlDaoTest {
@@ -19,7 +20,12 @@ class JenaSparqlDaoTest {
     ds.setUser("sa");
     ds.setPassword("sa");
 
-    return new JenaSparqlDao(ds, true);
+    return new JenaSparqlDao(ds);
+  }
+
+  @BeforeEach
+  void reinit() {
+    getDao().reinitialize();
   }
 
   @Test
@@ -111,7 +117,7 @@ class JenaSparqlDaoTest {
 
     assertEquals(1, dao.getModel().size());
 
-    dao.truncate();
+    dao.reinitialize();
 
     assertEquals(0, dao.getModel().size());
   }
