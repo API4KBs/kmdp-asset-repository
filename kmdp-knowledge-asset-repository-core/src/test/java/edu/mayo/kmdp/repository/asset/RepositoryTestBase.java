@@ -1,5 +1,7 @@
 package edu.mayo.kmdp.repository.asset;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import edu.mayo.kmdp.kbase.query.sparql.v1_1.JenaQuery;
 import edu.mayo.kmdp.language.LanguageDeSerializer;
 import edu.mayo.kmdp.language.LanguageDetector;
@@ -22,8 +24,10 @@ import java.util.Collections;
 import java.util.UUID;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 
 abstract class RepositoryTestBase {
@@ -78,6 +82,15 @@ abstract class RepositoryTestBase {
         index,
         new HrefBuilder(cfg),
         cfg);
+
+    ensureInitialized();
+  }
+
+  private static void ensureInitialized() {
+    KnowledgeCarrier kgraph = semanticRepository.getKnowledgeGraph()
+        .orElseGet(Assertions::fail);
+    assertTrue(kgraph.asString().orElse("")
+        .contains("https://www.omg.org/spec/API4KP/api4kp/KnowledgeAsset"));
   }
 
   public static DataSource getDataSource() {

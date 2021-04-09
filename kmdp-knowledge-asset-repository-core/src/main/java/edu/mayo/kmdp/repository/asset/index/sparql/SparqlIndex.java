@@ -125,6 +125,18 @@ public class SparqlIndex implements Index {
 
   public SparqlIndex(JenaSparqlDao jenaSparqlDao) {
     this.jenaSparqlDao = jenaSparqlDao;
+    ensureIndexInitialized();
+  }
+
+  @Override
+  public void reset() {
+    this.jenaSparqlDao.reinitialize();
+    ensureIndexInitialized();
+  }
+
+  @PostConstruct
+  protected void ensureIndexInitialized() {
+    this.jenaSparqlDao.store(getKnowledgeBaseTriples());
   }
 
 
@@ -711,12 +723,6 @@ public class SparqlIndex implements Index {
                     querySolution.getLiteral("?format")
                 ))));
     return versions;
-  }
-
-  @Override
-  public void reset() {
-    this.jenaSparqlDao.reinitialize();
-    this.jenaSparqlDao.store(getKnowledgeBaseTriples());
   }
 
   /**

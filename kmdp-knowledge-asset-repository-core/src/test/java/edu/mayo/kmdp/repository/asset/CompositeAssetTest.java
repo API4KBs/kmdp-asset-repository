@@ -27,14 +27,17 @@ import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.Dependenc
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Imports;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRoleSeries.Composite_Knowledge_Asset;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Clinical_Rule;
+import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Decision_Model;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Documentation_Template;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Equation;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Formal_Grammar;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Information_Model;
+import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Questionnaire;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Value_Set;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.TXT;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HL7_ELM;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
+import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate_2_0;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.OWL_2;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.SPARQL_1_1;
 import static org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevelSeries.Abstract_Knowledge_Expression;
@@ -42,6 +45,7 @@ import static org.omg.spec.api4kp._20200801.taxonomy.structuralreltype.Structura
 import static org.omg.spec.api4kp._20200801.taxonomy.structuralreltype.StructuralPartTypeSeries.Has_Structuring_Component;
 
 import edu.mayo.kmdp.language.parsers.rdf.JenaRdfParser;
+import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
 import edu.mayo.kmdp.util.JenaUtil;
 import java.net.URI;
 import java.nio.charset.Charset;
@@ -51,7 +55,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.jena.rdf.model.Model;
-import org.apache.jena.rdf.model.ModelFactory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._20200801.AbstractCarrier;
@@ -668,6 +671,67 @@ class CompositeAssetTest extends RepositoryTestBase {
   private boolean contains(Model m, ResourceIdentifier subj, Term pred, ResourceIdentifier obj) {
     return m.contains(
         JenaUtil.objA(subj.getVersionId(), pred.getReferentId(), obj.getVersionId()));
+  }
+
+  @Test
+  void testCompositeWithTypedComponents() {
+
+    semanticRepository.clearKnowledgeAssetCatalog();
+
+    ResourceIdentifier axId0 = randomAssetId(testAssetNS());
+    ResourceIdentifier axId1 = randomAssetId(testAssetNS());
+    ResourceIdentifier axId2 = randomAssetId(testAssetNS());
+    ResourceIdentifier sId = randomAssetId(testAssetNS());
+
+    KnowledgeAsset ka0 = new KnowledgeAsset()
+        .withAssetId(axId0)
+        .withName("Comp")
+        .withRole(Composite_Knowledge_Asset)
+        .withLinks(new Component().withRel(Has_Structural_Component).withHref(axId1))
+        .withLinks(new Component().withRel(Has_Structural_Component).withHref(axId2))
+        .withLinks(new Component().withRel(Has_Structuring_Component).withHref(sId));
+
+    KnowledgeAsset ka1 = new KnowledgeAsset()
+        .withAssetId(axId1)
+        .withName("Foo")
+        .withLinks(new Dependency().withRel(Imports).withHref(axId2));
+    KnowledgeAsset ka2 = new KnowledgeAsset()
+        .withAssetId(axId2)
+        .withFormalType(Decision_Model)
+        .withName("Bar");
+
+    semanticRepository.setKnowledgeAssetVersion(
+        axId0.getUuid(), axId0.getVersionTag(), ka0);
+
+    semanticRepository.setKnowledgeAssetVersion(
+        axId1.getUuid(), axId1.getVersionTag(), ka1);
+    semanticRepository.setKnowledgeAssetVersion(
+        axId2.getUuid(), axId2.getVersionTag(), ka2);
+
+    CompositeKnowledgeCarrier ckc =
+        semanticRepository.getCompositeKnowledgeAssetSurrogate(
+            axId0.getUuid(), axId0.getVersionTag())
+            .orElseGet(Assertions::fail);
+
+    JenaRdfParser parser = new JenaRdfParser();
+    Model m = parser
+        .applyLift(ckc.getStruct(), Abstract_Knowledge_Expression, codedRep(OWL_2), null)
+        .flatOpt(x -> x.as(Model.class))
+        .orElseGet(Assertions::fail);
+    KnowledgeCarrier compositeCarrier = ckc.componentById(ckc.getAssetId(), ckc)
+        .orElseGet(Assertions::fail);
+
+
+    KnowledgeAsset compositeSurrogate = new Surrogate2Parser()
+        .applyLift(compositeCarrier, Abstract_Knowledge_Expression, codedRep(Knowledge_Asset_Surrogate_2_0), null)
+        .flatOpt(kc -> kc.as(KnowledgeAsset.class))
+        .orElseGet(Assertions::fail);
+
+    ResourceIdentifier typedComponentId =
+        SurrogateHelper
+            .getComponent(compositeSurrogate, m, Decision_Model)
+            .orElseGet(Assertions::fail);
+    assertEquals(axId2.asKey(), typedComponentId.asKey());
   }
 
 }
