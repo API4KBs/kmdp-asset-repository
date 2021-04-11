@@ -12,7 +12,7 @@ import static org.omg.spec.api4kp._20200801.id.IdentifierConstants.VERSION_ZERO;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.assetId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomArtifactId;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetcategory.KnowledgeAssetCategorySeries.Terminology_Ontology_And_Assertional_KBs;
-import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Factual_Knowledge;
+import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Grounded_Knowledge;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.JSON;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.TXT;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
@@ -508,7 +508,7 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
     KnowledgeAsset ka = new KnowledgeAsset()
         .withAssetId(assetId(testAssetNS(), pockId, version))
         .withFormalCategory(Terminology_Ontology_And_Assertional_KBs)
-        .withFormalType(Factual_Knowledge)
+        .withFormalType(Grounded_Knowledge)
         .withName("Test section of content")
         .withSurrogate(
             new KnowledgeArtifact()
