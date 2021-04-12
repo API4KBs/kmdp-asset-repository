@@ -91,6 +91,20 @@
       <scope>test</scope>
     </dependency>
 
+    <!-- Logback conditional xml processing, used to configure Splunk -->
+    <!-- https://mvnrepository.com/artifact/org.codehaus.janino/janino -->
+    <dependency>
+      <groupId>org.codehaus.janino</groupId>
+      <artifactId>janino</artifactId>
+    </dependency>
+
+    <!-- https://mvnrepository.com/artifact/com.splunk.logging/splunk-library-javalogging -->
+    <dependency>
+      <groupId>com.splunk.logging</groupId>
+      <artifactId>splunk-library-javalogging</artifactId>
+      <version>1.7.3</version>
+    </dependency>
+
   </dependencies>
 
   <build>
