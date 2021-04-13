@@ -8,11 +8,11 @@
   <parent>
     <artifactId>kmdp-knowledge-asset-repository</artifactId>
     <groupId>edu.mayo.kmdp</groupId>
-    <version>4.9.13</version>
+    <version>4.9.14-SNAPSHOT</version>
   </parent>
 
   <artifactId>kmdp-knowledge-asset-repository-impl</artifactId>
-  <version>4.9.13</version>
+  <version>4.9.14-SNAPSHOT</version>
   <name>KMDP :: Server :: Knowledge Asset Repository Service (Web)</name>
 
   <dependencies>
