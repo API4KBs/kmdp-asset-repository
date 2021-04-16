@@ -13,8 +13,6 @@
  */
 package edu.mayo.kmdp.repository.asset.performance;
 
-import static edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig.KnowledgeArtifactRepositoryOptions.DDL_MODE;
-import static edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig.KnowledgeArtifactRepositoryOptions.SQL_DIALECT;
 import static edu.mayo.kmdp.util.Util.uuid;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
@@ -29,10 +27,10 @@ import edu.mayo.kmdp.language.parsers.owl2.JenaOwlParser;
 import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
 import edu.mayo.kmdp.language.translators.surrogate.v2.SurrogateV2Transcriptor;
 import edu.mayo.kmdp.language.translators.surrogate.v2.SurrogateV2toHTMLTranslator;
-import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig;
+import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties;
 import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepository;
 import edu.mayo.kmdp.repository.asset.HrefBuilder;
-import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig;
+import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties;
 import edu.mayo.kmdp.repository.asset.SemanticKnowledgeAssetRepository;
 import edu.mayo.kmdp.repository.asset.index.Index;
 import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDao;
@@ -40,10 +38,8 @@ import edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.UUID;
-import java.util.logging.Level;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
@@ -109,8 +105,9 @@ class RemoteRepoTest {
 
   static private DataSource ds;
 
-  static protected KnowledgeAssetRepositoryServerConfig cfg
-      = new KnowledgeAssetRepositoryServerConfig();
+  static protected KnowledgeAssetRepositoryServerProperties cfg
+      = new KnowledgeAssetRepositoryServerProperties(
+      RemoteRepoTest.class.getResourceAsStream("/application.test.properties"));
 
 
   @BeforeAll
@@ -148,10 +145,7 @@ class RemoteRepoTest {
   public static JPAKnowledgeArtifactRepository jpaRepository(DataSource dataSource) {
     return new JPAKnowledgeArtifactRepository(
         dataSource,
-        new KnowledgeArtifactRepositoryServerConfig()
-            .with(DDL_MODE, "create")
-            .with(SQL_DIALECT, "org.hibernate.dialect.SQLServerDialect")
-    );
+        new KnowledgeArtifactRepositoryServerProperties(cfg));
   }
 
   enum DB_TYPE {
@@ -192,7 +186,7 @@ class RemoteRepoTest {
     dataSourceBuilder.driverClassName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
     dataSourceBuilder.url("jdbc:sqlserver://"
         + type.server
-            + ";database=KmdKnowledgeArtifactRepo;sendStringParametersAsUnicode=false;"
+        + ";database=KmdKnowledgeArtifactRepo;sendStringParametersAsUnicode=false;"
     );
 
     dataSourceBuilder.username(USER);
@@ -206,7 +200,7 @@ class RemoteRepoTest {
 
     DataSourceBuilder<?> dataSourceBuilder = DataSourceBuilder.create();
     dataSourceBuilder.driverClassName("org.h2.Driver");
-    dataSourceBuilder.url("jdbc:h2:"+ DB_TYPE.IN_MEM.server + ":" + dbName);
+    dataSourceBuilder.url("jdbc:h2:" + DB_TYPE.IN_MEM.server + ":" + dbName);
     dataSourceBuilder.username("SA");
     dataSourceBuilder.password("");
 

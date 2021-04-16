@@ -15,23 +15,28 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
-import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
+import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions;
 import java.net.URI;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.server.Swagger2SpringBoot;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest(
     webEnvironment = WebEnvironment.RANDOM_PORT,
     classes = Swagger2SpringBoot.class)
-@ContextConfiguration(classes = SemanticRepoIntegrationTestConfig.class)
+@ContextConfiguration(classes = KnowledgeAssetRepositoryComponentConfig.class)
+@ActiveProfiles("local")
+@TestPropertySource("classpath:application-local.properties")
+@TestPropertySource("classpath:application.properties")
 public abstract class SemanticRepoAPITestBase {
 
   @Autowired
-  KnowledgeAssetRepositoryServerConfig cfg;
+  KnowledgeAssetRepositoryServerProperties cfg;
 
   @LocalServerPort
   protected int port;

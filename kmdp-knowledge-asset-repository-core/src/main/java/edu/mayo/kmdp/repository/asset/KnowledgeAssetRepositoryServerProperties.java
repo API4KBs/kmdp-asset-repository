@@ -19,21 +19,40 @@ import edu.mayo.kmdp.ConfigProperties;
 import edu.mayo.kmdp.Opt;
 import edu.mayo.kmdp.Option;
 import edu.mayo.kmdp.registry.Registry;
-import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig;
-import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig.KnowledgeArtifactRepositoryOptions;
-import edu.mayo.kmdp.util.Util;
+import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties.KnowledgeArtifactRepositoryOptions;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.util.Properties;
 
 @SuppressWarnings("unchecked")
-public class KnowledgeAssetRepositoryServerConfig extends
-    ConfigProperties<KnowledgeAssetRepositoryServerConfig,
-        KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions> {
+public class KnowledgeAssetRepositoryServerProperties extends
+    ConfigProperties<KnowledgeAssetRepositoryServerProperties,
+        KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions> {
 
   private static final Properties DEFAULTS = defaulted(KnowledgeAssetRepositoryOptions.class);
 
-  public KnowledgeAssetRepositoryServerConfig() {
+  private KnowledgeAssetRepositoryServerProperties() {
     super(DEFAULTS);
+  }
+
+  public KnowledgeAssetRepositoryServerProperties(Properties properties) {
+    super(properties);
+  }
+
+  public KnowledgeAssetRepositoryServerProperties(InputStream propertiesStream) {
+    super(defaulted(KnowledgeArtifactRepositoryOptions.class));
+    if (propertiesStream != null) {
+      try {
+        this.load(propertiesStream);
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
+  }
+
+  public static KnowledgeAssetRepositoryServerProperties emptyProperties() {
+    return new KnowledgeAssetRepositoryServerProperties(new Properties());
   }
 
   @Override
@@ -51,32 +70,18 @@ public class KnowledgeAssetRepositoryServerConfig extends
             Boolean.class,
             false)),
 
-    DEFAULT_REPOSITORY_ID(
-        Opt.of("http://edu.mayo.kmdp/assetRepository/artifactRepositoryIdentifier",
-            getDefaultRepositoryId(),
-            "ID of the default Artifact Repository that the Asset Repository will link to",
-            String.class,
-            false)),
-
     ASSET_NAMESPACE(
-        Opt.of("http://edu.mayo.kmdp/assetRepository/assetNamespace",
+        Opt.of("edu.mayo.kmdp.repository.asset.namespace",
             Registry.MAYO_ASSETS_BASE_URI,
             "Base namespace used for Assets",
             String.class,
             false)),
 
     ARTIFACT_NAMESPACE(
-        Opt.of("http://edu.mayo.kmdp/assetRepository/artifactNamespace",
+        Opt.of("edu.mayo.kmdp.repository.artifact.namespace",
             Registry.MAYO_ARTIFACTS_BASE_URI,
             "Base namespace used for Assets",
             String.class,
-            false)),
-
-    SERVER_HOST(
-        Opt.of("http://edu.mayo.kmdp/assetRepository/host",
-            getHost(),
-            "Host",
-            URL.class,
             false));
 
     private Opt<KnowledgeAssetRepositoryOptions> opt;
@@ -90,16 +95,6 @@ public class KnowledgeAssetRepositoryServerConfig extends
       return opt;
     }
 
-
-    private static String getHost() {
-      String envHost = System.getProperty("http://edu.mayo.kmdp/assetRepository/host");
-      return !Util.isEmpty(envHost) ? envHost : "http://localhost:8080";
-    }
-
-    private static String getDefaultRepositoryId() {
-      return new KnowledgeArtifactRepositoryServerConfig().getTyped(
-          KnowledgeArtifactRepositoryOptions.DEFAULT_REPOSITORY_ID);
-    }
 
   }
 }

@@ -2,13 +2,12 @@ package edu.mayo.kmdp.repository.asset.index;
 
 import static org.omg.spec.api4kp._20200801.id.VersionIdentifier.toSemVer;
 
-import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig;
-import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
+import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties;
+import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions;
 import java.net.URI;
 import java.util.UUID;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
-import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
 
 /**
  * Mapper that resolves UUIDs (+ versionTag) pairs to the
@@ -25,7 +24,7 @@ public class IdentityMapper {
 
   private URI artifactNamespace;
 
-  public IdentityMapper(KnowledgeAssetRepositoryServerConfig cfg) {
+  public IdentityMapper(KnowledgeAssetRepositoryServerProperties cfg) {
     this.assetNamespace =
         URI.create(cfg.getTyped(KnowledgeAssetRepositoryOptions.ASSET_NAMESPACE));
     this.artifactNamespace =

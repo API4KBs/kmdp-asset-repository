@@ -15,14 +15,12 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
-import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.util.Util;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.UUID;
-import org.apache.commons.lang3.StringUtils;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,17 +40,14 @@ public class HrefBuilder {
     ASSET_SURROGATE_VERSION
   }
 
-  private KnowledgeAssetRepositoryServerConfig cfg;
+  private KnowledgeAssetRepositoryServerProperties cfg;
 
-  public HrefBuilder(KnowledgeAssetRepositoryServerConfig cfg) {
+  public HrefBuilder(KnowledgeAssetRepositoryServerProperties cfg) {
     this.cfg = cfg;
   }
 
   protected String getHost() {
-    return StringUtils
-        .removeEnd(cfg.getTyped(
-            KnowledgeAssetRepositoryOptions.SERVER_HOST)
-            .toString(), "/");
+    return "http:/";
   }
 
   public String getCurrentURL() {

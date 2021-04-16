@@ -11,10 +11,10 @@ import edu.mayo.kmdp.language.parsers.owl2.JenaOwlParser;
 import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
 import edu.mayo.kmdp.language.translators.surrogate.v2.SurrogateV2Transcriptor;
 import edu.mayo.kmdp.language.translators.surrogate.v2.SurrogateV2toHTMLTranslator;
-import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig;
+import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepository;
-import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
+import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.repository.asset.index.Index;
 import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDao;
 import edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex;
@@ -42,9 +42,9 @@ abstract class RepositoryTestBase {
 
   protected static DataSource ds;
 
-  protected static KnowledgeAssetRepositoryServerConfig cfg =
-      new KnowledgeAssetRepositoryServerConfig()
-          .with(KnowledgeAssetRepositoryOptions.CLEARABLE, true);
+  protected static KnowledgeArtifactRepositoryServerProperties artifactCfg;
+
+  protected static KnowledgeAssetRepositoryServerProperties assetCfg;
 
   @BeforeEach
   void reset() {
@@ -61,10 +61,14 @@ abstract class RepositoryTestBase {
 
   @BeforeAll
   static void setUpRepos() {
+
+    assetCfg = new KnowledgeAssetRepositoryServerProperties(
+        RepositoryTestBase.class.getResourceAsStream("/application.test.properties"));
+    artifactCfg = new KnowledgeArtifactRepositoryServerProperties(assetCfg);
+
     ds = getDataSource();
 
-    repos = new JPAKnowledgeArtifactRepository(ds,
-        new KnowledgeArtifactRepositoryServerConfig());
+    repos = new JPAKnowledgeArtifactRepository(ds, artifactCfg);
 
     jenaSparqlDao = new JenaSparqlDao(ds);
 
@@ -80,8 +84,8 @@ abstract class RepositoryTestBase {
             Arrays.asList(new SurrogateV2toHTMLTranslator(), new SurrogateV2Transcriptor())),
         new JenaQuery(jenaSparqlDao),
         index,
-        new HrefBuilder(cfg),
-        cfg);
+        new HrefBuilder(assetCfg),
+        assetCfg);
 
     ensureInitialized();
   }
@@ -106,11 +110,11 @@ abstract class RepositoryTestBase {
   }
 
   static URI testAssetNS() {
-    return cfg.getTyped(KnowledgeAssetRepositoryOptions.ASSET_NAMESPACE, URI.class);
+    return assetCfg.getTyped(KnowledgeAssetRepositoryOptions.ASSET_NAMESPACE, URI.class);
   }
 
   static URI testArtifactNS() {
-    return cfg.getTyped(KnowledgeAssetRepositoryOptions.ARTIFACT_NAMESPACE, URI.class);
+    return assetCfg.getTyped(KnowledgeAssetRepositoryOptions.ARTIFACT_NAMESPACE, URI.class);
   }
 
 }

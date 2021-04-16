@@ -1,7 +1,7 @@
 package edu.mayo.kmdp.repository.asset.server;
 
 import edu.mayo.kmdp.repository.asset.HrefBuilder;
-import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig;
+import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties;
 import edu.mayo.kmdp.util.Util;
 import javax.annotation.PostConstruct;
 import org.slf4j.Logger;
@@ -18,7 +18,7 @@ public class ServerContextAwareHrefBuilder extends HrefBuilder {
   private boolean hasEnvOverride;
 
   public ServerContextAwareHrefBuilder(
-      KnowledgeAssetRepositoryServerConfig cfg) {
+      KnowledgeAssetRepositoryServerProperties cfg) {
     super(cfg);
 
   }

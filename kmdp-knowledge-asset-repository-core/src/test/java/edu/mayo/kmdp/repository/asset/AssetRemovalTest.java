@@ -23,7 +23,7 @@ import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetcategory.Know
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Decision_Model;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Formal_Ontology;
 
-import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
+import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties.KnowledgeArtifactRepositoryOptions;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -42,7 +42,6 @@ import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.VersionIncrement;
 import org.springframework.test.context.TestPropertySource;
-
 
 @TestPropertySource(properties = {"allowClearAll=true"})
 class AssetRemovalTest extends RepositoryTestBase {
@@ -274,7 +273,7 @@ class AssetRemovalTest extends RepositoryTestBase {
 
 
   private void checkEmpty() {
-    String repoId = cfg.getTyped(KnowledgeAssetRepositoryOptions.DEFAULT_REPOSITORY_ID);
+    String repoId = artifactCfg.getTyped(KnowledgeArtifactRepositoryOptions.DEFAULT_REPOSITORY_ID);
 
     List<Statement> triples = jenaSparqlDao.readAll()
         .stream()

@@ -40,13 +40,16 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
     KnowledgeAssetRepositoryApiInternal {
 
   static KnowledgeAssetRepositoryService selfContainedRepository() {
-    return selfContainedRepository(new KnowledgeAssetRepositoryServerConfig());
+    KnowledgeAssetRepositoryServerProperties cfg = new KnowledgeAssetRepositoryServerProperties(
+        KnowledgeAssetRepositoryService.class.getResourceAsStream("/application.properties"));
+    return selfContainedRepository(cfg);
   }
 
-  static KnowledgeAssetRepositoryService selfContainedRepository(KnowledgeAssetRepositoryServerConfig cfg) {
+  static KnowledgeAssetRepositoryService selfContainedRepository(
+      KnowledgeAssetRepositoryServerProperties cfg) {
     JenaSparqlDao dao = JenaSparqlDao.inMemoryDao();
     return new SemanticKnowledgeAssetRepository(
-        JPAKnowledgeArtifactRepositoryService.inMemoryArtifactRepository(),
+        JPAKnowledgeArtifactRepositoryService.inMemoryArtifactRepository(cfg),
         new LanguageDeSerializer(Collections.singletonList(new Surrogate2Parser())),
         new LanguageDetector(Collections.emptyList()),
         new LanguageValidator(Collections.emptyList()),
@@ -65,9 +68,10 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
       List<TransionApiOperator> translators
   ) {
     JenaSparqlDao dao = JenaSparqlDao.inMemoryDao();
-    KnowledgeAssetRepositoryServerConfig cfg = new KnowledgeAssetRepositoryServerConfig();
+    KnowledgeAssetRepositoryServerProperties cfg = new KnowledgeAssetRepositoryServerProperties(
+        KnowledgeAssetRepositoryService.class.getResourceAsStream("/application.properties"));
     return new SemanticKnowledgeAssetRepository(
-        JPAKnowledgeArtifactRepositoryService.inMemoryArtifactRepository(),
+        JPAKnowledgeArtifactRepositoryService.inMemoryArtifactRepository(cfg),
         new LanguageDeSerializer(parsers),
         new LanguageDetector(detectors),
         new LanguageValidator(validators),

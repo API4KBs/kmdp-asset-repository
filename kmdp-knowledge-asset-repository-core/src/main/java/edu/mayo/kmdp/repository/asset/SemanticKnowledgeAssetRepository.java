@@ -14,7 +14,7 @@
 package edu.mayo.kmdp.repository.asset;
 
 import static edu.mayo.kmdp.id.helper.DatatypeHelper.getDefaultVersionId;
-import static edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions.CLEARABLE;
+import static edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions.CLEARABLE;
 import static edu.mayo.kmdp.repository.asset.negotiation.ContentNegotiationHelper.decodePreferences;
 import static edu.mayo.kmdp.util.JenaUtil.objA;
 import static edu.mayo.kmdp.util.StreamUtil.filterAs;
@@ -83,7 +83,6 @@ import edu.mayo.kmdp.repository.artifact.ClearableKnowledgeArtifactRepositorySer
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.artifact.exceptions.ResourceNotFoundException;
 import edu.mayo.kmdp.repository.asset.HrefBuilder.HrefType;
-import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.repository.asset.composite.CompositeHelper;
 import edu.mayo.kmdp.repository.asset.index.IdentityMapper;
 import edu.mayo.kmdp.repository.asset.index.Index;
@@ -189,9 +188,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       defaultSurrogateRepresentation = rep(defaultSurrogateModel, defaultSurrogateFormat);
 
   /**
-   * Unique identifier of this repository instance
+   * Unique identifier of the underlying artifact repository
    */
-  private final String repositoryId;
+  @Value("${edu.mayo.kmdp.repository.artifact.identifier:default}")
+  private String repositoryId = "default";
 
   /* Knowledge Artifact Repository Service Client*/
   private KnowledgeArtifactApiInternal knowledgeArtifactApi;
@@ -250,7 +250,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       @Autowired @KPComponent _askQuery queryExecutor,
       @Autowired Index index,
       @Autowired(required = false) HrefBuilder hrefBuilder,
-      @Autowired KnowledgeAssetRepositoryServerConfig cfg) {
+      @Autowired KnowledgeAssetRepositoryServerProperties cfg) {
 
     super();
 
@@ -271,8 +271,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     this.compositeStructIntrospector = new CompositeAssetMetadataIntrospector();
 
-    this.repositoryId = cfg.getTyped(KnowledgeAssetRepositoryOptions.DEFAULT_REPOSITORY_ID);
-
     this.identityMapper = new IdentityMapper(cfg);
 
     if (artifactRepo == null ||
@@ -284,7 +282,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     this.compositeHelper = new CompositeHelper();
 
-    if (!allowClearAll && cfg.containsKey(CLEARABLE.getName())) {
+    if (!allowClearAll && cfg.getProperty(CLEARABLE.getName()) != null) {
       allowClearAll = cfg.getTyped(CLEARABLE);
     }
 

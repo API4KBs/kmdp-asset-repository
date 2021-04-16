@@ -18,13 +18,17 @@ package edu.mayo.kmdp.repository.asset;
 import static org.springframework.jdbc.support.JdbcUtils.extractDatabaseMetaData;
 
 import edu.mayo.kmdp.language.TransrepresentationExecutor;
-import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerConfig;
+import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties;
+import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties.KnowledgeArtifactRepositoryOptions;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepository;
+import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.repository.asset.server.ServerContextAwareHrefBuilder;
 import edu.mayo.kmdp.repository.asset.server.configuration.HTMLAdapter;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.stream.StreamSupport;
 import javax.sql.DataSource;
 import org.omg.spec.api4kp._20200801.services.KPServer;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
@@ -37,6 +41,9 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.EnumerablePropertySource;
+import org.springframework.core.env.MutablePropertySources;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.jdbc.support.MetaDataAccessException;
 
@@ -47,25 +54,46 @@ import org.springframework.jdbc.support.MetaDataAccessException;
 @PropertySource(value = {"classpath:application.properties"})
 public class KnowledgeAssetRepositoryComponentConfig {
 
+  @Value("${edu.mayo.kmdp.repository.asset.namespace}")
+  private String assetNamespace;
+
+  @Value("${edu.mayo.kmdp.repository.artifact.identifier:default}")
+  private String artifactRepoId;
+  @Value("${edu.mayo.kmdp.repository.artifact.name:Default Artifact Repository}")
+  private String artifactRepoName;
+  @Value("${edu.mayo.kmdp.repository.artifact.namespace}")
+  private String artifactNamespace;
+
+
   private static final Logger logger = LoggerFactory
-          .getLogger(KnowledgeAssetRepositoryComponentConfig.class);
+      .getLogger(KnowledgeAssetRepositoryComponentConfig.class);
 
   @Bean
-  public KnowledgeAssetRepositoryServerConfig defaultConfiguration() {
-    return new KnowledgeAssetRepositoryServerConfig();
+  public KnowledgeAssetRepositoryServerProperties defaultConfiguration() {
+    return KnowledgeAssetRepositoryServerProperties.emptyProperties()
+        .with(KnowledgeAssetRepositoryOptions.ASSET_NAMESPACE, assetNamespace);
   }
 
   @Bean
   @Primary
   public HrefBuilder contextAwareHrefBuilder(
-      @Autowired KnowledgeAssetRepositoryServerConfig cfg) {
+      @Autowired KnowledgeAssetRepositoryServerProperties cfg) {
     return new ServerContextAwareHrefBuilder(cfg);
+  }
+
+
+  @Bean
+  KnowledgeArtifactRepositoryServerProperties artifactConfig() {
+    return KnowledgeArtifactRepositoryServerProperties.emptyConfig()
+        .with(KnowledgeArtifactRepositoryOptions.DEFAULT_REPOSITORY_ID, artifactRepoId)
+        .with(KnowledgeArtifactRepositoryOptions.DEFAULT_REPOSITORY_NAME, artifactRepoName)
+        .with(KnowledgeArtifactRepositoryOptions.BASE_NAMESPACE, artifactNamespace);
   }
 
   /**
    * Configures a default instance of {@link KnowledgeArtifactRepositoryService} to be used by the Assert
    * Repoository. This will look for Spring JDBC connection info (such as 'spring.datasource.url'), set as
-   * either environment variables or in the application-*.properties files. If ot found will set up a default
+   * either environment variables or in the application-*.properties files. If not found will set up a default
    * in-memory datasource that will clear on server restarts.
    *
    * @param dataSource
@@ -74,7 +102,10 @@ public class KnowledgeAssetRepositoryComponentConfig {
    */
   @Bean
   @KPServer
-  public KnowledgeArtifactRepositoryService jdbcRepository(DataSource dataSource)  {
+  public KnowledgeArtifactRepositoryService jdbcRepository(
+      DataSource dataSource,
+      @Autowired KnowledgeArtifactRepositoryServerProperties artifactConfig,
+      @Autowired ConfigurableEnvironment env) {
 
     try {
       String url = (String) extractDatabaseMetaData(dataSource, DatabaseMetaData::getURL);
@@ -83,7 +114,15 @@ public class KnowledgeAssetRepositoryComponentConfig {
       logger.warn("Unable to access DB Connection info:", e);
     }
 
-    return new JPAKnowledgeArtifactRepository(dataSource, new KnowledgeArtifactRepositoryServerConfig());
+    MutablePropertySources propSrcs = env.getPropertySources();
+    StreamSupport.stream(propSrcs.spliterator(), false)
+        .filter(ps -> ps instanceof EnumerablePropertySource)
+        .map(ps -> ((EnumerablePropertySource) ps).getPropertyNames())
+        .flatMap(Arrays::stream)
+        .forEach(propName -> artifactConfig.setProperty(propName, env.getProperty(propName)));
+
+    return new JPAKnowledgeArtifactRepository(
+        dataSource, artifactConfig);
   }
 
   @Bean

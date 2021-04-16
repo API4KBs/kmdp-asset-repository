@@ -22,8 +22,8 @@ import static org.omg.spec.api4kp._20200801.taxonomy.krserialization.KnowledgeRe
 import static org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevelSeries.Abstract_Knowledge_Expression;
 
 import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
-import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig;
-import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerConfig.KnowledgeAssetRepositoryOptions;
+import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties;
+import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
 import edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex;
 import edu.mayo.kmdp.util.JSonUtil;
@@ -53,7 +53,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._20200801.AbstractCarrier;
-import org.omg.spec.api4kp._20200801.AbstractCarrier.Encodings;
 import org.omg.spec.api4kp._20200801.Answer;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetCatalogApi;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.client.ApiClientFactory;
@@ -74,15 +73,11 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
   private KnowledgeAssetCatalogApi rpo;
 
   @Autowired
-  KnowledgeAssetRepositoryServerConfig cfg;
+  KnowledgeAssetRepositoryServerProperties cfg;
 
   @BeforeEach
   protected void init() {
     String host = "http://localhost:" + port;
-
-    cfg.with(
-        KnowledgeAssetRepositoryOptions.SERVER_HOST, host
-    );
 
     ApiClientFactory apiClientFactory
         = new ApiClientFactory(host, WithFHIR.NONE);
