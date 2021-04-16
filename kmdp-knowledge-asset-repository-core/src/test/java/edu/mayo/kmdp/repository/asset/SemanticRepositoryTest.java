@@ -170,7 +170,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
   @Test
   void testListAllInMemoryHelperMethod() {
     KnowledgeAssetRepositoryService repo = KnowledgeAssetRepositoryService
-        .selfContainedRepository();
+        .selfContainedRepository(assetCfg);
 
     assertTrue(repo
         .setKnowledgeAssetVersion(uuid("foo"), "1",
