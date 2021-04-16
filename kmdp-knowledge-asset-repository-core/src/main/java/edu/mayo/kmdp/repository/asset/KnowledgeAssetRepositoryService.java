@@ -25,7 +25,10 @@ import edu.mayo.kmdp.language.TransionApiOperator;
 import edu.mayo.kmdp.language.TransrepresentationExecutor;
 import edu.mayo.kmdp.language.ValidateApiOperator;
 import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
+import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties;
+import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties.KnowledgeArtifactRepositoryOptions;
 import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepositoryService;
+import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDao;
 import edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex;
 import java.util.Collections;
@@ -42,6 +45,26 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
   static KnowledgeAssetRepositoryService selfContainedRepository() {
     KnowledgeAssetRepositoryServerProperties cfg = new KnowledgeAssetRepositoryServerProperties(
         KnowledgeAssetRepositoryService.class.getResourceAsStream("/application.properties"));
+    return selfContainedRepository(cfg);
+  }
+
+  /**
+   * Self-contained Asset Repository instance used for testing
+   * @return
+   */
+  static KnowledgeAssetRepositoryService mockTestRepository() {
+    KnowledgeArtifactRepositoryServerProperties subCfg =
+        KnowledgeArtifactRepositoryServerProperties.emptyConfig()
+            .with(KnowledgeArtifactRepositoryOptions.DEFAULT_REPOSITORY_ID, "test")
+            .with(KnowledgeArtifactRepositoryOptions.DEFAULT_REPOSITORY_NAME, "Test Artifact Repo");
+    KnowledgeAssetRepositoryServerProperties cfg =
+        KnowledgeAssetRepositoryServerProperties.emptyProperties()
+            .with(KnowledgeAssetRepositoryOptions.CLEARABLE, true)
+            .with(KnowledgeAssetRepositoryOptions.ASSET_NAMESPACE, "urn:uuid:")
+            .with(KnowledgeAssetRepositoryOptions.ARTIFACT_NAMESPACE, "urn:uuid:");
+    cfg.putAll(subCfg);
+    cfg.put("spring.profiles.active", "jpa");
+    cfg.put("spring.jpa.hibernate.ddl-auto", "create");
     return selfContainedRepository(cfg);
   }
 

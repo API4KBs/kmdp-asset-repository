@@ -14,6 +14,7 @@
 package edu.mayo.kmdp.repository.asset;
 
 import static edu.mayo.kmdp.id.helper.DatatypeHelper.getDefaultVersionId;
+import static edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties.KnowledgeArtifactRepositoryOptions.DEFAULT_REPOSITORY_ID;
 import static edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions.CLEARABLE;
 import static edu.mayo.kmdp.repository.asset.negotiation.ContentNegotiationHelper.decodePreferences;
 import static edu.mayo.kmdp.util.JenaUtil.objA;
@@ -114,6 +115,7 @@ import org.omg.spec.api4kp._20200801.ServerSideException;
 import org.omg.spec.api4kp._20200801.api.inference.v4.server.ReasoningApiInternal._askQuery;
 import org.omg.spec.api4kp._20200801.api.knowledgebase.v4.server.TranscreateApiInternal._applyNamedIntrospectDirect;
 import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactApiInternal;
+import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactRepositoryApiInternal;
 import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactSeriesApiInternal;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.server.KnowledgeAssetRepositoryApiInternal;
 import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.DeserializeApiInternal;
@@ -191,11 +193,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * Unique identifier of the underlying artifact repository
    */
   @Value("${edu.mayo.kmdp.repository.artifact.identifier:default}")
-  private String repositoryId = "default";
+  private String artifactRepositoryId = "default";
 
   /* Knowledge Artifact Repository Service Client*/
   private KnowledgeArtifactApiInternal knowledgeArtifactApi;
   private KnowledgeArtifactSeriesApiInternal knowledgeArtifactSeriesApi;
+  private KnowledgeArtifactRepositoryApiInternal knowledgeArtifactRepoApi;
 
   /* Language Service Client */
   private DeserializeApiInternal parser;
@@ -220,6 +223,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   private ContentNegotiationHelper negotiator;
 
   private CompositeHelper compositeHelper;
+
+  @Autowired
+  private KnowledgeAssetRepositoryServerProperties cfg;
 
   /**
    * IMPORTANT! If true this will allow to delete content, including clearing all tables.
@@ -256,6 +262,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     this.knowledgeArtifactApi = artifactRepo;
     this.knowledgeArtifactSeriesApi = artifactRepo;
+    this.knowledgeArtifactRepoApi = artifactRepo;
 
     this.index = index;
     this.hrefBuilder = hrefBuilder != null
@@ -272,13 +279,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     this.compositeStructIntrospector = new CompositeAssetMetadataIntrospector();
 
     this.identityMapper = new IdentityMapper(cfg);
-
-    if (artifactRepo == null ||
-        !artifactRepo.getKnowledgeArtifactRepository(repositoryId)
-            .isSuccess()) {
-      throw new IllegalStateException(
-          "Unable to construct an Asset repository on an inconsistent Artifact repository");
-    }
 
     this.compositeHelper = new CompositeHelper();
 
@@ -297,6 +297,15 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
               + "variable `allowClearAll` is either unset or set to false.");
     } else {
       logger.info("This repository does not support DELETE operations");
+    }
+    if (artifactRepositoryId == null) {
+      artifactRepositoryId = cfg.getProperty(DEFAULT_REPOSITORY_ID.getName());
+    }
+    if (knowledgeArtifactRepoApi == null ||
+        !knowledgeArtifactRepoApi.getKnowledgeArtifactRepository(artifactRepositoryId)
+            .isSuccess()) {
+      throw new IllegalStateException(
+          "Unable to construct an Asset repository on an inconsistent Artifact repository");
     }
   }
 
@@ -712,11 +721,11 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   private Answer<Void> removeArtifact(KnowledgeArtifact artifact, boolean hardDelete) {
     ResourceIdentifier id = artifact.getArtifactId();
     Answer<Void> ans = knowledgeArtifactApi.deleteKnowledgeArtifactVersion(
-        repositoryId,
+        artifactRepositoryId,
         id.getUuid(), id.getVersionTag(),
         hardDelete);
-    if (knowledgeArtifactSeriesApi.isKnowledgeArtifactSeries(repositoryId,id.getUuid(),hardDelete).isSuccess()) {
-      knowledgeArtifactSeriesApi.deleteKnowledgeArtifact(repositoryId, id.getUuid(), hardDelete);
+    if (knowledgeArtifactSeriesApi.isKnowledgeArtifactSeries(artifactRepositoryId,id.getUuid(),hardDelete).isSuccess()) {
+      knowledgeArtifactSeriesApi.deleteKnowledgeArtifact(artifactRepositoryId, id.getUuid(), hardDelete);
     }
     return ans;
   }
@@ -1959,7 +1968,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     if (surrogateBinary.isSuccess()) {
       this.knowledgeArtifactApi.setKnowledgeArtifactVersion(
-          repositoryId,
+          artifactRepositoryId,
           surrogateId.getUuid(),
           surrogateId.getVersionTag(),
           surrogateBinary.flatOpt(AbstractCarrier::asBinary).get());
@@ -1985,7 +1994,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       byte[] exemplar) {
 
     this.knowledgeArtifactApi.setKnowledgeArtifactVersion(
-        repositoryId,
+        artifactRepositoryId,
         artifactId.getUuid(), artifactId.getVersionTag(),
         exemplar);
 
@@ -2282,7 +2291,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   private Answer<byte[]> retrieveBinaryArtifactFromRepository(ResourceIdentifier artifactId) {
     try {
       return knowledgeArtifactApi.getKnowledgeArtifactVersion(
-          repositoryId, artifactId.getUuid(), artifactId.getVersionTag());
+          artifactRepositoryId, artifactId.getUuid(), artifactId.getVersionTag());
     } catch (ResourceNotFoundException rnfe) {
       return Answer.notFound();
     }
