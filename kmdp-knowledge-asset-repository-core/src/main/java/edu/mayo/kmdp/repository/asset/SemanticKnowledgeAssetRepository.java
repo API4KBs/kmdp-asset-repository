@@ -224,7 +224,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   private CompositeHelper compositeHelper;
 
-  @Autowired
+  @Autowired(required = false)
   private KnowledgeAssetRepositoryServerProperties cfg;
 
   /**
@@ -286,6 +286,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       allowClearAll = cfg.getTyped(CLEARABLE);
     }
 
+    if (this.cfg == null) {
+      this.cfg = cfg;
+    }
   }
 
   @PostConstruct
