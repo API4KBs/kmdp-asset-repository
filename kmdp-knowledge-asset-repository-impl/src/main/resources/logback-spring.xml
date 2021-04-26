@@ -166,4 +166,6 @@
 
   <logger name="ca.uhn.fhir.parser.LenientErrorHandler" level="error"/>
 
+  <logger name="com.zaxxer.hikari.pool" level="warn"/>
+
 </configuration>

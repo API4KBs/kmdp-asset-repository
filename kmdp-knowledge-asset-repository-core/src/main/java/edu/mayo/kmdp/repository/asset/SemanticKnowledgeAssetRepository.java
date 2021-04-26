@@ -301,7 +301,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     } else {
       logger.info("This repository does not support DELETE operations");
     }
-    if (artifactRepositoryId == null) {
+    if (artifactRepositoryId == null || cfg.containsKey(DEFAULT_REPOSITORY_ID.getName())) {
       artifactRepositoryId = cfg.getProperty(DEFAULT_REPOSITORY_ID.getName());
     }
     if (knowledgeArtifactRepoApi == null ||

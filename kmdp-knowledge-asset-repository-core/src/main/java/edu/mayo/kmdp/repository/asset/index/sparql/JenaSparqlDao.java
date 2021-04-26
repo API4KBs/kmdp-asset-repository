@@ -74,6 +74,10 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   @Autowired
   private DataSource dataSource;
 
+  SDBConnection conn;
+  DatabaseType type;
+  StoreDesc storeDesc;
+
   private Model model;
 
   private KnowledgeBase kBase;
@@ -124,8 +128,6 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
   public void init() {
     this.registerNewDatabaseTypes(DatabaseType::registerName);
 
-    DatabaseType type;
-
     if (StringUtils.isNotBlank(this.databaseType)) {
       type = DatabaseType.fetch(this.databaseType);
     } else {
@@ -137,14 +139,18 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
       }
     }
 
-    StoreDesc storeDesc = new StoreDesc(LayoutType.LayoutTripleNodesHash, type);
+    storeDesc = new StoreDesc(LayoutType.LayoutTripleNodesHash, type);
 
-    SDBConnection conn;
     try {
-      conn = new SDBConnection(this.dataSource);
-    } catch (SQLException e) {
-      throw new BeanInitializationException("Error conneting to DataSource", e);
+      openConnection();
+    } catch (SQLException sqle) {
+      logger.error(sqle.getMessage(),sqle);
+      throw new BeanInitializationException(sqle.getMessage());
     }
+  }
+
+  private void openConnection() throws SQLException {
+    conn = new SDBConnection(this.dataSource);
 
     this.store = SDBFactory.connectStore(conn, storeDesc);
 
@@ -160,6 +166,20 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
     this.model = SDBFactory.connectDefaultModel(store);
   }
 
+  private void checkConnection() {
+    if (dataSource == null) {
+      return;
+    }
+    try {
+      if (! this.conn.hasSQLConnection() || this.conn.getSqlConnection().isClosed()) {
+        logger.warn("Jena Store Connection CLOSED - Reopen Attempt");
+        openConnection();
+      }
+    } catch (SQLException sqle) {
+      logger.error(sqle.getMessage(), sqle);
+    }
+  }
+
   /**
    * Subclasses can register database types that aren't included here in the Jetan {@link
    * DatabaseType} enum.
@@ -172,6 +192,7 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
 
   @PreDestroy
   public void shutdown() {
+    this.conn.close();
     this.model.close();
     this.store.close();
   }
@@ -184,6 +205,7 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
    * @param object    O
    */
   public void store(URI subject, URI predicate, URI object) {
+    checkConnection();
     Statement s = ResourceFactory.createStatement(
         createResource(subject.toString()),
         ResourceFactory.createProperty(predicate.toString()),
@@ -203,6 +225,7 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
    * @param statements the triples to store
    */
   public void store(List<Statement> statements) {
+    checkConnection();
     this.model.notifyEvent(GraphEvents.startRead);
     try {
       this.model.add(statements);
@@ -220,6 +243,7 @@ public class JenaSparqlDao implements KnowledgeBaseApiInternal._getKnowledgeBase
    */
   public void runSparql(ParameterizedSparqlString pss, Map<String, URI> params,
       Map<String, Literal> literalParams, Consumer<QuerySolution> consumer) {
+    checkConnection();
     params.forEach((key, value) -> pss.setIri(key, value.toString()));
     literalParams.forEach(pss::setLiteral);
 
