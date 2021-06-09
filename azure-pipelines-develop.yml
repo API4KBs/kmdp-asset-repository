@@ -228,16 +228,15 @@ steps:
     overwriteExistingFiles: false
     destinationFolder: 'veracode'
 
-- script: |
-      echo Project War Version $(PROJECT_SLM_VERSION)
-      chmod 777 "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$PROJECT_SLM_VERSION.war"
-
-      java -Dpipeline.debug=true -jar veracode/pipeline-scan.jar --veracode_api_id "$VERACODE_API_ID" --veracode_api_key "$VERACODE_API_KEY" --file "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$PROJECT_SLM_VERSION.war" --fail_on_severity="Very High, High" --fail_on_cwe="80"
-  env:
-    VERACODE_API_ID: $(veracodeApiId)
-    VERACODE_API_KEY: $(veracodeApiToken)
-    PROJECT_SLM_VERSION: $(projectSlmVersionFinal)
-  displayName: 'Run Veracode Pipeline Scan'
+# - script: |
+#       echo Project War Version $(PROJECT_SLM_VERSION)
+#       chmod 777 "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$PROJECT_SLM_VERSION.war"
+#       java -Dpipeline.debug=true -jar veracode/pipeline-scan.jar --veracode_api_id "$VERACODE_API_ID" --veracode_api_key "$VERACODE_API_KEY" --file "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$PROJECT_SLM_VERSION.war" --fail_on_severity="Very High, High" --fail_on_cwe="80" --json_output="true" --project_name="kmdp-knowledge-asset-repository-impl"
+#   env:
+#     VERACODE_API_ID: $(veracodeApiId)
+#     VERACODE_API_KEY: $(veracodeApiToken)
+#     PROJECT_SLM_VERSION: $(projectSlmVersionFinal)
+#   displayName: 'Run Veracode Pipeline Scan'
     
 # Export Variables
 - task: ImportExportVariables@1
