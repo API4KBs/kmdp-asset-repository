@@ -229,9 +229,9 @@ steps:
     script: |
       echo Run Veracode Pipeline Scan
 
-      chmod 777 veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$env:PROJECT_SLM_VERSION.war
+      chmod 777 "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$env:PROJECT_SLM_VERSION.war"
 
-      java -Dpipeline.debug=true -jar veracode/pipeline-scan.jar --veracode_api_id $env:VERACODE_API_ID --veracode_api_key $env:VERACODE_API_TOKEN --file veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$env:PROJECT_SLM_VERSION.war
+      java -Dpipeline.debug=true -jar veracode/pipeline-scan.jar --veracode_api_id "$env:VERACODE_API_ID" --veracode_api_key "$env:VERACODE_API_TOKEN" --file "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$env:PROJECT_SLM_VERSION.war"
     failOnStderr: true
   env:
     SYSTEM_ACCESSTOKEN: $(system.accesstoken)
