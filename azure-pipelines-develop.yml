@@ -230,9 +230,9 @@ steps:
 
 - script: |
       echo Project War Version $(PROJECT_SLM_VERSION)
-      chmod 777 "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$(PROJECT_SLM_VERSION).war"
+      chmod 777 "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$PROJECT_SLM_VERSION.war"
 
-      java -Dpipeline.debug=true -jar veracode/pipeline-scan.jar --veracode_api_id "$(VERACODE_API_ID)" --veracode_api_key "$(VERACODE_API_KEY)" --file "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$(PROJECT_SLM_VERSION).war" --fail_on_severity="Very High, High" --fail_on_cwe="80"
+      java -Dpipeline.debug=true -jar veracode/pipeline-scan.jar --veracode_api_id "$VERACODE_API_ID" --veracode_api_key "$VERACODE_API_KEY" --file "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$PROJECT_SLM_VERSION.war" --fail_on_severity="Very High, High" --fail_on_cwe="80"
   env:
     VERACODE_API_ID: $(veracodeApiId)
     VERACODE_API_KEY: $(veracodeApiToken)
