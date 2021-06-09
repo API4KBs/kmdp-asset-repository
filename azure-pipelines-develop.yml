@@ -43,22 +43,6 @@ steps:
     echo Project :: kmdp-knowledge-asset-repository-service
   displayName: 'Starting Pipeline Steps'
 
-- task: PowerShell@2
-  displayName: 'Run Veracode Pipeline Scan'
-  inputs:
-    targetType: 'inline'
-    script: |
-      Write-Host Run Veracode Pipeline Scan
-
-      Write-Host "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$env:PROJECT_SLM_VERSION"
-      Write-Host "$env:VERACODE_API_ID"
-    failOnStderr: true
-  env:
-    SYSTEM_ACCESSTOKEN: $(system.accesstoken)
-    PROJECT_SLM_VERSION: $(projectSlmVersionFinal)
-    VERACODE_API_ID: $(veracodeApiId)
-    VERACODE_API_TOKEN: $(veracodeApiToken)
-
 # Reads Root pom.xml File
 # Gets/Sets GAV from POM to Pipeline Variables
 - task: PowerShell@2
@@ -238,18 +222,18 @@ steps:
     overwriteExistingFiles: false
     destinationFolder: 'veracode'
 
-# Run Veracode Pipeline Scan
-- task: CmdLine@2
+- task: PowerShell@2
   displayName: 'Run Veracode Pipeline Scan'
   inputs:
+    targetType: 'inline'
     script: |
-      echo Run Veracode Pipeline Scan
+      Write-Host Run Veracode Pipeline Scan
 
-      echo "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$(projectSlmVersionFinal).war"
+      Write-Host "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$env:PROJECT_SLM_VERSION"
 
-      chmod 777 "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$(projectSlmVersionFinal).war"
+      icacls "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$env:PROJECT_SLM_VERSION.war" /grant Everyone:F
 
-      java -Dpipeline.debug=true -jar veracode/pipeline-scan.jar --veracode_api_id "$(veracodeApiId)"" --veracode_api_key "$(veracodeApiToken)"" --file "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$(projectSlmVersionFinal).war"
+      java -Dpipeline.debug=true -jar veracode/pipeline-scan.jar --veracode_api_id "$env:VERACODE_API_ID" --veracode_api_key "$env:VERACODE_API_TOKEN" --file "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$env:PROJECT_SLM_VERSION.war"
     failOnStderr: true
   env:
     SYSTEM_ACCESSTOKEN: $(system.accesstoken)
