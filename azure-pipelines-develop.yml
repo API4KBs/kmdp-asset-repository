@@ -44,7 +44,7 @@ steps:
   displayName: 'Starting Pipeline Steps'
 
 - script: |
-      echo VERACODE_API_ID $(VERACODE_API_ID)
+      echo VERACODE_API_ID $VERACODE_API_ID
   env:
     VERACODE_API_ID: $(veracodeApiId)
   displayName: 'Test debug api key for veracode'
