@@ -33,6 +33,7 @@ pool:
 # Gets Variables from Azure DevOps Library
 variables: 
   - group: kmdp-platform-variables
+  - group: kmd-veracode
 
 # ------------------ PIPELINE STEPS  ------------------
 steps:
@@ -186,6 +187,58 @@ steps:
         **/*.war
       TargetFolder: '$(build.artifactstagingdirectory)'
 
+# Make directory for veracode scan
+- task: PowerShell@2
+  displayName: 'Make directory for veracode scan'
+  inputs:
+    targetType: 'inline'
+    script: |
+        mkdir veracode
+
+# Veracode Files to scan
+- task: CopyFiles@2
+  displayName: 'Copy Files to veracode folder'
+  inputs:
+      SourceFolder: '$(system.defaultworkingdirectory)'
+      Contents: |
+        **/*.war
+      TargetFolder: 'veracode'
+
+# Download Veracode Pipeline Scanner
+- task: CmdLine@2
+  displayName: 'Download latest Veracode pipeline scanner'
+  inputs:
+    script: |
+      echo Download Pipeline Scanner
+      
+      curl -O -L https://downloads.veracode.com/securityscan/pipeline-scan-LATEST.zip
+
+# Unzip Veracode Pipeline Scanner
+- task: ExtractFiles@1
+  displayName: 'Unzip Veracode Pipeline Scan'
+  inputs:
+    archiveFilePatterns: 'pipeline-scan-LATEST.zip'
+    cleanDestinationFolder: false
+    overwriteExistingFiles: false
+    destinationFolder: 'veracode'
+
+# Run Veracode Pipeline Scan
+- task: CmdLine@2
+  displayName: 'Run Veracode Pipeline Scan'
+  inputs:
+    script: |
+      echo Run Veracode Pipeline Scan
+
+      chmod 777 veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$env:PROJECT_SLM_VERSION.war
+
+      java -Dpipeline.debug=true -jar veracode/pipeline-scan.jar --veracode_api_id $env:VERACODE_API_ID --veracode_api_key $env:VERACODE_API_TOKEN --file veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$env:PROJECT_SLM_VERSION.war
+    failOnStderr: true
+  env:
+    SYSTEM_ACCESSTOKEN: $(system.accesstoken)
+    PROJECT_SLM_VERSION: $(projectSlmVersionFinal)
+    VERACODE_API_ID: $(veracodeApiId)
+    VERACODE_API_TOKEN: $(veracodeApiToken)
+    
 # Export Variables
 - task: ImportExportVariables@1
   displayName: 'Export Build Variables'
@@ -198,6 +251,14 @@ steps:
   inputs:
     PathtoPublish: '$(build.artifactstagingdirectory)'
     ArtifactName: deploy
+  condition: succeededOrFailed()
+
+# Publish to Azure Pipelines
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: veracode'
+  inputs:
+    PathtoPublish: 'veracode'
+    ArtifactName: veracode
   condition: succeededOrFailed()
 
 # ------------------ END PIPELINE  ------------------
