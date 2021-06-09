@@ -43,14 +43,15 @@ steps:
     echo Project :: kmdp-knowledge-asset-repository-service
   displayName: 'Starting Pipeline Steps'
 
-- task: CmdLine@2
+- task: PowerShell@2
   displayName: 'Run Veracode Pipeline Scan'
   inputs:
+    targetType: 'inline'
     script: |
-      echo Run Veracode Pipeline Scan
+      Write-Host Run Veracode Pipeline Scan
 
-      echo "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$(PROJECT_SLM_VERSION)"
-      echo "$(VERACODE_API_ID)"
+      Write-Host "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$env:PROJECT_SLM_VERSION"
+      Write-Host "$env:VERACODE_API_ID"
     failOnStderr: true
   env:
     SYSTEM_ACCESSTOKEN: $(system.accesstoken)
