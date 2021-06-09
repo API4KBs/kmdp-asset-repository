@@ -43,6 +43,21 @@ steps:
     echo Project :: kmdp-knowledge-asset-repository-service
   displayName: 'Starting Pipeline Steps'
 
+- task: CmdLine@2
+  displayName: 'Run Veracode Pipeline Scan'
+  inputs:
+    script: |
+      echo Run Veracode Pipeline Scan
+
+      echo "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$(projectSlmVersionFinal).war"
+      echo "$(veracodeApiId)"
+    failOnStderr: true
+  env:
+    SYSTEM_ACCESSTOKEN: $(system.accesstoken)
+    PROJECT_SLM_VERSION: $(projectSlmVersionFinal)
+    VERACODE_API_ID: $(veracodeApiId)
+    VERACODE_API_TOKEN: $(veracodeApiToken)
+
 # Reads Root pom.xml File
 # Gets/Sets GAV from POM to Pipeline Variables
 - task: PowerShell@2
@@ -228,6 +243,8 @@ steps:
   inputs:
     script: |
       echo Run Veracode Pipeline Scan
+
+      echo "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$(projectSlmVersionFinal).war"
 
       chmod 777 "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$(projectSlmVersionFinal).war"
 
