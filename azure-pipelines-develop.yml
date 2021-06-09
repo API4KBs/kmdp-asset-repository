@@ -49,8 +49,8 @@ steps:
     script: |
       echo Run Veracode Pipeline Scan
 
-      echo "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$(projectSlmVersionFinal).war"
-      echo "$(veracodeApiId)"
+      echo "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$(PROJECT_SLM_VERSION)"
+      echo "$(VERACODE_API_ID)"
     failOnStderr: true
   env:
     SYSTEM_ACCESSTOKEN: $(system.accesstoken)
