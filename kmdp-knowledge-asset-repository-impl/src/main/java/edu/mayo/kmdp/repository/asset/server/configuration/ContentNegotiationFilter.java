@@ -48,7 +48,7 @@ public class ContentNegotiationFilter implements Filter {
     String xAccept = req.getHeader("X-Accept");
 
     mutableRequest.addXAccept(
-        Util.isEmpty(xAccept) ? ModelMIMECoder.recodeAll(accept, ModelMIMECoder.WEIGHT_UNSPECIFIED) : xAccept);
+        Util.isEmpty(xAccept) ? ModelMIMECoder.recodeAll(accept, ModelMIMECoder.WEIGHT_DEFAULT) : xAccept);
 
     chain.doFilter(mutableRequest, response);
   }

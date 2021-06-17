@@ -39,7 +39,8 @@ public class ContentNegotiationHelper {
         decodePreferences(xAccept, defaultSurrogateRepresentation).stream()
             .filter(wrep ->
                 HTML.sameAs(wrep.getRep().getLanguage()) ||
-                    (defaultSurrogateRepresentation.getLanguage().sameAs(wrep.getRep().getLanguage())))
+                    (defaultSurrogateRepresentation.getLanguage()
+                        .sameAs(wrep.getRep().getLanguage())))
             .collect(Collectors.toList());
 
     if (acceptable.isEmpty()) {
@@ -54,23 +55,21 @@ public class ContentNegotiationHelper {
     if (redirectUri.isPresent()) {
       return Answer.referTo(redirectUri.get(), false);
     } else if (HTML.sameAs(acceptable.get(0).getRep().getLanguage())) {
-      return Answer.referTo(hrefBuilder.getRelativeURL("/surrogate"),false);
+      return Answer.referTo(hrefBuilder.getRelativeURL("/surrogate"), false);
     } else {
       return Answer.of(surrogate);
     }
   }
 
   /**
-   * Selects the best Artifact (surrogate), given an ordered list of
-   * preferred representations. If no suitable candidate is found, will return
-   * one of the candidates, non-deterministically
-   *
-   * @see ContentNegotiationHelper#negotiateOrDefault(List, List, Float)
+   * Selects the best Artifact (surrogate), given an ordered list of preferred representations. If
+   * no suitable candidate is found, will return one of the candidates, non-deterministically
    *
    * @param artifacts The candidate artifact surrogates
-   * @param reps The user-provided, weighted preferences
+   * @param reps      The user-provided, weighted preferences
    * @return The first artifact that matches a representation that is first in order of preference,
    * or an artifact chosen non-deterministically
+   * @see ContentNegotiationHelper#negotiateOrDefault(List, List, Float)
    */
   public Answer<KnowledgeArtifact> negotiateOrDefault(
       List<KnowledgeArtifact> artifacts,
@@ -100,6 +99,10 @@ public class ContentNegotiationHelper {
       List<WeightedRepresentation> reps,
       Float acceptAnyCarrierThreshold) {
 
+    if (reps.stream().allMatch(wr -> wr.getRep().getLanguage() == null)) {
+      return anyCarrier(artifacts);
+    }
+
     Answer<KnowledgeArtifact> chosen = Answer.of(reps.stream()
         .map(rep -> getBestCandidateForRepresentation(artifacts, rep))
         .flatMap(StreamUtil::trimStream)
@@ -112,7 +115,7 @@ public class ContentNegotiationHelper {
 
   private Float getDefaultTolerance(List<WeightedRepresentation> reps) {
     // HTML is treated with special regards, and always honored
-    if (reps.isEmpty() || ! HTML.sameAs(reps.get(0).getRep().getLanguage())) {
+    if (reps.isEmpty() || !HTML.sameAs(reps.get(0).getRep().getLanguage())) {
       return WEIGHT_UNSPECIFIED;
     } else {
       return 0.0f;
@@ -127,6 +130,7 @@ public class ContentNegotiationHelper {
 
   /**
    * Returns any carrier, non-deterministically
+   *
    * @param artifacts The list of candidates
    * @return One of the carriers
    */
@@ -137,14 +141,12 @@ public class ContentNegotiationHelper {
   }
 
   /**
-   * Selects the best Artifact (surrogate), given an ordered list of
-   * preferred representations
-   *
-   * @see ContentNegotiationHelper#getBestCandidateForRepresentation(List, WeightedRepresentation)
+   * Selects the best Artifact (surrogate), given an ordered list of preferred representations
    *
    * @param artifacts The candidate artifact surrogates
-   * @param reps The preferred representations, in order of preference
+   * @param reps      The preferred representations, in order of preference
    * @return The first artifact that matches a representation that is first in order of preference
+   * @see ContentNegotiationHelper#getBestCandidateForRepresentation(List, WeightedRepresentation)
    */
   public Answer<KnowledgeArtifact> negotiate(
       List<KnowledgeArtifact> artifacts,
@@ -156,12 +158,12 @@ public class ContentNegotiationHelper {
   }
 
   /**
-   * Selects the best Artifact (surrogate), that matches a specified representation
-   * A match is found when the artifact representation is the same, or more specific, than
-   * the desired representation
+   * Selects the best Artifact (surrogate), that matches a specified representation A match is found
+   * when the artifact representation is the same, or more specific, than the desired
+   * representation
    *
    * @param artifacts The candidate artifact surrogates
-   * @param rep The preferred representation
+   * @param rep       The preferred representation
    * @return The first artifact that matches the given representation
    */
   public Optional<KnowledgeArtifact> getBestCandidateForRepresentation(
@@ -177,9 +179,9 @@ public class ContentNegotiationHelper {
   /**
    * Decodes a formal MIME type that encodes a client's representation preferences
    *
-   * @param xAccept the formal MIME code
-   * @param fallbackRepresentation a representation that is returned in case no representations
-   *                               can be extracted from the MIME code
+   * @param xAccept                the formal MIME code
+   * @param fallbackRepresentation a representation that is returned in case no representations can
+   *                               be extracted from the MIME code
    * @return a list of SyntacticRepresentations, ordered by weight
    */
   public static List<WeightedRepresentation> decodePreferences(String xAccept,
@@ -197,24 +199,23 @@ public class ContentNegotiationHelper {
   /**
    * Decodes a formal MIME type that encodes a client's representation preferences
    *
-   * @see ContentNegotiationHelper#decodePreferences(String,SyntacticRepresentation)
    * @param xAccept the formal MIME code
    * @return a list of SyntacticRepresentations, ordered by weight
+   * @see ContentNegotiationHelper#decodePreferences(String, SyntacticRepresentation)
    */
   public static List<WeightedRepresentation> decodePreferences(String xAccept) {
-    return decodePreferences(xAccept,null);
+    return decodePreferences(xAccept, null);
   }
 
   /**
    * Checks whether a Computable Knowledge Artifact matches at least one of the preferences
-   * indicated in the
-   * Returns trivially 'true' if the preference list is empty
+   * indicated in the Returns trivially 'true' if the preference list is empty
    *
-   * @param descriptor The metadata descriptor of a Knowledge Artifact/Surrogate,
-   *                   which is expected to contain representation information
-   * @param xAccept A coded list of preferences
-   * @return true if the Artifact's representation is narrower or equal than
-   * at least one of the preferences
+   * @param descriptor The metadata descriptor of a Knowledge Artifact/Surrogate, which is expected
+   *                   to contain representation information
+   * @param xAccept    A coded list of preferences
+   * @return true if the Artifact's representation is narrower or equal than at least one of the
+   * preferences
    */
   public boolean isAcceptable(KnowledgeArtifact descriptor, String xAccept) {
     if (!Util.isEmpty(xAccept)) {
@@ -228,12 +229,14 @@ public class ContentNegotiationHelper {
   }
 
   /**
-   * Given a set of ranked, sorted preferences, returns the first format
-   * i.e. the format of the first preference that specifies a format
+   * Given a set of ranked, sorted preferences, returns the first format i.e. the format of the
+   * first preference that specifies a format
+   *
    * @param preferences
    * @return
    */
-  public Optional<SerializationFormat> getPreferredFormat(List<WeightedRepresentation> preferences) {
+  public Optional<SerializationFormat> getPreferredFormat(
+      List<WeightedRepresentation> preferences) {
     return preferences.stream()
         .map(WeightedRepresentation::getRep)
         .map(SyntacticRepresentation::getFormat)
@@ -241,8 +244,9 @@ public class ContentNegotiationHelper {
   }
 
   /**
-   * Decodes a formal MIME type and returns the Format component
-   * Uses a default value in case the decoding fails
+   * Decodes a formal MIME type and returns the Format component Uses a default value in case the
+   * decoding fails
+   *
    * @param xAccept
    * @param defaultFormat
    * @return
