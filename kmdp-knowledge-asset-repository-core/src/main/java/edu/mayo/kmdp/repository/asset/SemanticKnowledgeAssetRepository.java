@@ -330,7 +330,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   @PreDestroy
   private void shutdown() {
-    logger.info("Ensuring that Knowledge Graph is persisted");
+    logger.info("Ensuring that Knowledge Graph is persisted before shutdown");
     kGraphHolder.persistGraph();
   }
 
@@ -396,6 +396,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<Void> clearKnowledgeAssetCatalog() {
     if (!isDeleteAllowed()) {
+      logger.error("Attempted CLEAR ALL Assets, but ");
       return Answer.of(Forbidden);
     } else {
       logger.warn("CLEAR ALL Knowledge Assets");
@@ -503,6 +504,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<UUID> initKnowledgeAsset() {
     ResourceIdentifier newId = randomAssetId(identityMapper.getAssetNamespace());
+    logger.info("Initializing new Asset {}", newId);
 
     KnowledgeAsset surrogate = new KnowledgeAsset()
         .withAssetId(newId);
@@ -690,6 +692,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       // FUTURE: consider an interceptor
       return Answer.of(Forbidden);
     }
+    logger.info("SETTING Surrogate for Asset {}:{}", assetId, versionTag);
     String semVerTag = toSemVer(versionTag);
 
     setIdAndVersionIfMissing(assetSurrogate, assetId, semVerTag);
@@ -740,6 +743,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .map(KnowledgeAsset::getLifecycle)
         .map(Publication::getPublicationStatus)
         .orElse(Draft);
+
     switch (asEnum(status)) {
       case Archived:
         return asset.flatMap(ax -> removeAssetVersion(ax, !isDeleteAllowed()));
@@ -754,18 +758,21 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   private Answer<Void> removeAssetVersion(KnowledgeAsset asset, boolean hardDelete) {
+    logger.info("DELETE Carriers for {}:{}", asset.getAssetId().getUuid(), asset.getAssetId().getVersionTag());
     Answer<Void> artfs = asset.getCarriers().stream()
         .map(carrier -> removeArtifact(carrier, hardDelete))
         .reduce(Answer::merge)
         // succeed automatically if no artifact to delete
         .orElseGet(Answer::succeed);
 
+    logger.info("DELETE Surrogates for {}:{}", asset.getAssetId().getUuid(), asset.getAssetId().getVersionTag());
     Answer<Void> surrs = asset.getSurrogate().stream()
         .map(surrogate -> removeArtifact(surrogate, hardDelete))
         .reduce(Answer::merge)
         // it should be impossible for no surrogate to exist
         .orElseGet(Answer::failed);
 
+    logger.info("UN-INDEX Asset {}:{}", asset.getAssetId().getUuid(), asset.getAssetId().getVersionTag());
     index.unregisterAssetVersion(asset.getAssetId());
     return Answer.merge(artfs, surrs);
   }
@@ -1327,9 +1334,11 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       // FUTURE: consider an interceptor
       return Answer.failed(Forbidden);
     }
+
     if (assetSurrogateCarrier instanceof CompositeKnowledgeCarrier) {
       CompositeKnowledgeCarrier ckc = ((CompositeKnowledgeCarrier) assetSurrogateCarrier);
 
+      logger.info("Found Composite Asset {}:{}, recurse on components", assetId, versionTag);
       Answer<Void> ans = ckc.getComponent().stream()
           .map(comp -> addCanonicalKnowledgeAssetSurrogate(
               comp.getAssetId().getUuid(), comp.getAssetId().getVersionTag(), comp))
@@ -1340,6 +1349,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       // exclude anonymous composites, where the 'root' Surrogate is already one of the components
       if (ckc.getStructType() != null && ckc.getStructType() != NONE
           && ckc.tryMainComponentAs(KnowledgeAsset.class).isEmpty()) {
+        logger.info("Add Composite for Asset {}:{}", assetId, versionTag);
         Answer<Void> compositeAns =
             compositeStructIntrospector.applyNamedIntrospectDirect(
                 CompositeAssetMetadataIntrospector.id, ckc, null)
@@ -1351,6 +1361,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
       return ans;
     } else {
+      logger.info("Add Asset {}:{}", assetId, versionTag);
       return liftCanonicalSurrogate(assetSurrogateCarrier)
           .flatMap(ax -> setKnowledgeAssetVersion(
               ax.getAssetId().getUuid(), ax.getAssetId().getVersionTag(), ax));
@@ -1679,6 +1690,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       // FUTURE: consider an interceptor
       return Answer.failed(Forbidden);
     }
+    logger.info("Add Carrier Artifact for Asset {}:{}", assetId, versionTag);
     Answer<KnowledgeAsset> currentSurrogate = getKnowledgeAsset(assetId, versionTag);
     if (!currentSurrogate.isSuccess()) {
       return failed(currentSurrogate);
@@ -1702,6 +1714,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       }
     }
 
+    logger.info("Update Surrogate to reference new Carrier {}:{}", assetId, versionTag);
     // add the Carrier
     surr.withCarriers(
         new KnowledgeArtifact()
@@ -2123,16 +2136,17 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       ResourceIdentifier assetId,
       ResourceIdentifier surrogateId,
       KnowledgeAsset assetSurrogate) {
-
     Answer<KnowledgeCarrier> surrogateBinary = encodeCanonicalSurrogate(assetSurrogate);
 
     if (surrogateBinary.isSuccess()) {
+      logger.info("PERSIST Surrogate for Asset {}:{}", assetId.getUuid(), assetId.getVersionTag());
       this.knowledgeArtifactApi.setKnowledgeArtifactVersion(
           artifactRepositoryId,
           surrogateId.getUuid(),
           surrogateId.getVersionTag(),
           surrogateBinary.flatOpt(AbstractCarrier::asBinary).get());
 
+      logger.info("INDEX Asset {}:{}", assetId.getUuid(), assetId.getVersionTag());
       Index.registerAssetByCanonicalSurrogate(
           assetSurrogate,
           surrogateId,
