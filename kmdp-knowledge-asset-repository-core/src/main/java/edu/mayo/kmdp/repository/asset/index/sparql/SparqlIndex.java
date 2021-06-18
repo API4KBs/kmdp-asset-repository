@@ -1,7 +1,7 @@
 package edu.mayo.kmdp.repository.asset.index.sparql;
 
 import static edu.mayo.kmdp.util.JenaUtil.objA;
-import static org.apache.jena.rdf.model.ResourceFactory.createResource;
+import static java.util.Collections.singletonList;
 import static org.apache.jena.rdf.model.ResourceFactory.createStatement;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newVersionId;
@@ -22,7 +22,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,13 +29,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.annotation.PostConstruct;
 import org.apache.jena.query.ParameterizedSparqlString;
 import org.apache.jena.rdf.model.Literal;
-import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
-import org.apache.jena.rdf.model.SimpleSelector;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
@@ -44,7 +40,6 @@ import org.omg.spec.api4kp._20200801.id.ConceptIdentifier;
 import org.omg.spec.api4kp._20200801.id.Pointer;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
-import org.omg.spec.api4kp._20200801.services.KnowledgeBase;
 import org.omg.spec.api4kp._20200801.surrogate.Annotation;
 import org.omg.spec.api4kp._20200801.surrogate.Dependency;
 import org.omg.spec.api4kp._20200801.surrogate.Derivative;
@@ -121,24 +116,16 @@ public class SparqlIndex implements Index {
   public static final URI FORMAT_URI = URI.create(DC + FORMAT);
 
   @Autowired
-  protected JenaSparqlDao jenaSparqlDao;
+  protected JenaSparqlDAO jenaSparqlDao;
 
-  public SparqlIndex(JenaSparqlDao jenaSparqlDao) {
+  public SparqlIndex(JenaSparqlDAO jenaSparqlDao) {
     this.jenaSparqlDao = jenaSparqlDao;
-    ensureIndexInitialized();
   }
 
   @Override
   public void reset() {
     this.jenaSparqlDao.reinitialize();
-    ensureIndexInitialized();
   }
-
-  @PostConstruct
-  protected void ensureIndexInitialized() {
-    this.jenaSparqlDao.store(getKnowledgeBaseTriples());
-  }
-
 
   /**
    * Deconstruct an Asset into RDF statements.
@@ -380,16 +367,7 @@ public class SparqlIndex implements Index {
   @Override
   public void unregisterAsset(ResourceIdentifier asset) {
     String assetId = asset.getResourceId().toString();
-    List<Statement> stats = new LinkedList<>();
-    jenaSparqlDao.getModel().listStatements(
-        new SimpleSelector() {
-          @Override
-          public boolean test(Statement s) {
-            return s.getSubject().getURI().equals(assetId);
-          }
-        }).forEachRemaining(stats::add);
-
-    jenaSparqlDao.getModel().remove(stats);
+    jenaSparqlDao.removeBySubject(assetId);
   }
 
   @Override
@@ -414,20 +392,11 @@ public class SparqlIndex implements Index {
               ids.add(carrV.getVersionId().toString()));
     });
 
-    List<Statement> stats = new LinkedList<>();
-    surrs.forEach(surr -> jenaSparqlDao.getModel().listStatements(
-        new SimpleSelector() {
-          @Override
-          public boolean test(Statement s) {
-            return ids.stream().anyMatch(id -> s.getSubject().getURI().equals(id));
-          }
-        }).forEachRemaining(stats::add));
-
-    jenaSparqlDao.getModel().remove(stats);
-    jenaSparqlDao.getModel().remove(objA(
+    jenaSparqlDao.removeBySubjects(ids);
+    jenaSparqlDao.remove(singletonList(objA(
         asset.getResourceId().toString(),
         HAS_VERSION_URI.toString(),
-        asset.getVersionId().toString()));
+        asset.getVersionId().toString())));
   }
 
   @Override
@@ -725,26 +694,6 @@ public class SparqlIndex implements Index {
     return versions;
   }
 
-  /**
-   * Returns the ID of the KnowledgeGraph underlying this index
-   *
-   * @return a Pointer Identifier of the Graph Knowledge Asset
-   */
-  @Override
-  public Pointer getKnowledgeBaseId() {
-    return jenaSparqlDao.getKnowledgeBase().getKbaseId();
-  }
-
-  /**
-   * Returns the KnowledgeGraph underlying this index
-   *
-   * @return the Graph, as a API4KP KnowledgeBase
-   */
-  @Override
-  public KnowledgeBase asKnowledgeBase() {
-    return jenaSparqlDao.getKnowledgeBase();
-  }
-
 
   protected ResourceIdentifier resourceToResourceIdentifier(Resource resource) {
     return newVersionId(URI.create(resource.getURI()));
@@ -774,45 +723,6 @@ public class SparqlIndex implements Index {
     }
     return rid;
   }
-
-  /**
-   * List of T-box Statements adding semantics to the index graph, supporting query/inference
-   *
-   * @return the knowledge T-box triples
-   */
-  private List<Statement> getKnowledgeBaseTriples() {
-    List<Statement> statements = new ArrayList<>();
-    addKnowledgeAssetTriples(KnowledgeAssetTypeSeries.values(), statements);
-    addKnowledgeAssetTriples(ClinicalKnowledgeAssetTypeSeries.values(), statements);
-    addRelationshipTriples(DependencyTypeSeries.values(), statements);
-    return statements;
-  }
-
-  private void addKnowledgeAssetTriples(ConceptTerm[] values, List<Statement> statements) {
-    Arrays.stream(values)
-        .forEach(ax -> {
-          statements.add(createStatement(
-              createResource(ax.getReferentId().toString()),
-              RDFS.subClassOf,
-              createResource(ASSET_URI.toString())));
-          addHierarchy(ax, RDFS.subClassOf, statements);
-        });
-  }
-
-  private void addRelationshipTriples(ConceptTerm[] values, List<Statement> statements) {
-    Arrays.stream(values)
-        .forEach(ax ->
-            addHierarchy(ax, RDFS.subPropertyOf, statements));
-  }
-
-  private void addHierarchy(ConceptTerm ax, Property type, List<Statement> statements) {
-    Arrays.stream(ax.getAncestors()).forEach(parent ->
-        statements.add(
-            createStatement(createResource(ax.getReferentId().toString()),
-                type,
-                createResource(parent.getReferentId().toString()))));
-  }
-
 
   static class InternalQueryManager {
 

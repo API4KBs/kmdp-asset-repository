@@ -282,9 +282,14 @@ class AssetRemovalTest extends RepositoryTestBase {
 
     assertTrue(triples.isEmpty());
 
+    List<Pointer> assetPtr = semanticRepository.listKnowledgeAssets()
+        .orElseGet(Assertions::fail);
+    assertTrue(assetPtr.isEmpty());
+
     List<Pointer> ptrs = repos.listKnowledgeArtifacts(repoId)
         .orElseGet(Assertions::fail);
-    assertTrue(ptrs.isEmpty());
+    assertEquals(1, ptrs.size());
+    assertEquals(kgHolder.getKnowledgeGraphArtifactId().getUuid(), ptrs.get(0).getUuid());
   }
 
   private boolean isInstanceTriple(Statement s) {

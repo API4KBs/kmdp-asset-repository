@@ -259,19 +259,6 @@ public interface Index {
    */
   void reset();
 
-  /**
-   * Returns the KnowledgeGraph underlying this index
-   *
-   * @return
-   */
-  KnowledgeBase asKnowledgeBase();
-
-  /**
-   * Returns the ID of the KnowledgeGraph underlying this index
-   * @return
-   */
-  ResourceIdentifier getKnowledgeBaseId();
-
 
   Optional<ResourceIdentifier> resolve(UUID assetId, String versionTag);
 

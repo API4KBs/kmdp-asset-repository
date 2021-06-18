@@ -2,6 +2,9 @@ package edu.mayo.kmdp.repository.asset.index.sparql;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties;
+import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepository;
+import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepositoryService;
 import java.net.URI;
 import java.util.Set;
 import org.h2.jdbcx.JdbcDataSource;
@@ -12,15 +15,22 @@ import org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSe
 
 class SparqlIndexTest {
 
-  private JenaSparqlDao dao;
+  private JenaSparqlDAO dao;
 
-  private JenaSparqlDao getDao() {
+  private JenaSparqlDAO getDao() {
     JdbcDataSource ds = new JdbcDataSource();
     ds.setURL("jdbc:h2:mem:test");
     ds.setUser("sa");
     ds.setPassword("sa");
 
-    JenaSparqlDao dao = new JenaSparqlDao(ds);
+    KnowledgeArtifactRepositoryServerProperties cfg =
+        new KnowledgeArtifactRepositoryServerProperties(
+            SparqlIndexTest.class.getResourceAsStream("/application.test.properties"));
+
+    JPAKnowledgeArtifactRepository mockRepo =
+        new JPAKnowledgeArtifactRepository(JPAKnowledgeArtifactRepositoryService.inMemoryDataSource(), cfg);
+    KnowledgeGraphHolder kgHelper = new KnowledgeGraphHolder(mockRepo);
+    JenaSparqlDAO dao = new JenaSparqlDAO(kgHelper);
 
     this.dao = dao;
 

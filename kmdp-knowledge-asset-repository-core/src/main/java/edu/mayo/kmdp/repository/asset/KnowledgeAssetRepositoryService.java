@@ -27,9 +27,11 @@ import edu.mayo.kmdp.language.ValidateApiOperator;
 import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties.KnowledgeArtifactRepositoryOptions;
+import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions;
-import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDao;
+import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDAO;
+import edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphHolder;
 import edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex;
 import java.util.Collections;
 import java.util.List;
@@ -70,15 +72,21 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
 
   static KnowledgeAssetRepositoryService selfContainedRepository(
       KnowledgeAssetRepositoryServerProperties cfg) {
-    JenaSparqlDao dao = JenaSparqlDao.inMemoryDao();
+    KnowledgeArtifactRepositoryService artifactRepo =
+        JPAKnowledgeArtifactRepositoryService.inMemoryArtifactRepository(cfg);
+    KnowledgeGraphHolder kGraphHolder
+        = new KnowledgeGraphHolder(artifactRepo);
+    JenaSparqlDAO dao =
+        new JenaSparqlDAO(kGraphHolder);
     return new SemanticKnowledgeAssetRepository(
-        JPAKnowledgeArtifactRepositoryService.inMemoryArtifactRepository(cfg),
+        artifactRepo,
         new LanguageDeSerializer(Collections.singletonList(new Surrogate2Parser())),
         new LanguageDetector(Collections.emptyList()),
         new LanguageValidator(Collections.emptyList()),
         new TransrepresentationExecutor(Collections.emptyList()),
-        new JenaQuery(dao),
+        new JenaQuery(kGraphHolder),
         new SparqlIndex(dao),
+        kGraphHolder,
         new HrefBuilder(cfg),
         cfg
     );
@@ -88,19 +96,26 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
       List<DeserializeApiOperator> parsers,
       List<DetectApiOperator> detectors,
       List<ValidateApiOperator> validators,
-      List<TransionApiOperator> translators
-  ) {
-    JenaSparqlDao dao = JenaSparqlDao.inMemoryDao();
+      List<TransionApiOperator> translators) {
     KnowledgeAssetRepositoryServerProperties cfg = new KnowledgeAssetRepositoryServerProperties(
         KnowledgeAssetRepositoryService.class.getResourceAsStream("/application.properties"));
+    KnowledgeArtifactRepositoryService artifactRepo =
+        JPAKnowledgeArtifactRepositoryService.inMemoryArtifactRepository(cfg);
+
+    KnowledgeGraphHolder kGraphHolder
+        = new KnowledgeGraphHolder(artifactRepo);
+    JenaSparqlDAO dao =
+        new JenaSparqlDAO(kGraphHolder);
+
     return new SemanticKnowledgeAssetRepository(
-        JPAKnowledgeArtifactRepositoryService.inMemoryArtifactRepository(cfg),
+        artifactRepo,
         new LanguageDeSerializer(parsers),
         new LanguageDetector(detectors),
         new LanguageValidator(validators),
         new TransrepresentationExecutor(translators),
-        new JenaQuery(dao),
+        new JenaQuery(kGraphHolder),
         new SparqlIndex(dao),
+        kGraphHolder,
         new HrefBuilder(cfg),
         cfg
     );

@@ -3,6 +3,9 @@ package edu.mayo.kmdp.repository.asset.index.sparql;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.collect.Lists;
+import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties;
+import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepository;
+import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepositoryService;
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
@@ -14,13 +17,21 @@ import org.junit.jupiter.api.Test;
 
 class JenaSparqlDaoTest {
 
-  private JenaSparqlDao getDao() {
+  private JenaSparqlDAO getDao() {
     JdbcDataSource ds = new JdbcDataSource();
     ds.setURL("jdbc:h2:mem:test");
     ds.setUser("sa");
     ds.setPassword("sa");
 
-    return new JenaSparqlDao(ds);
+    KnowledgeArtifactRepositoryServerProperties cfg =
+        new KnowledgeArtifactRepositoryServerProperties(
+            SparqlIndexTest.class.getResourceAsStream("/application.test.properties"));
+
+    JPAKnowledgeArtifactRepository mockRepo =
+        new JPAKnowledgeArtifactRepository(JPAKnowledgeArtifactRepositoryService.inMemoryDataSource(), cfg);
+    KnowledgeGraphHolder kgHelper = new KnowledgeGraphHolder(mockRepo);
+
+    return new JenaSparqlDAO(kgHelper);
   }
 
   @BeforeEach
@@ -30,23 +41,24 @@ class JenaSparqlDaoTest {
 
   @Test
   void store() {
-    JenaSparqlDao dao = this.getDao();
+    JenaSparqlDAO dao = this.getDao();
+    int tBoxSize = dao.knowledgeGraphHolder.getTBoxTriples().size();
 
-    assertEquals(0, dao.getModel().size());
+    assertEquals(tBoxSize, dao.getKnowledgeGraph().size());
 
     dao.store(URI.create("http://test1"), URI.create("http://test2"), URI.create("http://test3"));
 
-    assertEquals(1, dao.getModel().size());
+    assertEquals(1 + tBoxSize, dao.getKnowledgeGraph().size());
   }
 
   @Test
   void runSparql() {
-    JenaSparqlDao dao = this.getDao();
+    JenaSparqlDAO dao = this.getDao();
 
     dao.store(URI.create("http://test1"), URI.create("http://test2"), URI.create("http://test3"));
 
     String query = "" +
-            "select ?s where { ?s ?p ?o . }" +
+            "select ?s where { ?s <http://test2> ?o . }" +
             "";
 
     List<Resource> results = Lists.newArrayList();
@@ -61,7 +73,7 @@ class JenaSparqlDaoTest {
 
   @Test
   void readBySubjectPredicateAndObject() {
-    JenaSparqlDao dao = this.getDao();
+    JenaSparqlDAO dao = this.getDao();
 
     dao.store(URI.create("http://test1"), URI.create("http://test2"), URI.create("http://test3"));
 
@@ -73,7 +85,7 @@ class JenaSparqlDaoTest {
 
   @Test
   void readObjectBySubjectAndPredicate() {
-    JenaSparqlDao dao = this.getDao();
+    JenaSparqlDAO dao = this.getDao();
 
     dao.store(URI.create("http://test1"), URI.create("http://test2"), URI.create("http://test3"));
 
@@ -85,7 +97,7 @@ class JenaSparqlDaoTest {
 
   @Test
   void readSubjectByPredicate() {
-    JenaSparqlDao dao = this.getDao();
+    JenaSparqlDAO dao = this.getDao();
 
     dao.store(URI.create("http://test1"), URI.create("http://test2"), URI.create("http://test3"));
 
@@ -97,7 +109,7 @@ class JenaSparqlDaoTest {
 
   @Test
   void readSubjectByObject() {
-    JenaSparqlDao dao = this.getDao();
+    JenaSparqlDAO dao = this.getDao();
 
     dao.store(URI.create("http://test1"), URI.create("http://test2"), URI.create("http://test3"));
 
@@ -109,17 +121,18 @@ class JenaSparqlDaoTest {
 
   @Test
   void testTruncate() {
-    JenaSparqlDao dao = this.getDao();
+    JenaSparqlDAO dao = this.getDao();
+    int tBoxSize = dao.knowledgeGraphHolder.getTBoxTriples().size();
 
-    assertEquals(0, dao.getModel().size());
+    assertEquals(tBoxSize, dao.getKnowledgeGraph().size());
 
     dao.store(URI.create("http://test1"), URI.create("http://test2"), URI.create("http://test3"));
 
-    assertEquals(1, dao.getModel().size());
+    assertEquals(1 + tBoxSize, dao.getKnowledgeGraph().size());
 
     dao.reinitialize();
 
-    assertEquals(0, dao.getModel().size());
+    assertEquals(tBoxSize, dao.getKnowledgeGraph().size());
   }
 
 }

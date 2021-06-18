@@ -33,7 +33,8 @@ import edu.mayo.kmdp.repository.asset.HrefBuilder;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties;
 import edu.mayo.kmdp.repository.asset.SemanticKnowledgeAssetRepository;
 import edu.mayo.kmdp.repository.asset.index.Index;
-import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDao;
+import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDAO;
+import edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphHolder;
 import edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex;
 import java.util.Arrays;
 import java.util.Collections;
@@ -101,9 +102,11 @@ class RemoteRepoTest {
 
   static Index index;
 
-  static private JenaSparqlDao jenaSparqlDao;
+  static private JenaSparqlDAO jenaSparqlDao;
 
   static private DataSource ds;
+
+  static private KnowledgeGraphHolder knowledgeGraphHelper;
 
   static protected KnowledgeAssetRepositoryServerProperties cfg
       = new KnowledgeAssetRepositoryServerProperties(
@@ -117,7 +120,9 @@ class RemoteRepoTest {
 
     artifactRepo = jpaRepository(ds);
 
-    jenaSparqlDao = new JenaSparqlDao(ds);
+    knowledgeGraphHelper = new KnowledgeGraphHolder(artifactRepo);
+
+    jenaSparqlDao = new JenaSparqlDAO(knowledgeGraphHelper);
 
     index = new SparqlIndex(jenaSparqlDao);
 
@@ -129,8 +134,9 @@ class RemoteRepoTest {
         new LanguageValidator(Collections.emptyList()),
         new TransrepresentationExecutor(
             Arrays.asList(new SurrogateV2toHTMLTranslator(), new SurrogateV2Transcriptor())),
-        new JenaQuery(jenaSparqlDao),
+        new JenaQuery(knowledgeGraphHelper),
         index,
+        knowledgeGraphHelper,
         new HrefBuilder(cfg),
         cfg);
   }
