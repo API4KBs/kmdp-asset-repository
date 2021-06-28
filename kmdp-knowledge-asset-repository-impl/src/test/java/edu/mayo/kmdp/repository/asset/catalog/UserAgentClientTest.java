@@ -83,6 +83,7 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
         = new ApiClientFactory(host, WithFHIR.NONE);
 
     rpo = KnowledgeAssetCatalogApi.newInstance(apiClientFactory);
+    rpo.clearKnowledgeAssetCatalog();
   }
 
 
