@@ -21,7 +21,11 @@ import edu.mayo.kmdp.language.TransrepresentationExecutor;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties.KnowledgeArtifactRepositoryOptions;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
+import edu.mayo.kmdp.repository.artifact.dao.ArtifactDAO;
+import edu.mayo.kmdp.repository.artifact.jpa.JPAArtifactDAO;
 import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepository;
+import edu.mayo.kmdp.repository.artifact.jpa.entities.ArtifactVersionEntity;
+import edu.mayo.kmdp.repository.artifact.jpa.stores.ArtifactVersionRepository;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.repository.asset.server.ServerContextAwareHrefBuilder;
 import edu.mayo.kmdp.repository.asset.server.configuration.HTMLAdapter;
@@ -36,6 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -44,14 +49,22 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.core.env.MutablePropertySources;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.support.MetaDataAccessException;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 @Configuration
 @ComponentScan(basePackageClasses = {
     SemanticKnowledgeAssetRepository.class,
+    JPAArtifactDAO.class,
     TransrepresentationExecutor.class})
 @PropertySource(value = {"classpath:application.properties"})
+@EnableJpaRepositories(basePackageClasses = ArtifactVersionRepository.class)
+@EntityScan(basePackageClasses = ArtifactVersionEntity.class)
+@EnableTransactionManagement
 public class KnowledgeAssetRepositoryComponentConfig {
 
   @Value("${edu.mayo.kmdp.repository.asset.namespace}")
@@ -83,11 +96,22 @@ public class KnowledgeAssetRepositoryComponentConfig {
 
 
   @Bean
-  KnowledgeArtifactRepositoryServerProperties artifactConfig() {
-    return KnowledgeArtifactRepositoryServerProperties.emptyConfig()
+  KnowledgeArtifactRepositoryServerProperties artifactConfig(
+      @Autowired ConfigurableEnvironment env) {
+    KnowledgeArtifactRepositoryServerProperties artifactConfig = KnowledgeArtifactRepositoryServerProperties
+        .emptyConfig()
         .with(KnowledgeArtifactRepositoryOptions.DEFAULT_REPOSITORY_ID, artifactRepoId)
         .with(KnowledgeArtifactRepositoryOptions.DEFAULT_REPOSITORY_NAME, artifactRepoName)
         .with(KnowledgeArtifactRepositoryOptions.BASE_NAMESPACE, artifactNamespace);
+
+    MutablePropertySources propSrcs = env.getPropertySources();
+    StreamSupport.stream(propSrcs.spliterator(), false)
+        .filter(ps -> ps instanceof EnumerablePropertySource)
+        .map(ps -> ((EnumerablePropertySource) ps).getPropertyNames())
+        .flatMap(Arrays::stream)
+        .forEach(propName -> artifactConfig.setProperty(propName, env.getProperty(propName)));
+
+    return artifactConfig;
   }
 
   /**
@@ -103,9 +127,9 @@ public class KnowledgeAssetRepositoryComponentConfig {
   @Bean
   @KPServer
   public KnowledgeArtifactRepositoryService jdbcRepository(
-      DataSource dataSource,
-      @Autowired KnowledgeArtifactRepositoryServerProperties artifactConfig,
-      @Autowired ConfigurableEnvironment env) {
+      @Autowired ArtifactDAO dao,
+      @Autowired DataSource dataSource,
+      @Autowired KnowledgeArtifactRepositoryServerProperties artifactConfig) {
 
     try {
       String url = (String) extractDatabaseMetaData(dataSource, DatabaseMetaData::getURL);
@@ -114,15 +138,13 @@ public class KnowledgeAssetRepositoryComponentConfig {
       logger.warn("Unable to access DB Connection info:", e);
     }
 
-    MutablePropertySources propSrcs = env.getPropertySources();
-    StreamSupport.stream(propSrcs.spliterator(), false)
-        .filter(ps -> ps instanceof EnumerablePropertySource)
-        .map(ps -> ((EnumerablePropertySource) ps).getPropertyNames())
-        .flatMap(Arrays::stream)
-        .forEach(propName -> artifactConfig.setProperty(propName, env.getProperty(propName)));
+    return new JPAKnowledgeArtifactRepository(dao, artifactConfig);
+  }
 
-    return new JPAKnowledgeArtifactRepository(
-        dataSource, artifactConfig);
+  @Bean
+  public PlatformTransactionManager transactionManager(@Autowired DataSource dataSource) {
+    PlatformTransactionManager ptm = new DataSourceTransactionManager(dataSource);
+    return ptm;
   }
 
   @Bean
