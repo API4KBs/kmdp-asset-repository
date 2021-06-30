@@ -1,23 +1,19 @@
 package edu.mayo.kmdp.repository.asset.index.sparql;
 
-import static edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex.InternalQueryManager.TRIPLE_OBJECT_QUERY;
-import static edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex.InternalQueryManager.TRIPLE_SUBJECT_QUERY;
+import static edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex.InternalQueryManager.TRIPLE_OBJECT_SELECT;
+import static edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex.InternalQueryManager.TRIPLE_SUBJECT_SELECT;
 import static org.apache.jena.rdf.model.ResourceFactory.createResource;
-import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import java.net.URI;
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import javax.annotation.PreDestroy;
-import org.apache.jena.graph.GraphEvents;
 import org.apache.jena.query.ParameterizedSparqlString;
-import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
@@ -27,6 +23,7 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.SimpleSelector;
 import org.apache.jena.rdf.model.Statement;
+import org.apache.jena.shared.Lock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -76,16 +73,16 @@ public class JenaSparqlDAO {
    * @param object    O
    */
   public void store(URI subject, URI predicate, URI object) {
-    Statement s = ResourceFactory.createStatement(
+    var s = ResourceFactory.createStatement(
         createResource(subject.toString()),
         ResourceFactory.createProperty(predicate.toString()),
         createResource(object.toString()));
 
-    getKnowledgeGraph().notifyEvent(GraphEvents.startRead);
+    getKnowledgeGraph().enterCriticalSection(Lock.WRITE);
     try {
       getKnowledgeGraph().add(s);
     } finally {
-      getKnowledgeGraph().notifyEvent(GraphEvents.finishRead);
+      getKnowledgeGraph().leaveCriticalSection();
     }
   }
 
@@ -95,11 +92,11 @@ public class JenaSparqlDAO {
    * @param statements the triples to store
    */
   public void store(List<Statement> statements) {
-    getKnowledgeGraph().notifyEvent(GraphEvents.startRead);
+    getKnowledgeGraph().enterCriticalSection(Lock.WRITE);
     try {
       getKnowledgeGraph().add(statements);
     } finally {
-      getKnowledgeGraph().notifyEvent(GraphEvents.finishRead);
+      getKnowledgeGraph().leaveCriticalSection();
     }
   }
 
@@ -109,11 +106,11 @@ public class JenaSparqlDAO {
    * @param statements the triples to remove
    */
   public void remove(List<Statement> statements) {
-    getKnowledgeGraph().notifyEvent(GraphEvents.startRead);
+    getKnowledgeGraph().enterCriticalSection(Lock.WRITE);
     try {
       getKnowledgeGraph().remove(statements);
     } finally {
-      getKnowledgeGraph().notifyEvent(GraphEvents.finishRead);
+      getKnowledgeGraph().leaveCriticalSection();
     }
   }
 
@@ -158,14 +155,20 @@ public class JenaSparqlDAO {
    * @param params
    * @param consumer
    */
-  public void runSparql(ParameterizedSparqlString pss, Map<String, URI> params,
-      Map<String, Literal> literalParams, Consumer<QuerySolution> consumer) {
+  public void runSparql(
+      ParameterizedSparqlString pss,
+      Map<String, URI> params,
+      Map<String, Literal> literalParams,
+      Consumer<QuerySolution> consumer) {
     params.forEach((key, value) -> pss.setIri(key, value.toString()));
     literalParams.forEach(pss::setLiteral);
 
-    try (QueryExecution qexec = QueryExecutionFactory.create(pss.asQuery(), getKnowledgeGraph())) {
+    getKnowledgeGraph().enterCriticalSection(Lock.READ);
+    try (var qexec = QueryExecutionFactory.create(pss.asQuery(), getKnowledgeGraph())) {
       ResultSet rs = qexec.execSelect();
       rs.forEachRemaining(consumer);
+    } finally {
+      getKnowledgeGraph().leaveCriticalSection();
     }
 
     pss.clearParams();
@@ -181,13 +184,16 @@ public class JenaSparqlDAO {
    * @return ?s
    */
   public List<Resource> readSubjectByPredicateAndObject(URI predicate, URI object) {
-    Map<String, URI> params = Maps.newHashMap();
+    Map<String, URI> params = new HashMap<>();
     params.put("?p", predicate);
     params.put("?o", object);
 
-    List<Resource> resourceList = Lists.newArrayList();
+    List<Resource> resourceList = new ArrayList<>();
 
-    this.runSparql(TRIPLE_SUBJECT_QUERY, params, Collections.emptyMap(),
+    this.runSparql(
+        new ParameterizedSparqlString(TRIPLE_SUBJECT_SELECT),
+        params,
+        new HashMap<>(),
         result -> resourceList.add(result.getResource("?s")));
 
     return resourceList;
@@ -203,15 +209,20 @@ public class JenaSparqlDAO {
    * @return ?o
    */
   public List<Resource> readObjectBySubjectAndPredicate(URI subject, URI predicate) {
-
-    Map<String, URI> params = Maps.newHashMap();
+    Map<String, URI> params = new HashMap<>();
     params.put("?p", predicate);
     params.put("?s", subject);
 
-    List<Resource> resourceList = Lists.newArrayList();
+    List<Resource> resourceList = new ArrayList<>();
 
-    this.runSparql(TRIPLE_OBJECT_QUERY, params, Collections.emptyMap(),
-        result -> resourceList.add(result.getResource("?o")));
+    this.runSparql(
+        new ParameterizedSparqlString(TRIPLE_OBJECT_SELECT),
+        params,
+        new HashMap<>(),
+        result -> {
+          result.get("?o").isResource();
+          resourceList.add(result.getResource("?o"));
+        });
 
     return resourceList;
   }
@@ -226,13 +237,16 @@ public class JenaSparqlDAO {
    * @return ?o
    */
   public List<Literal> readValueBySubjectAndPredicate(URI subject, URI predicate) {
-    Map<String, URI> params = Maps.newHashMap();
+    Map<String, URI> params = new HashMap<>();
     params.put("?p", predicate);
     params.put("?s", subject);
 
-    List<Literal> valueList = Lists.newArrayList();
+    List<Literal> valueList = new ArrayList<>();
 
-    this.runSparql(TRIPLE_OBJECT_QUERY, params, Collections.emptyMap(),
+    this.runSparql(
+        new ParameterizedSparqlString(TRIPLE_OBJECT_SELECT),
+        params,
+        new HashMap<>(),
         result -> valueList.add(result.getLiteral("?o")));
 
     return valueList;
@@ -247,12 +261,15 @@ public class JenaSparqlDAO {
    * @return ?s
    */
   public List<Resource> readSubjectByPredicate(URI predicate) {
-    Map<String, URI> params = Maps.newHashMap();
+    Map<String, URI> params = new HashMap<>();
     params.put("?p", predicate);
 
-    List<Resource> resourceList = Lists.newArrayList();
+    List<Resource> resourceList = new ArrayList<>();
 
-    this.runSparql(TRIPLE_SUBJECT_QUERY, params, Collections.emptyMap(),
+    this.runSparql(
+        new ParameterizedSparqlString(TRIPLE_SUBJECT_SELECT),
+        params,
+        new HashMap<>(),
         result -> resourceList.add(result.getResource("?s")));
 
     return resourceList;
@@ -266,7 +283,12 @@ public class JenaSparqlDAO {
    * @return ?s
    */
   public List<Statement> readAll() {
-    return getKnowledgeGraph().listStatements().toList();
+    getKnowledgeGraph().enterCriticalSection(Lock.READ);
+    try {
+      return getKnowledgeGraph().listStatements().toList();
+    } finally {
+      getKnowledgeGraph().leaveCriticalSection();
+    }
   }
 
   /**
@@ -276,7 +298,12 @@ public class JenaSparqlDAO {
    * @return true if (s,p,o) is a statement that is part of the model
    */
   public boolean checkStatementExists(Statement st) {
-    return getKnowledgeGraph().contains(st);
+    getKnowledgeGraph().enterCriticalSection(Lock.READ);
+    try {
+      return getKnowledgeGraph().contains(st);
+    } finally {
+      getKnowledgeGraph().leaveCriticalSection();
+    }
   }
 
   /**
@@ -288,12 +315,15 @@ public class JenaSparqlDAO {
    * @return ?s
    */
   public List<Resource> readSubjectByObject(URI object) {
-    Map<String, URI> params = Maps.newHashMap();
+    Map<String, URI> params = new HashMap<>();
     params.put("?o", object);
 
-    List<Resource> resourceList = Lists.newArrayList();
+    List<Resource> resourceList = new ArrayList<>();
 
-    this.runSparql(TRIPLE_SUBJECT_QUERY, params, Collections.emptyMap(),
+    this.runSparql(
+        new ParameterizedSparqlString(TRIPLE_SUBJECT_SELECT),
+        params,
+        new HashMap<>(),
         result -> resourceList.add(result.getResource("?s")));
 
     return resourceList;

@@ -33,6 +33,7 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Statement;
+import org.apache.jena.shared.Lock;
 import org.apache.jena.vocabulary.RDFS;
 import org.omg.spec.api4kp._20200801.AbstractCarrier;
 import org.omg.spec.api4kp._20200801.AbstractCarrier.Encodings;
@@ -134,11 +135,11 @@ public class KnowledgeGraphHolder implements KnowledgeBaseApiInternal._getKnowle
 
   protected KnowledgeCarrier newEmptyGraph() {
     Model kgModel = ModelFactory.createDefaultModel();
-    kgModel.notifyEvent(GraphEvents.startRead);
+    kgModel.enterCriticalSection(Lock.WRITE);
     try {
       kgModel.add(getTBoxTriples());
     } finally {
-      kgModel.notifyEvent(GraphEvents.finishRead);
+      kgModel.leaveCriticalSection();
     }
     return wrapGraph(kgModel);
   }
@@ -154,9 +155,14 @@ public class KnowledgeGraphHolder implements KnowledgeBaseApiInternal._getKnowle
   }
 
   public Answer<byte[]> getEncodedGraph() {
-    return parser.applyLower(
-        kBase.getManifestation(), Encoded_Knowledge_Expression, codedRep(OWL_2), null)
-        .flatOpt(AbstractCarrier::asBinary);
+    knowledgeGraph.enterCriticalSection(Lock.WRITE);
+    try {
+      return parser.applyLower(
+          kBase.getManifestation(), Encoded_Knowledge_Expression, codedRep(OWL_2), null)
+          .flatOpt(AbstractCarrier::asBinary);
+    } finally {
+      knowledgeGraph.leaveCriticalSection();
+    }
   }
 
   public Model getJenaModel() {

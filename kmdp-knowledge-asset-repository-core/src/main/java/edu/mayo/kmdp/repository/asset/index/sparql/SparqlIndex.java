@@ -1,5 +1,6 @@
 package edu.mayo.kmdp.repository.asset.index.sparql;
 
+import static edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex.InternalQueryManager.TRANSITIVE_CLOSURE_SELECT;
 import static edu.mayo.kmdp.util.JenaUtil.objA;
 import static java.util.Collections.singletonList;
 import static org.apache.jena.rdf.model.ResourceFactory.createStatement;
@@ -314,7 +315,8 @@ public class SparqlIndex implements Index {
 
     Set<ResourceIdentifier> related = Sets.newHashSet();
 
-    this.jenaSparqlDao.runSparql(InternalQueryManager.TRANSITIVE_CLOSURE_QUERY,
+    this.jenaSparqlDao.runSparql(
+        new ParameterizedSparqlString(TRANSITIVE_CLOSURE_SELECT),
         params,
         Collections.emptyMap(), (
             querySolution -> related.add(
@@ -330,7 +332,8 @@ public class SparqlIndex implements Index {
 
     Set<ResourceIdentifier> related = Sets.newHashSet();
 
-    this.jenaSparqlDao.runSparql(InternalQueryManager.DEPENDENCY_CLOSURE_QUERY,
+    this.jenaSparqlDao.runSparql(
+        new ParameterizedSparqlString(InternalQueryManager.DEPENDENCY_CLOSURE_SELECT),
         params, Collections.emptyMap(), (
             querySolution -> related.add(
                 this.resourceToResourceIdentifier(querySolution.getResource("?o")))));
@@ -587,7 +590,8 @@ public class SparqlIndex implements Index {
     literalParams.put("?vTag",
         ResourceFactory.createPlainLiteral(versionTag));
 
-    this.jenaSparqlDao.runSparql(InternalQueryManager.RESOLVE_TAG_VERSION_QUERY,
+    this.jenaSparqlDao.runSparql(
+        new ParameterizedSparqlString(InternalQueryManager.RESOLVE_TAG_VERSION_SELECT),
         Collections.emptyMap(),
         literalParams, (
             querySolution -> versions.add(querySolution.getResource("?version"))));
@@ -604,7 +608,8 @@ public class SparqlIndex implements Index {
     literalParams.put("?tag",
         ResourceFactory.createPlainLiteral(assetId.toString()));
 
-    this.jenaSparqlDao.runSparql(InternalQueryManager.RESOLVE_TAG_QUERY,
+    this.jenaSparqlDao.runSparql(
+        new ParameterizedSparqlString(InternalQueryManager.RESOLVE_TAG_SELECT),
         Collections.emptyMap(),
         literalParams, (
             querySolution -> versions.add(querySolution.getResource("?asset"))));
@@ -627,7 +632,8 @@ public class SparqlIndex implements Index {
     literalParams.put("?tag",
         ResourceFactory.createPlainLiteral(assetSeriesId.toString()));
 
-    this.jenaSparqlDao.runSparql(InternalQueryManager.ASSET_VERSIONS_QUERY,
+    this.jenaSparqlDao.runSparql(
+        new ParameterizedSparqlString(InternalQueryManager.ASSET_VERSIONS_SELECT),
         Collections.emptyMap(),
         literalParams, (
             querySolution -> versions.add(
@@ -653,7 +659,8 @@ public class SparqlIndex implements Index {
     literalParams.put("?tag",
         ResourceFactory.createPlainLiteral(surrogateSeriesId.toString()));
 
-    this.jenaSparqlDao.runSparql(InternalQueryManager.SURROGATE_VERSIONS_QUERY,
+    this.jenaSparqlDao.runSparql(
+        new ParameterizedSparqlString(InternalQueryManager.SURROGATE_VERSIONS_SELECT),
         Collections.emptyMap(),
         literalParams, (
             querySolution -> versions.add(
@@ -680,7 +687,8 @@ public class SparqlIndex implements Index {
     literalParams.put("?tag",
         ResourceFactory.createPlainLiteral(carrierSeriesId.toString()));
 
-    this.jenaSparqlDao.runSparql(InternalQueryManager.CARRIER_VERSIONS_QUERY,
+    this.jenaSparqlDao.runSparql(
+        new ParameterizedSparqlString(InternalQueryManager.CARRIER_VERSIONS_SELECT),
         Collections.emptyMap(),
         literalParams, (
             querySolution -> versions.add(
@@ -742,9 +750,6 @@ public class SparqlIndex implements Index {
             + "  ?asset kmd:" + TAG_ID + " ?tag . \n"
             + "}";
 
-    public static final ParameterizedSparqlString RESOLVE_TAG_QUERY
-        = new ParameterizedSparqlString(RESOLVE_TAG_SELECT);
-
     static final String RESOLVE_TAG_VERSION_SELECT =
         PREAMBLE
             + "SELECT ?asset ?version \n"
@@ -753,9 +758,6 @@ public class SparqlIndex implements Index {
             + "     api4kp-series:" + HAS_VERSION + " ?version . \n"
             + "  ?version kmd:" + HAS_VERSION_TAG + " ?vTag . \n"
             + "}";
-
-    public static final ParameterizedSparqlString RESOLVE_TAG_VERSION_QUERY
-        = new ParameterizedSparqlString(RESOLVE_TAG_VERSION_SELECT);
 
     static final String CARRIER_VERSIONS_SELECT =
         PREAMBLE
@@ -771,9 +773,6 @@ public class SparqlIndex implements Index {
             + "} \n"
             + "ORDER BY DESC(?vTimestamp)";
 
-    public static final ParameterizedSparqlString CARRIER_VERSIONS_QUERY
-        = new ParameterizedSparqlString(CARRIER_VERSIONS_SELECT);
-
     static final String SURROGATE_VERSIONS_SELECT =
         PREAMBLE
             + "SELECT ?surrogate ?version ?vTag ?vTimestamp ?format \n"
@@ -788,9 +787,6 @@ public class SparqlIndex implements Index {
             + "} \n"
             + "ORDER BY DESC(?vTimestamp)";
 
-    public static final ParameterizedSparqlString SURROGATE_VERSIONS_QUERY
-        = new ParameterizedSparqlString(SURROGATE_VERSIONS_SELECT);
-
     static final String ASSET_VERSIONS_SELECT =
         PREAMBLE
             + "SELECT ?asset ?version ?vTag ?vTimestamp \n"
@@ -803,18 +799,11 @@ public class SparqlIndex implements Index {
             + "} \n"
             + "ORDER BY DESC(?vTimestamp)";
 
-    public static final ParameterizedSparqlString ASSET_VERSIONS_QUERY
-        = new ParameterizedSparqlString(ASSET_VERSIONS_SELECT);
-
     static final String TRANSITIVE_CLOSURE_SELECT =
         "SELECT ?o \n" +
             "WHERE { \n" +
             "    ?s ?p* ?o \n" +
             "}";
-
-    public static final ParameterizedSparqlString TRANSITIVE_CLOSURE_QUERY
-        = new ParameterizedSparqlString(TRANSITIVE_CLOSURE_SELECT);
-
 
     static final String DEPENDENCY_CLOSURE_SELECT =
         "SELECT ?o \n" +
@@ -822,22 +811,11 @@ public class SparqlIndex implements Index {
             "    ?s " + TRAVERSE_DEPS_SPARQL + " ?o\n" +
             "}";
 
-    public static final ParameterizedSparqlString DEPENDENCY_CLOSURE_QUERY
-        = new ParameterizedSparqlString(DEPENDENCY_CLOSURE_SELECT);
-
-
     static final String TRIPLE_OBJECT_SELECT =
         "SELECT ?o WHERE { ?s ?p ?o . }";
 
-    public static final ParameterizedSparqlString TRIPLE_OBJECT_QUERY
-        = new ParameterizedSparqlString(TRIPLE_OBJECT_SELECT);
-
     static final String TRIPLE_SUBJECT_SELECT =
         "SELECT ?s WHERE { ?s ?p ?o . }";
-
-    public static final ParameterizedSparqlString TRIPLE_SUBJECT_QUERY
-        = new ParameterizedSparqlString(TRIPLE_SUBJECT_SELECT);
-
 
     private InternalQueryManager() {
       // constants only
