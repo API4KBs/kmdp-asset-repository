@@ -1,20 +1,24 @@
 package edu.mayo.kmdp.repository.asset.index;
 
+import static edu.mayo.kmdp.util.Util.isNotEmpty;
+
 import com.google.common.collect.Sets;
 import edu.mayo.kmdp.util.URIUtil;
 import edu.mayo.kmdp.util.Util;
 import edu.mayo.ontology.taxonomies.kmdo.semanticannotationreltype.SemanticAnnotationRelTypeSeries;
 import java.net.URI;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import org.omg.spec.api4kp._20200801.id.ConceptIdentifier;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.ClinicalKnowledgeAssetTypeSeries;
-import org.omg.spec.api4kp._20200801.terms.ConceptTerm;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRole;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRoleSeries;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetType;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries;
+import org.omg.spec.api4kp._20200801.terms.ConceptTerm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -107,7 +111,7 @@ public class StaticFilter {
   }
 
   private static Optional<Set<ResourceIdentifier>> filterByType(String assetTypeTag, Index index) {
-    return Util.isNotEmpty(assetTypeTag)
+    return isNotEmpty(assetTypeTag)
         ? Optional.of(
             // type filter -> restricted set
             resolveTypeTag(assetTypeTag)
@@ -140,4 +144,18 @@ public class StaticFilter {
         .map(ConceptTerm::getReferentId);
   }
 
+  public static Optional<ConceptIdentifier> choosePrimaryType(
+      List<ConceptIdentifier> assetTypes, String assetTypeTag) {
+    if (isNotEmpty(assetTypeTag)) {
+      return assetTypes.stream()
+          .filter(cid -> assetTypeTag.equals(cid.getTag()))
+          .findFirst();
+    } else {
+      return assetTypes.stream()
+          // prefer NOT roles over types
+          .filter(cid -> KnowledgeAssetRoleSeries.resolve(cid.getTag()).isEmpty())
+          .findFirst()
+          .or(() -> assetTypes.stream().findFirst());
+    }
+  }
 }

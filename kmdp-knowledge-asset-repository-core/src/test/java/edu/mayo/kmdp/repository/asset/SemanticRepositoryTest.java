@@ -43,8 +43,10 @@ import static org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.
 import static org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.ClinicalKnowledgeAssetTypeSeries.Cognitive_Care_Process_Model;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Depends_On;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRoleSeries.Operational_Concept_Definition;
+import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Decision_Model;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Formal_Ontology;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Predictive_Model;
+import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Service_Profile;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.JSON;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.TXT;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.XML_1_1;
@@ -82,6 +84,8 @@ import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateDiffer;
+import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRole;
+import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetType;
 
 
 class SemanticRepositoryTest extends RepositoryTestBase {
@@ -1552,7 +1556,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
 
     KnowledgeAsset asset = semanticRepository.getKnowledgeAsset(axId.getUuid())
         .orElseGet(Assertions::fail);
-    assertEquals(1,asset.getFormalType().size());
+    assertEquals(1, asset.getFormalType().size());
     assertTrue(Cognitive_Care_Process_Model.isAnyOf(asset.getFormalType()));
   }
 
@@ -1565,7 +1569,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         .withName("Test", "")
         .get()
         .withFormalType(Clinical_Guidance_Rule);
-    semanticRepository.setKnowledgeAssetVersion(axId.getUuid(),axId.getVersionTag(),surr);
+    semanticRepository.setKnowledgeAssetVersion(axId.getUuid(), axId.getVersionTag(), surr);
 
     assertEquals(1,
         semanticRepository.listKnowledgeAssets()
@@ -1578,5 +1582,56 @@ class SemanticRepositoryTest extends RepositoryTestBase {
             .size());
   }
 
+  @Test
+  void testPointerType() {
+    publishForPointer("A", null);
+    publishForPointer("B", Operational_Concept_Definition, Decision_Model);
+    publishForPointer("C", null, Decision_Model);
+    publishForPointer("D", null, Decision_Model, Service_Profile);
+    publishForPointer("E", Operational_Concept_Definition);
 
+    List<Pointer> ptrs = semanticRepository.listKnowledgeAssets().orElseGet(Assertions::fail);
+    assertEquals(5, ptrs.size());
+
+    assertTrue(ptrs.stream()
+        .filter(p -> "A".equals(p.getName()))
+        .anyMatch(p -> p.getType() == null));
+    assertTrue(ptrs.stream()
+        .filter(p -> "B".equals(p.getName()))
+        .anyMatch(p -> Decision_Model.getReferentId().equals(p.getType())));
+    assertTrue(ptrs.stream()
+        .filter(p -> "C".equals(p.getName()))
+        .anyMatch(p -> Decision_Model.getReferentId().equals(p.getType())));
+    assertTrue(ptrs.stream()
+        .filter(p -> "D".equals(p.getName()))
+        .anyMatch(p -> Decision_Model.getReferentId().equals(p.getType()) ||
+            Service_Profile.getReferentId().equals(p.getType())));
+    assertTrue(ptrs.stream()
+        .filter(p -> "E".equals(p.getName()))
+        .anyMatch(p -> Operational_Concept_Definition.getReferentId().equals(p.getType())));
+
+    List<Pointer> ptrs2 =
+        semanticRepository
+            .listKnowledgeAssets(Operational_Concept_Definition.getTag(), null, null, 0, -1)
+            .orElseGet(Assertions::fail);
+    assertEquals(2, ptrs2.size());
+    ptrs2.forEach(ptr -> {
+      assertEquals(Operational_Concept_Definition.getReferentId(), ptr.getType());
+    });
+  }
+
+  void publishForPointer(String seedId, KnowledgeAssetRole role, KnowledgeAssetType... types) {
+    ResourceIdentifier axId =
+        assetId(testAssetNS(), uuid(seedId), VERSION_ZERO);
+    KnowledgeAsset surr = SurrogateBuilder.newSurrogate(axId)
+        .withName(seedId, "")
+        .get()
+        .withFormalType(types);
+    if (role != null) {
+      surr.withRole(role);
+    }
+    Answer<Void> ans1 = semanticRepository
+        .setKnowledgeAssetVersion(axId.getUuid(), axId.getVersionTag(), surr);
+
+  }
 }

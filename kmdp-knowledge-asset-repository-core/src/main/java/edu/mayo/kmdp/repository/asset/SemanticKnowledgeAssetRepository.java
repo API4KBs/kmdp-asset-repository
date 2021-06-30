@@ -486,7 +486,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .map(id -> this.toKnowledgeAssetPointer(
             id,
             HrefType.ASSET,
-            codedRep(defaultSurrogateRepresentation)))
+            codedRep(defaultSurrogateRepresentation),
+            assetTypeTag))
         .collect(toList());
 
     return Answer.of(
@@ -598,7 +599,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .map(ax -> toKnowledgeAssetPointer(
             ax,
             HrefType.ASSET_VERSION,
-            codedRep(defaultSurrogateRepresentation)))
+            codedRep(defaultSurrogateRepresentation),
+            null))
         .collect(toList());
 
     return Answer.of(
@@ -2325,21 +2327,24 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @param assetId  the Id of the Asset to be mapped to a Pointer
    * @param hrefType the type of resource (only ASSET and ASSET_VERSION are supported)
    * @param mime     the MIME type of the resource the Pointer resolves to
+   * @param assetTypeTag
    * @return a Pointer that includes a URL to this server
    */
   private Pointer toKnowledgeAssetPointer(
       ResourceIdentifier assetId,
       HrefType hrefType,
-      String mime) {
-    Pointer pointer = assetId.toPointer();
+      String mime,
+      String assetTypeTag) {
+    var pointer = assetId.toPointer();
 
     // TODO: Assess if the information is worthy the cost of the queries
     // or the queries should be optimized
     // e.g. into a single query that returns the Id information with name and type
     index.getAssetName(assetId)
         .ifPresent(pointer::setName);
-    index.getAssetTypes(assetId)
-        .forEach(ci -> pointer.setType(ci.getReferentId()));
+
+    StaticFilter.choosePrimaryType(index.getAssetTypes(assetId), assetTypeTag)
+        .ifPresent(ci -> pointer.setType(ci.getReferentId()));
 
     return pointer
         .withHref(hrefBuilder.getHref(assetId, hrefType))
