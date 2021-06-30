@@ -746,7 +746,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     switch (asEnum(status)) {
       case Archived:
-        return asset.flatMap(ax -> removeAssetVersion(ax, !isDeleteAllowed()));
+        return asset.flatMap(ax -> removeAssetVersion(ax, isDeleteAllowed()));
       case Published:
         if (!isDeleteAllowed()) {
           return Answer.of(ResponseCodeSeries.Unauthorized);
@@ -760,14 +760,14 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   private Answer<Void> removeAssetVersion(KnowledgeAsset asset, boolean hardDelete) {
     logger.info("DELETE Carriers for {}:{}", asset.getAssetId().getUuid(), asset.getAssetId().getVersionTag());
     Answer<Void> artfs = asset.getCarriers().stream()
-        .map(carrier -> removeArtifact(carrier, hardDelete))
+        .map(carrier -> removeArtifact(asset, carrier, hardDelete))
         .reduce(Answer::merge)
         // succeed automatically if no artifact to delete
         .orElseGet(Answer::succeed);
 
     logger.info("DELETE Surrogates for {}:{}", asset.getAssetId().getUuid(), asset.getAssetId().getVersionTag());
     Answer<Void> surrs = asset.getSurrogate().stream()
-        .map(surrogate -> removeArtifact(surrogate, hardDelete))
+        .map(surrogate -> removeArtifact(asset, surrogate, hardDelete))
         .reduce(Answer::merge)
         // it should be impossible for no surrogate to exist
         .orElseGet(Answer::failed);
@@ -777,16 +777,23 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     return Answer.merge(artfs, surrs);
   }
 
-  private Answer<Void> removeArtifact(KnowledgeArtifact artifact, boolean hardDelete) {
+  private Answer<Void> removeArtifact(KnowledgeAsset asset, KnowledgeArtifact artifact, boolean hardDelete) {
     ResourceIdentifier id = artifact.getArtifactId();
+    logger.info("DELETE Carrier Artifact {}:{} for Asset {}:{}",
+        artifact.getArtifactId().getUuid(), artifact.getArtifactId().getVersionTag(),
+        asset.getAssetId().getUuid(), asset.getAssetId().getVersionTag());
     Answer<Void> ans = knowledgeArtifactApi.deleteKnowledgeArtifactVersion(
         artifactRepositoryId,
         id.getUuid(), id.getVersionTag(),
         hardDelete);
     if (knowledgeArtifactSeriesApi
         .isKnowledgeArtifactSeries(artifactRepositoryId, id.getUuid(), hardDelete).isSuccess()) {
-      knowledgeArtifactSeriesApi
+      logger.info("DELETE Artifact {} Series for Asset {}:{}",
+          artifact.getArtifactId().getUuid(),
+          asset.getAssetId().getUuid(), asset.getAssetId().getVersionTag());
+      Answer<Void> sans = knowledgeArtifactSeriesApi
           .deleteKnowledgeArtifact(artifactRepositoryId, id.getUuid(), hardDelete);
+      ans = Answer.merge(ans, sans);
     }
     return ans;
   }
@@ -2139,7 +2146,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     Answer<KnowledgeCarrier> surrogateBinary = encodeCanonicalSurrogate(assetSurrogate);
 
     if (surrogateBinary.isSuccess()) {
-      logger.info("PERSIST Surrogate for Asset {}:{}", assetId.getUuid(), assetId.getVersionTag());
+      logger.info("PERSIST Surrogate {}:{} for Asset {}:{}",
+          surrogateId.getUuid(), surrogateId.getVersionTag(), assetId.getUuid(), assetId.getVersionTag());
       this.knowledgeArtifactApi.setKnowledgeArtifactVersion(
           artifactRepositoryId,
           surrogateId.getUuid(),
