@@ -51,9 +51,7 @@ import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.support.MetaDataAccessException;
-import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 @Configuration
@@ -139,12 +137,6 @@ public class KnowledgeAssetRepositoryComponentConfig {
     }
 
     return new JPAKnowledgeArtifactRepository(dao, artifactConfig);
-  }
-
-  @Bean
-  public PlatformTransactionManager transactionManager(@Autowired DataSource dataSource) {
-    PlatformTransactionManager ptm = new DataSourceTransactionManager(dataSource);
-    return ptm;
   }
 
   @Bean

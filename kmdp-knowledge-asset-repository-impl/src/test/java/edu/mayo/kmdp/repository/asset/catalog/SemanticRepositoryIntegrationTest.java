@@ -56,7 +56,8 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
   private KnowledgeAssetRepositoryApi repo;
 
   @BeforeEach
-  void init() {
+  protected void init() {
+    super.init();
     ApiClientFactory webClientFactory = new ApiClientFactory("http://localhost:" + port,
         WithFHIR.NONE);
 

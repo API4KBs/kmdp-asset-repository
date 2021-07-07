@@ -53,11 +53,11 @@ public class StaticFilter {
    * accordingly. If both type and annotation are present, it will return the the IDs
    * of the assets that match both criteria
    *
-   * @param assetTypeTag
-   * @param assetAnnotationTag
-   * @param assetAnnotationConcept
-   * @param index
-   * @return
+   * @param assetTypeTag the tag of an Asset type or role
+   * @param assetAnnotationTag the tag of a semantic Asset / Concept relationship type
+   * @param assetAnnotationConcept the tag of a related Concept
+   * @param index the Index (built on top of a queryable Knowledge Graph)
+   * @return the Identifiers of the Assets that match the filtering criteria
    */
   public static Set<ResourceIdentifier> filter(String assetTypeTag, String assetAnnotationTag,
       String assetAnnotationConcept, Index index) {
@@ -82,6 +82,15 @@ public class StaticFilter {
     return all;
   }
 
+
+  /**
+   * Sub-filter by annotation
+   *
+   * @param assetAnnotationTag the tag of a semantic Asset / Concept relationship type
+   * @param assetAnnotationConcept the tag of a related Concept
+   * @param index the Index (built on top of a queryable Knowledge Graph)
+   * @return the Identifiers of the Assets that match the filtering criteria
+   */
   private static Optional<Set<ResourceIdentifier>> filterByAnnotation(String assetAnnotationTag,
       String assetAnnotationConcept, Index index) {
     if (Util.isEmpty(assetAnnotationConcept) && Util.isEmpty(assetAnnotationTag)) {
@@ -110,6 +119,14 @@ public class StaticFilter {
     return Optional.ofNullable(filteredResources);
   }
 
+
+  /**
+   * Sub-filter by asset type/role
+   *
+   * @param assetTypeTag the tag of an Asset type or role
+   * @param index the Index (built on top of a queryable Knowledge Graph)
+   * @return the Identifiers of the Assets that match the filtering criteria
+   */
   private static Optional<Set<ResourceIdentifier>> filterByType(String assetTypeTag, Index index) {
     return isNotEmpty(assetTypeTag)
         ? Optional.of(
@@ -122,6 +139,11 @@ public class StaticFilter {
         : Optional.empty();
   }
 
+  /**
+   * Tries to resolve an Asset type/role tag using the supported Ontologies
+   * @param assetTypeTag the Tag to be resolved
+   * @return the URI of the concept's referent, as defined in an Asset Type ontology
+   */
   private static Optional<URI> resolveTypeTag(String assetTypeTag) {
     if (Util.isEmpty(assetTypeTag)) {
       return Optional.empty();
@@ -139,11 +161,31 @@ public class StaticFilter {
     return Optional.empty();
   }
 
+  /**
+   * Tries to resolve an Annotation Tag using the supported Ontologies
+   * @param annotationTag the annotation Tag to be resolved
+   * @return the URI of the concept's referent, as defined in an annotation ontology
+   */
   private static Optional<URI> resolveAnnotationTag(String annotationTag) {
     return SemanticAnnotationRelTypeSeries.resolve(annotationTag)
         .map(ConceptTerm::getReferentId);
   }
 
+  /**
+   * Determines the 'primary' asset type for an Asset with multiple types/roles,
+   * to match a client's request.
+   *
+   * If the client's provided type (tag) matches one of the asset types, that type is
+   * returned.
+   * Asset types are preferred over Asset Roles
+   *
+   * Future TO-DO: leverage the hierarchy of Asset Types to return more specific types
+   * over more generic ones.
+   *
+   * @param assetTypes the types/roles of an Asset
+   * @param assetTypeTag a client-provided type
+   * @return the primary Asset type
+   */
   public static Optional<ConceptIdentifier> choosePrimaryType(
       List<ConceptIdentifier> assetTypes, String assetTypeTag) {
     if (isNotEmpty(assetTypeTag)) {

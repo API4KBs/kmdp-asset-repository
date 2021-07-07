@@ -1,19 +1,21 @@
 /**
  * Copyright © 2018 Mayo Clinic (RSTKNOWLEDGEMGMT@mayo.edu)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package edu.mayo.kmdp.repository.asset;
+
+import static edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphHolder.newKnowledgeGraphHolder;
+import static edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphInfo.newKnowledgeGraphInfo;
+import static edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex.newSparqlIndex;
 
 import edu.mayo.kmdp.kbase.query.sparql.v1_1.JenaQuery;
 import edu.mayo.kmdp.language.DeserializeApiOperator;
@@ -27,12 +29,9 @@ import edu.mayo.kmdp.language.ValidateApiOperator;
 import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties.KnowledgeArtifactRepositoryOptions;
-import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDAO;
-import edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphHolder;
-import edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex;
 import java.util.Collections;
 import java.util.List;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.server.KnowledgeAssetCatalogApiInternal;
@@ -41,17 +40,31 @@ import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 
+/**
+ * Combination interface that joins KnowledgeAssetCatalogApiInternal
+ * and KnowledgeAssetRepositoryApiInternal
+ *
+ * Provides additional helper methods
+ */
 public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogApiInternal,
     KnowledgeAssetRepositoryApiInternal {
 
+  /**
+   * Factory method that constructs a Knowledge Asset Repository instance with
+   * default configuration, components, and in-memory volatile artifact repository database
+   *
+   * @return a self-contained KnowledgeAssetRepositoryService
+   * @see KnowledgeAssetRepositoryService#selfContainedRepository(List, List, List, List)
+   */
   static KnowledgeAssetRepositoryService selfContainedRepository() {
-    KnowledgeAssetRepositoryServerProperties cfg = new KnowledgeAssetRepositoryServerProperties(
+    var cfg = new KnowledgeAssetRepositoryServerProperties(
         KnowledgeAssetRepositoryService.class.getResourceAsStream("/application.properties"));
     return selfContainedRepository(cfg);
   }
 
   /**
    * Self-contained Asset Repository instance used for testing
+   *
    * @return
    */
   static KnowledgeAssetRepositoryService mockTestRepository() {
@@ -70,14 +83,23 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
     return selfContainedRepository(cfg);
   }
 
+  /**
+   * Factory method that constructs a Knowledge Asset Repository instance with
+   * given configuration, default components, and in-memory volatile artifact repository database
+   *
+   * @return a self-contained KnowledgeAssetRepositoryService
+   * @see KnowledgeAssetRepositoryService#selfContainedRepository(List, List, List, List)
+   */
   static KnowledgeAssetRepositoryService selfContainedRepository(
       KnowledgeAssetRepositoryServerProperties cfg) {
-    KnowledgeArtifactRepositoryService artifactRepo =
+    var kgi = newKnowledgeGraphInfo();
+    var artifactRepo =
         JPAKnowledgeArtifactRepositoryService.inMemoryArtifactRepository(cfg);
-    KnowledgeGraphHolder kGraphHolder
-        = new KnowledgeGraphHolder(artifactRepo);
-    JenaSparqlDAO dao =
+    var kGraphHolder
+        = newKnowledgeGraphHolder(artifactRepo, kgi);
+    var dao =
         new JenaSparqlDAO(kGraphHolder);
+    var index = newSparqlIndex(dao, kgi);
     return new SemanticKnowledgeAssetRepository(
         artifactRepo,
         new LanguageDeSerializer(Collections.singletonList(new Surrogate2Parser())),
@@ -85,26 +107,39 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
         new LanguageValidator(Collections.emptyList()),
         new TransrepresentationExecutor(Collections.emptyList()),
         new JenaQuery(kGraphHolder),
-        new SparqlIndex(dao),
+        index,
         kGraphHolder,
         new HrefBuilder(cfg),
         cfg
     );
   }
 
+  /**
+   * Factory method that constructs a Knowledge Asset Repository instance with
+   * given configuration, components, and in-memory volatile artifact repository database
+   *
+   * @param parsers the {@link DeserializeApiOperator} used for reading/writing Artifacts.
+   *                Must include an operator that supports {@link KnowledgeAsset}
+   * @param detectors the {@link DetectApiOperator} used to detect Artifacts's representations
+   * @param validators the {@link ValidateApiOperator} used to validate Artifacts
+   * @param translators the {@link TransionApiOperator} used to trans* Artifacts as required
+   *                    by content negotiation
+   * @return a self-contained KnowledgeAssetRepositoryService
+   */
   static KnowledgeAssetRepositoryService selfContainedRepository(
       List<DeserializeApiOperator> parsers,
       List<DetectApiOperator> detectors,
       List<ValidateApiOperator> validators,
       List<TransionApiOperator> translators) {
-    KnowledgeAssetRepositoryServerProperties cfg = new KnowledgeAssetRepositoryServerProperties(
+    var kgi = newKnowledgeGraphInfo();
+    var cfg = new KnowledgeAssetRepositoryServerProperties(
         KnowledgeAssetRepositoryService.class.getResourceAsStream("/application.properties"));
-    KnowledgeArtifactRepositoryService artifactRepo =
+    var artifactRepo =
         JPAKnowledgeArtifactRepositoryService.inMemoryArtifactRepository(cfg);
 
-    KnowledgeGraphHolder kGraphHolder
-        = new KnowledgeGraphHolder(artifactRepo);
-    JenaSparqlDAO dao =
+    var kGraphHolder
+        = newKnowledgeGraphHolder(artifactRepo, kgi);
+    var dao =
         new JenaSparqlDAO(kGraphHolder);
 
     return new SemanticKnowledgeAssetRepository(
@@ -114,7 +149,7 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
         new LanguageValidator(validators),
         new TransrepresentationExecutor(translators),
         new JenaQuery(kGraphHolder),
-        new SparqlIndex(dao),
+        newSparqlIndex(dao, kgi),
         kGraphHolder,
         new HrefBuilder(cfg),
         cfg
@@ -122,6 +157,11 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
   }
 
 
+  /**
+   * Helper method that combines the publication of an Asset's Surrogate + Carrier Artifact
+   * @param surrogate the Asset metadata
+   * @param artifact the Asset manifestation
+   */
   default void publish(
       KnowledgeAsset surrogate,
       KnowledgeCarrier artifact) {

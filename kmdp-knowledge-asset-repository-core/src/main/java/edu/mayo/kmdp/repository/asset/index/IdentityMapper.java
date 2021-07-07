@@ -8,7 +8,6 @@ import java.net.URI;
 import java.util.UUID;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Mapper that resolves UUIDs (+ versionTag) pairs to the
@@ -21,9 +20,9 @@ import org.springframework.beans.factory.annotation.Autowired;
  */
 public class IdentityMapper {
 
-  private URI assetNamespace;
+  private final URI assetNamespace;
 
-  private URI artifactNamespace;
+  private final URI artifactNamespace;
 
   public IdentityMapper() {
     this(KnowledgeAssetRepositoryServerProperties.emptyProperties());

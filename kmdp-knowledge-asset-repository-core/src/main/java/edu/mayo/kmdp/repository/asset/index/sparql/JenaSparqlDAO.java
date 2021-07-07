@@ -18,19 +18,18 @@ import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
 import org.apache.jena.rdf.model.Literal;
-import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.SimpleSelector;
 import org.apache.jena.rdf.model.Statement;
-import org.apache.jena.shared.Lock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * Basic in/out functions for interacting with a Jena triple store.
+ * Basic in/out functions for interacting with a Jena Knowledge Graph Model.
+ *
  */
 @Component
 public class JenaSparqlDAO {
@@ -55,14 +54,19 @@ public class JenaSparqlDAO {
     this.knowledgeGraphHolder = graphHolder;
   }
 
+  /**
+   * Resets the underlying Graph
+   */
   protected void reinitialize() {
     knowledgeGraphHolder.resetGraph();
   }
 
+  /**
+   * Shuts down the underlying Graph
+   */
   @PreDestroy
   public void shutdown() {
-    knowledgeGraphHolder.persistGraph();
-    getKnowledgeGraph().close();
+    knowledgeGraphHolder.shutdown();
   }
 
   /**
@@ -78,12 +82,7 @@ public class JenaSparqlDAO {
         ResourceFactory.createProperty(predicate.toString()),
         createResource(object.toString()));
 
-    getKnowledgeGraph().enterCriticalSection(Lock.WRITE);
-    try {
-      getKnowledgeGraph().add(s);
-    } finally {
-      getKnowledgeGraph().leaveCriticalSection();
-    }
+    knowledgeGraphHolder.writeContentToGraph(kg -> kg.add(s));
   }
 
   /**
@@ -92,12 +91,7 @@ public class JenaSparqlDAO {
    * @param statements the triples to store
    */
   public void store(List<Statement> statements) {
-    getKnowledgeGraph().enterCriticalSection(Lock.WRITE);
-    try {
-      getKnowledgeGraph().add(statements);
-    } finally {
-      getKnowledgeGraph().leaveCriticalSection();
-    }
+    knowledgeGraphHolder.writeContentToGraph(kg -> kg.add(statements));
   }
 
   /**
@@ -106,12 +100,7 @@ public class JenaSparqlDAO {
    * @param statements the triples to remove
    */
   public void remove(List<Statement> statements) {
-    getKnowledgeGraph().enterCriticalSection(Lock.WRITE);
-    try {
-      getKnowledgeGraph().remove(statements);
-    } finally {
-      getKnowledgeGraph().leaveCriticalSection();
-    }
+    knowledgeGraphHolder.writeContentToGraph(kg -> kg.remove(statements));
   }
 
   /**
@@ -120,14 +109,17 @@ public class JenaSparqlDAO {
    * @param subjectURI the subject S* such that any triple <S* P O> will be removed
    */
   public void removeBySubject(String subjectURI) {
-    List<Statement> stats = new LinkedList<>();
-    getKnowledgeGraph().listStatements(
-        new SimpleSelector() {
-          @Override
-          public boolean test(Statement s) {
-            return s.getSubject().getURI().equals(subjectURI);
-          }
-        }).forEachRemaining(stats::add);
+    List<Statement> stats = knowledgeGraphHolder.readGraphContent(kg -> {
+      List<Statement> ss = new LinkedList<>();
+      kg.listStatements(
+          new SimpleSelector() {
+            @Override
+            public boolean test(Statement s) {
+              return s.getSubject().getURI().equals(subjectURI);
+            }
+          }).forEachRemaining(ss::add);
+      return ss;
+    });
     remove(stats);
   }
 
@@ -137,23 +129,27 @@ public class JenaSparqlDAO {
    * @param subjectURIs the subjects S* such that any triple <S* P O> will be removed
    */
   public void removeBySubjects(Set<String> subjectURIs) {
-    List<Statement> stats = new LinkedList<>();
-    getKnowledgeGraph().listStatements(
-        new SimpleSelector() {
-          @Override
-          public boolean test(Statement s) {
-            return subjectURIs.stream().anyMatch(id -> s.getSubject().getURI().equals(id));
-          }
-        }).forEachRemaining(stats::add);
+    List<Statement> stats = knowledgeGraphHolder.readGraphContent(kg -> {
+      List<Statement> ss = new LinkedList<>();
+      kg.listStatements(
+          new SimpleSelector() {
+            @Override
+            public boolean test(Statement s) {
+              return subjectURIs.stream().anyMatch(id -> s.getSubject().getURI().equals(id));
+            }
+          }).forEachRemaining(ss::add);
+      return ss;
+    });
     remove(stats);
   }
 
   /**
    * Run a custom SPARQL query.
+   * The query is expected to be a READ query
    *
-   * @param pss
-   * @param params
-   * @param consumer
+   * @param pss      the parametric query
+   * @param params   the query's parameters
+   * @param consumer callback function
    */
   public void runSparql(
       ParameterizedSparqlString pss,
@@ -163,13 +159,12 @@ public class JenaSparqlDAO {
     params.forEach((key, value) -> pss.setIri(key, value.toString()));
     literalParams.forEach(pss::setLiteral);
 
-    getKnowledgeGraph().enterCriticalSection(Lock.READ);
-    try (var qexec = QueryExecutionFactory.create(pss.asQuery(), getKnowledgeGraph())) {
+    logger.trace("Executing SPARQL query {}", pss);
+    knowledgeGraphHolder.processGraphContent(kg -> {
+      var qexec = QueryExecutionFactory.create(pss.asQuery(), kg);
       ResultSet rs = qexec.execSelect();
       rs.forEachRemaining(consumer);
-    } finally {
-      getKnowledgeGraph().leaveCriticalSection();
-    }
+    });
 
     pss.clearParams();
   }
@@ -283,12 +278,7 @@ public class JenaSparqlDAO {
    * @return ?s
    */
   public List<Statement> readAll() {
-    getKnowledgeGraph().enterCriticalSection(Lock.READ);
-    try {
-      return getKnowledgeGraph().listStatements().toList();
-    } finally {
-      getKnowledgeGraph().leaveCriticalSection();
-    }
+    return knowledgeGraphHolder.readGraphContent(kg -> kg.listStatements().toList());
   }
 
   /**
@@ -298,12 +288,7 @@ public class JenaSparqlDAO {
    * @return true if (s,p,o) is a statement that is part of the model
    */
   public boolean checkStatementExists(Statement st) {
-    getKnowledgeGraph().enterCriticalSection(Lock.READ);
-    try {
-      return getKnowledgeGraph().contains(st);
-    } finally {
-      getKnowledgeGraph().leaveCriticalSection();
-    }
+    return knowledgeGraphHolder.readGraphContent(kg -> kg.contains(st));
   }
 
   /**
@@ -328,15 +313,5 @@ public class JenaSparqlDAO {
 
     return resourceList;
   }
-
-  /**
-   * Testing purposes only
-   *
-   * @return
-   */
-  protected Model getKnowledgeGraph() {
-    return this.knowledgeGraphHolder.getJenaModel();
-  }
-
 
 }

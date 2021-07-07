@@ -1,5 +1,8 @@
 package edu.mayo.kmdp.repository.asset.index.sparql;
 
+import static edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphHolder.newKnowledgeGraphHolder;
+import static edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphInfo.newKnowledgeGraphInfo;
+import static edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex.newSparqlIndex;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties;
@@ -29,7 +32,7 @@ class SparqlIndexTest {
 
     JPAKnowledgeArtifactRepository mockRepo =
         new JPAKnowledgeArtifactRepository(JPAKnowledgeArtifactRepositoryService.inMemoryDataSource(), cfg);
-    KnowledgeGraphHolder kgHelper = new KnowledgeGraphHolder(mockRepo);
+    KnowledgeGraphHolder kgHelper = newKnowledgeGraphHolder(mockRepo, newKnowledgeGraphInfo());
     JenaSparqlDAO dao = new JenaSparqlDAO(kgHelper);
 
     this.dao = dao;
@@ -38,8 +41,8 @@ class SparqlIndexTest {
   }
 
   @Test
-  public void testGetRelatedAssets() {
-    SparqlIndex index = new SparqlIndex(this.getDao());
+  void testGetRelatedAssets() {
+    SparqlIndex index = newSparqlIndex(this.getDao(), newKnowledgeGraphInfo());
 
     URI uri1 = URI.create("https://clinicalknowledgemanagement.mayo.edu/assets/1/versions/1");
     URI uri2 = URI.create("https://clinicalknowledgemanagement.mayo.edu/assets/2/versions/1");
@@ -58,8 +61,8 @@ class SparqlIndexTest {
   }
 
   @Test
-  public void testGetRelatedAssetsWithPredicate() {
-    SparqlIndex index = new SparqlIndex(this.getDao());
+  void testGetRelatedAssetsWithPredicate() {
+    SparqlIndex index = newSparqlIndex(this.getDao(), newKnowledgeGraphInfo());
 
     URI uri1 = URI.create("https://clinicalknowledgemanagement.mayo.edu/assets/1/versions/1");
     URI uri2 = URI.create("https://clinicalknowledgemanagement.mayo.edu/assets/2/versions/1");
@@ -78,8 +81,8 @@ class SparqlIndexTest {
   }
 
   @Test
-  public void testGetRelatedAssetsDifferentPredicate() {
-    SparqlIndex index = new SparqlIndex(this.getDao());
+  void testGetRelatedAssetsDifferentPredicate() {
+    SparqlIndex index = newSparqlIndex(this.getDao(), newKnowledgeGraphInfo());
 
     URI uri1 = URI.create("https://clinicalknowledgemanagement.mayo.edu/assets/1/versions/1");
     URI uri2 = URI.create("https://clinicalknowledgemanagement.mayo.edu/assets/2/versions/1");

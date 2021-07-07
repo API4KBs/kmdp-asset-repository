@@ -13,6 +13,9 @@
  */
 package edu.mayo.kmdp.repository.asset.performance;
 
+import static edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphHolder.newKnowledgeGraphHolder;
+import static edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphInfo.newKnowledgeGraphInfo;
+import static edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex.newSparqlIndex;
 import static edu.mayo.kmdp.util.Util.uuid;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
@@ -35,13 +38,14 @@ import edu.mayo.kmdp.repository.asset.SemanticKnowledgeAssetRepository;
 import edu.mayo.kmdp.repository.asset.index.Index;
 import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDAO;
 import edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphHolder;
-import edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex;
+import edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphInfo;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.UUID;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
@@ -102,12 +106,6 @@ class RemoteRepoTest {
 
   static Index index;
 
-  static private JenaSparqlDAO jenaSparqlDao;
-
-  static private DataSource ds;
-
-  static private KnowledgeGraphHolder knowledgeGraphHelper;
-
   static protected KnowledgeAssetRepositoryServerProperties cfg
       = new KnowledgeAssetRepositoryServerProperties(
       RemoteRepoTest.class.getResourceAsStream("/application.test.properties"));
@@ -116,15 +114,17 @@ class RemoteRepoTest {
   @BeforeAll
   static void setUpRepos() {
 
-    ds = getDataSource(dbType);
+    DataSource ds = getDataSource(dbType);
 
     artifactRepo = jpaRepository(ds);
 
-    knowledgeGraphHelper = new KnowledgeGraphHolder(artifactRepo);
+    KnowledgeGraphInfo kgi = newKnowledgeGraphInfo();
 
-    jenaSparqlDao = new JenaSparqlDAO(knowledgeGraphHelper);
+    KnowledgeGraphHolder knowledgeGraphHelper = newKnowledgeGraphHolder(artifactRepo, kgi);
 
-    index = new SparqlIndex(jenaSparqlDao);
+    JenaSparqlDAO jenaSparqlDao = new JenaSparqlDAO(knowledgeGraphHelper);
+
+    index = newSparqlIndex(jenaSparqlDao, kgi);
 
     semanticRepository = new SemanticKnowledgeAssetRepository(
         artifactRepo,
@@ -139,13 +139,6 @@ class RemoteRepoTest {
         knowledgeGraphHelper,
         new HrefBuilder(cfg),
         cfg);
-  }
-
-  @AfterEach
-  void shutdown() {
-    if (artifactRepo != null) {
-      artifactRepo.shutdown();
-    }
   }
 
   public static JPAKnowledgeArtifactRepository jpaRepository(DataSource dataSource) {
@@ -186,8 +179,6 @@ class RemoteRepoTest {
   }
 
   public static DataSource getRemoteDataSource(DB_TYPE type) {
-    String dbName = UUID.randomUUID().toString();
-
     DataSourceBuilder<?> dataSourceBuilder = DataSourceBuilder.create();
     dataSourceBuilder.driverClassName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
     dataSourceBuilder.url("jdbc:sqlserver://"

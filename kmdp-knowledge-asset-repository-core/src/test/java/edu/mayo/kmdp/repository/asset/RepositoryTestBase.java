@@ -1,5 +1,8 @@
 package edu.mayo.kmdp.repository.asset;
 
+import static edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphHolder.newKnowledgeGraphHolder;
+import static edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphInfo.newKnowledgeGraphInfo;
+import static edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex.newSparqlIndex;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import edu.mayo.kmdp.kbase.query.sparql.v1_1.JenaQuery;
@@ -15,9 +18,9 @@ import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProper
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepository;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions;
-import edu.mayo.kmdp.repository.asset.index.Index;
 import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDAO;
 import edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphHolder;
+import edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphInfo;
 import edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex;
 import java.net.URI;
 import java.util.Arrays;
@@ -35,9 +38,11 @@ abstract class RepositoryTestBase {
 
   protected static SemanticKnowledgeAssetRepository semanticRepository;
 
-  protected static KnowledgeArtifactRepositoryService repos;
+  protected static KnowledgeArtifactRepositoryService artifactRepository;
 
-  protected static Index index;
+  protected static KnowledgeGraphInfo kgi;
+
+  protected static SparqlIndex index;
 
   protected static JenaSparqlDAO jenaSparqlDao;
 
@@ -57,13 +62,11 @@ abstract class RepositoryTestBase {
   @AfterAll
   static void tearDownRepos() {
     jenaSparqlDao.shutdown();
-    if (repos != null) {
-      repos.shutdown();
-    }
   }
 
   @BeforeAll
   static void setUpRepos() {
+    kgi = newKnowledgeGraphInfo();
 
     assetCfg = new KnowledgeAssetRepositoryServerProperties(
         RepositoryTestBase.class.getResourceAsStream("/application.test.properties"));
@@ -71,16 +74,16 @@ abstract class RepositoryTestBase {
 
     ds = getDataSource();
 
-    repos = new JPAKnowledgeArtifactRepository(ds, artifactCfg);
+    artifactRepository = new JPAKnowledgeArtifactRepository(ds, artifactCfg);
 
-    kgHolder = new KnowledgeGraphHolder(repos);
+    kgHolder = newKnowledgeGraphHolder(artifactRepository, kgi, assetCfg);
 
     jenaSparqlDao = new JenaSparqlDAO(kgHolder);
 
-    index = new SparqlIndex(jenaSparqlDao);
+    index = newSparqlIndex(jenaSparqlDao, kgi);
 
     semanticRepository = new SemanticKnowledgeAssetRepository(
-        repos,
+        artifactRepository,
         new LanguageDeSerializer(
             Arrays.asList(new Surrogate2Parser(), new JenaOwlParser())),
         new LanguageDetector(Collections.emptyList()),
@@ -108,7 +111,7 @@ abstract class RepositoryTestBase {
 
     DataSourceBuilder<?> dataSourceBuilder = DataSourceBuilder.create();
     dataSourceBuilder.driverClassName("org.h2.Driver");
-    dataSourceBuilder.url("jdbc:h2:mem:" + dbName);
+    dataSourceBuilder.url("jdbc:h2:mem:" + dbName + ";DB_CLOSE_ON_EXIT=FALSE");
     dataSourceBuilder.username("SA");
     dataSourceBuilder.password("");
 

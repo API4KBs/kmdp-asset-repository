@@ -22,7 +22,6 @@ import edu.mayo.kmdp.registry.Registry;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties.KnowledgeArtifactRepositoryOptions;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.util.Properties;
 
 @SuppressWarnings("unchecked")
@@ -68,6 +67,13 @@ public class KnowledgeAssetRepositoryServerProperties extends
             Boolean.FALSE.toString(),
             "Flag that, when true, allows clients to perform certain DELETE operations",
             Boolean.class,
+            false)),
+
+    AUTOSAVE_DELAY(
+        Opt.of("edu.mayo.kmdp.repository.asset.graph.autoSaveDelay",
+            "10",
+            "Knowledge Graph AutoSave interval, in seconds",
+            Integer.class,
             false)),
 
     ASSET_NAMESPACE(

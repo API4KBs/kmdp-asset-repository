@@ -49,7 +49,8 @@ class ParallelInteractionTest extends SemanticRepoAPITestBase {
   private KnowledgeAssetRepositoryApi repo;
 
   @BeforeEach
-  void init() {
+  protected void init() {
+    super.init();
     String url = "http://localhost:" + port;
 //    String url = "http://localhost:8080/kar";
     ApiClientFactory webClientFactory = new ApiClientFactory(url, WithFHIR.NONE);

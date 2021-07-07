@@ -31,6 +31,18 @@ public class ContentNegotiationHelper {
     this.hrefBuilder = builder;
   }
 
+  /**
+   * Selects the best Surrogate, given the client preferences and the canonical Surrogate
+   * Inspects the canonical Surrogate to determine if a different, better form exists,
+   * otherwise returns the canonical Surrogate itself
+   *
+   * Currently only supports HTML as an alternative representation
+   *
+   * @param surrogate The canonical Surrogate
+   * @param xAccept   A format MIME type expressing the client's preferences
+   * @param defaultSurrogateRepresentation The representation of KnowledgeAsset surrogates
+   * @return The best Surrogate
+   */
   public Answer<KnowledgeAsset> negotiateCanonicalSurrogate(
       KnowledgeAsset surrogate, String xAccept,
       SyntacticRepresentation defaultSurrogateRepresentation) {
@@ -113,6 +125,13 @@ public class ContentNegotiationHelper {
         : anyCarrier(artifacts);
   }
 
+  /**
+   * the Default tolerance for a set of weighted representations, below which a
+   * requested representation is not considered acceptable
+   * Defaults to 0.0, except for HTML to support implicit requests by browsers and other user agents
+   * @param reps the list of weighted representations
+   * @return WEIGHT_UNSPECIFIED for HTML, 0.0 otherwise
+   */
   private Float getDefaultTolerance(List<WeightedRepresentation> reps) {
     // HTML is treated with special regards, and always honored
     if (reps.isEmpty() || !HTML.sameAs(reps.get(0).getRep().getLanguage())) {
@@ -232,8 +251,8 @@ public class ContentNegotiationHelper {
    * Given a set of ranked, sorted preferences, returns the first format i.e. the format of the
    * first preference that specifies a format
    *
-   * @param preferences
-   * @return
+   * @param preferences the list of preferences
+   * @return the first preference that includes a serialization format
    */
   public Optional<SerializationFormat> getPreferredFormat(
       List<WeightedRepresentation> preferences) {
@@ -247,9 +266,9 @@ public class ContentNegotiationHelper {
    * Decodes a formal MIME type and returns the Format component Uses a default value in case the
    * decoding fails
    *
-   * @param xAccept
-   * @param defaultFormat
-   * @return
+   * @param xAccept the formal MIME type to be decoded
+   * @param defaultFormat the fallback format
+   * @return the format specified in the MIME type if present, the default format otherwise
    */
   public SerializationFormat decodePreferredFormat(String xAccept,
       SerializationFormat defaultFormat) {

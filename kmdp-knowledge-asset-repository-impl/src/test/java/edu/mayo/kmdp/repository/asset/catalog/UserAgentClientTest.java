@@ -23,7 +23,6 @@ import static org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevelSe
 
 import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties;
-import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
 import edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex;
 import edu.mayo.kmdp.util.JSonUtil;
@@ -67,7 +66,7 @@ import org.springframework.http.HttpHeaders;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
-public class UserAgentClientTest extends SemanticRepoAPITestBase {
+class UserAgentClientTest extends SemanticRepoAPITestBase {
 
 
   private KnowledgeAssetCatalogApi rpo;
@@ -77,6 +76,7 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
 
   @BeforeEach
   protected void init() {
+    super.init();
     String host = "http://localhost:" + port;
 
     ApiClientFactory apiClientFactory
@@ -88,7 +88,7 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
 
 
   @Test
-  public void testGetKnowledgeAssetWithHTMLViaRedirect() {
+  void testGetKnowledgeAssetWithHTMLViaRedirect() {
     UUID assetId = UUID.randomUUID();
     populateRepository(assetId);
 
@@ -101,7 +101,7 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
   }
 
   @Test
-  public void testCanonicalSurrogate() {
+  void testCanonicalSurrogate() {
     UUID assetId = UUID.randomUUID();
     populateRepositoryWithRedirectables(assetId);
 
@@ -114,7 +114,7 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
   }
 
   @Test
-  public void testCanonicalSurrogateJSON() {
+  void testCanonicalSurrogateJSON() {
     UUID assetId = UUID.randomUUID();
     populateRepositoryWithRedirectables(assetId);
 
@@ -134,7 +134,7 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
   }
 
   @Test
-  public void testCanonicalSurrogateWithWrappedNegotiation() {
+  void testCanonicalSurrogateWithWrappedNegotiation() {
     UUID assetId = UUID.randomUUID();
     populateRepositoryWithRedirectables(assetId);
 
@@ -153,7 +153,7 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
 
 
   @Test
-  public void testCanonicalSurrogateWithHTMLOut() {
+  void testCanonicalSurrogateWithHTMLOut() {
     UUID assetId = UUID.randomUUID();
     populateRepositoryWithRedirectables(assetId);
 
@@ -169,7 +169,7 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
 
 
   @Test
-  public void testPointerXMLSerialization() {
+  void testPointerXMLSerialization() {
     populateRepositoryWithRedirectables(UUID.randomUUID());
 
     String out = executeRequest("/cat/assets", "application/xhtml+xml, application/xml;q=0.9");
@@ -530,20 +530,12 @@ public class UserAgentClientTest extends SemanticRepoAPITestBase {
 
   private static class StatusCodeException extends Exception {
 
-    private int code;
-    private String msg;
+    private final int code;
+    private final String msg;
 
-    public StatusCodeException(int statusCode, String reasonPhrase) {
+    StatusCodeException(int statusCode, String reasonPhrase) {
       this.code = statusCode;
       this.msg = reasonPhrase;
-    }
-
-    public int getCode() {
-      return code;
-    }
-
-    public String getMsg() {
-      return msg;
     }
 
     @Override

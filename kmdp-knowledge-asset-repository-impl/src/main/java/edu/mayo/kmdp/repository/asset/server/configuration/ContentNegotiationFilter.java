@@ -42,7 +42,7 @@ public class ContentNegotiationFilter implements Filter {
   FilterChain chain) throws IOException, ServletException {
     HttpServletRequest req = (HttpServletRequest) request;
 
-    MutableHttpServletRequest mutableRequest = new MutableHttpServletRequest(req);
+    var mutableRequest = new MutableHttpServletRequest(req);
 
     String accept = req.getHeader("Accept");
     String xAccept = req.getHeader("X-Accept");

@@ -72,7 +72,7 @@ public class CompositeHelper {
         FileUtil
             .read(SemanticKnowledgeAssetRepository.class.getResourceAsStream("/components.sparql"))
             .orElseThrow(() -> new IllegalStateException("Unable to load components.sparql"));
-   this.rootQuery =
+    this.rootQuery =
         FileUtil
             .read(SemanticKnowledgeAssetRepository.class.getResourceAsStream("/root.sparql"))
             .orElseThrow(() -> new IllegalStateException("Unable to load components.sparql"));
@@ -137,7 +137,7 @@ public class CompositeHelper {
   }
 
   public KnowledgeCarrier toStructGraph(ResourceIdentifier structId, List<Bindings> bindings) {
-    Model model = ModelFactory.createDefaultModel();
+    var model = ModelFactory.createDefaultModel();
     bindings.forEach(b -> model.add(
         objA(b.get("s").toString(), b.get("p").toString(), b.get("o").toString())));
     return ofAst(model)
@@ -156,7 +156,8 @@ public class CompositeHelper {
     return toEncodedStructGraph(structId, bindings);
   }
 
-  public Answer<KnowledgeCarrier> toEncodedStructGraph(ResourceIdentifier structId, List<Bindings> bindings) {
+  public Answer<KnowledgeCarrier> toEncodedStructGraph(ResourceIdentifier structId,
+      List<Bindings> bindings) {
     return rdfLowerer.applyLower(
         toStructGraph(structId, bindings),
         Encoded_Knowledge_Expression,

@@ -51,16 +51,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 
-public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
-
-  private static Logger logger = LoggerFactory.getLogger(SurrogateNegotiationTest.class);
+class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
 
   private URI redirectUrl;
 
   private KnowledgeAssetCatalogApi rpo;
 
   @BeforeEach
-  void init() {
+  protected void init() {
+    super.init();
     redirectUrl = URI.create("http://localhost:" + port + "/cat");
 
     ApiClientFactory apiClientFactory
@@ -70,7 +69,7 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
   }
 
   @Test
-  public void testPopulation() {
+  void testPopulation() {
     UUID pockId = UUID.randomUUID();
     UUID rulId = UUID.randomUUID();
 
@@ -82,7 +81,7 @@ public class SurrogateNegotiationTest extends SemanticRepoAPITestBase {
 
 
   @Test
-  public void testHeaders() {
+  void testHeaders() {
     UUID pockId = UUID.randomUUID();
     UUID rulId = UUID.randomUUID();
 

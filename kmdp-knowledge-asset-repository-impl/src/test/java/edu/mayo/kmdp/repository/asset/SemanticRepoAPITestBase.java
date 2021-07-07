@@ -16,7 +16,9 @@
 package edu.mayo.kmdp.repository.asset;
 
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions;
+import edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphHolder;
 import java.net.URI;
+import org.junit.jupiter.api.BeforeEach;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.server.Swagger2SpringBoot;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -48,5 +50,9 @@ public abstract class SemanticRepoAPITestBase {
 
   protected URI testArtifactNS() {
     return cfg.getTyped(KnowledgeAssetRepositoryOptions.ARTIFACT_NAMESPACE, URI.class);
+  }
+
+  protected void init() {
+    // nothing to do for now
   }
 }

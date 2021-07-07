@@ -40,14 +40,13 @@ import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 
 class SemanticRepositoryRemoteQueryTest extends SemanticRepoAPITestBase {
 
-  private KnowledgeAssetCatalogApi ckac;
-
   @BeforeEach
-  void init() {
+  protected void init() {
+    super.init();
     ApiClientFactory webClientFactory = new ApiClientFactory("http://localhost:" + port,
         WithFHIR.NONE);
 
-    ckac = KnowledgeAssetCatalogApi.newInstance(webClientFactory);
+    KnowledgeAssetCatalogApi ckac = KnowledgeAssetCatalogApi.newInstance(webClientFactory);
 
     ResourceIdentifier assetId =
         assetId(testAssetNS(), UUID.nameUUIDFromBytes("aaa000".getBytes()),"1.0.0");

@@ -2,6 +2,7 @@ package edu.mayo.kmdp.repository.asset.index.sparql;
 
 import static edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex.InternalQueryManager.TRANSITIVE_CLOSURE_SELECT;
 import static edu.mayo.kmdp.util.JenaUtil.objA;
+import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
 import static org.apache.jena.rdf.model.ResourceFactory.createStatement;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
@@ -77,7 +78,6 @@ public class SparqlIndex implements Index {
             .collect(Collectors.joining("|")) + ")";
   }
 
-  //TODO: Change this to the official URIs as published in the ontology.
   // All below are likely wrong until changed.
   public static final String LCC = "https://www.omg.org/spec/LCC/Languages/LanguageRepresentation/";
   public static final String API4KP = "https://www.omg.org/spec/API4KP/api4kp/";
@@ -119,8 +119,18 @@ public class SparqlIndex implements Index {
   @Autowired
   protected JenaSparqlDAO jenaSparqlDao;
 
-  public SparqlIndex(JenaSparqlDAO jenaSparqlDao) {
-    this.jenaSparqlDao = jenaSparqlDao;
+  @Autowired
+  protected KnowledgeGraphInfo kgi;
+
+  public SparqlIndex() {
+    // empty constructor
+  }
+
+  public static SparqlIndex newSparqlIndex(JenaSparqlDAO jenaSparqlDao, KnowledgeGraphInfo kgi) {
+    var sparqlIndex = new SparqlIndex();
+    sparqlIndex.jenaSparqlDao = jenaSparqlDao;
+    sparqlIndex.kgi = kgi;
+    return sparqlIndex;
   }
 
   @Override
@@ -256,14 +266,14 @@ public class SparqlIndex implements Index {
   }
 
   private Stream<Statement> toDependencyStatements(URI subj, Dependency dependency) {
-    ConceptDescriptor dependencyType = ConceptDescriptor.toConceptDescriptor(dependency.getRel());
+    var dependencyType = ConceptDescriptor.toConceptDescriptor(dependency.getRel());
     URI tgt = dependency.getHref().getVersionId();
 
     return toRelatedStatements(subj, dependencyType, tgt);
   }
 
   private Stream<Statement> toDerivationStatements(URI subj, Derivative derivative) {
-    ConceptDescriptor derivationType = ConceptDescriptor.toConceptDescriptor(derivative.getRel());
+    var derivationType = ConceptDescriptor.toConceptDescriptor(derivative.getRel());
     URI tgt = derivative.getHref().getVersionId();
 
     return toRelatedStatements(subj, derivationType, tgt);
@@ -271,7 +281,7 @@ public class SparqlIndex implements Index {
 
   private Stream<Statement> toParthoodStatements(URI subj,
       org.omg.spec.api4kp._20200801.surrogate.Component part) {
-    ConceptDescriptor partType = ConceptDescriptor.toConceptDescriptor(part.getRel());
+    var partType = ConceptDescriptor.toConceptDescriptor(part.getRel());
     URI tgt = part.getHref().getVersionId();
 
     return toRelatedStatements(subj, partType, tgt);
@@ -369,12 +379,18 @@ public class SparqlIndex implements Index {
 
   @Override
   public void unregisterAsset(ResourceIdentifier asset) {
-    String assetId = asset.getResourceId().toString();
+    if (kgi.isKnowledgeGraphAsset(asset.getUuid())) {
+      throw new IllegalArgumentException("Unable remove the Knowledge Graph from the Index");
+    }
+    var assetId = asset.getResourceId().toString();
     jenaSparqlDao.removeBySubject(assetId);
   }
 
   @Override
   public void unregisterAssetVersion(ResourceIdentifier asset) {
+    if (kgi.isKnowledgeGraphAsset(asset.getUuid())) {
+      throw new IllegalArgumentException("Unable remove the Knowledge Graph from the Index");
+    }
     Set<ResourceIdentifier> surrs = getSurrogatesForAsset(asset);
     Set<ResourceIdentifier> carrs = getArtifactsForAsset(asset);
 
@@ -405,6 +421,9 @@ public class SparqlIndex implements Index {
   @Override
   public void registerArtifactToAsset(ResourceIdentifier assetPointer,
       ResourceIdentifier artifact, String mimeType) {
+    if (kgi.isKnowledgeGraphAsset(assetPointer.getUuid())) {
+      throw new IllegalArgumentException("Unable to register a Carrier for the Knowledge Graph");
+    }
     List<Statement> statements = Arrays.asList(
         toStatement(assetPointer.getVersionId(), HAS_CARRIER_URI, artifact.getResourceId()),
         toStatement(artifact.getResourceId(), HAS_VERSION_URI, artifact.getVersionId()),
@@ -422,6 +441,9 @@ public class SparqlIndex implements Index {
   @Override
   public void registerSurrogateToAsset(ResourceIdentifier assetPointer,
       ResourceIdentifier surrogate, String mimeType) {
+    if (kgi.isKnowledgeGraphAsset(assetPointer.getUuid())) {
+      throw new IllegalArgumentException("Unable to register a Surrogate for the Knowledge Graph");
+    }
     List<Statement> statements = Arrays.asList(
         toStatement(assetPointer.getVersionId(), HAS_SURROGATE_URI, surrogate.getResourceId()),
         toStatement(surrogate.getResourceId(), HAS_VERSION_URI, surrogate.getVersionId()),
@@ -440,6 +462,9 @@ public class SparqlIndex implements Index {
   @Override
   public Optional<ResourceIdentifier> getCanonicalSurrogateForAsset(
       ResourceIdentifier assetPointer) {
+    if (kgi.isKnowledgeGraphAsset(assetPointer.getUuid())) {
+      return Optional.ofNullable(kgi.knowledgeGraphSurrogateId());
+    }
     return this.jenaSparqlDao
         .readObjectBySubjectAndPredicate(assetPointer.getVersionId(), HAS_CANONICAL_SURROGATE_URI)
         .stream()
@@ -463,6 +488,9 @@ public class SparqlIndex implements Index {
    */
   @Override
   public boolean isKnownAsset(ResourceIdentifier assetId) {
+    if (kgi.isKnowledgeGraphAsset(assetId.getUuid())) {
+      return true;
+    }
     return jenaSparqlDao.checkStatementExists(
         toStringValueStatement(
             assetId.getResourceId(),
@@ -513,6 +541,9 @@ public class SparqlIndex implements Index {
 
   @Override
   public Set<ResourceIdentifier> getArtifactsForAsset(ResourceIdentifier assetId) {
+    if (kgi.isKnowledgeGraphAsset(assetId.getUuid())) {
+      return singleton(kgi.knowledgeGraphArtifactId());
+    }
     List<Resource> resources =
         this.jenaSparqlDao
             .readObjectBySubjectAndPredicate(assetId.getVersionId(), HAS_CARRIER_URI);
@@ -524,6 +555,9 @@ public class SparqlIndex implements Index {
 
   @Override
   public Set<ResourceIdentifier> getSurrogatesForAsset(ResourceIdentifier assetId) {
+    if (kgi.isKnowledgeGraphAsset(assetId.getUuid())) {
+      return singleton(kgi.knowledgeGraphSurrogateId());
+    }
     List<Resource> resources =
         this.jenaSparqlDao
             .readObjectBySubjectAndPredicate(assetId.getVersionId(), HAS_SURROGATE_URI);
@@ -536,11 +570,14 @@ public class SparqlIndex implements Index {
   /**
    * Retrieves the name of an Asset
    *
-   * @param assetId
-   * @return
+   * @param assetId the ID of the Asset
+   * @return the name of the Asset, according to the Surrogate
    */
   @Override
   public Optional<String> getAssetName(ResourceIdentifier assetId) {
+    if (kgi.isKnowledgeGraphAsset(assetId.getUuid())) {
+      return Optional.ofNullable(kgi.getKnowledgeGraphLabel());
+    }
     List<Literal> labels = this.jenaSparqlDao.readValueBySubjectAndPredicate(
         assetId.getVersionId(), URI.create(RDFS.label.getURI()));
 
@@ -552,8 +589,8 @@ public class SparqlIndex implements Index {
   /**
    * Retrieves the types and roles of an Asset
    *
-   * @param assetId
-   * @return
+   * @param assetId the ID of the Asset
+   * @return the types and roles, according to the Surrogate, as ConceptIdentifiers
    */
   @Override
   public List<ConceptIdentifier> getAssetTypes(ResourceIdentifier assetId) {
@@ -581,8 +618,25 @@ public class SparqlIndex implements Index {
   }
 
   @Override
-  public Optional<ResourceIdentifier> resolve(UUID assetId, String versionTag) {
+  public Optional<ResourceIdentifier> resolveAsset(UUID assetId, String versionTag) {
+    if (kgi.isKnowledgeGraphAsset(assetId)) {
+      return Optional.of(kgi.knowledgeGraphAssetId());
+    }
+    return resolve(assetId, versionTag);
+  }
 
+  @Override
+  public Optional<ResourceIdentifier> resolveArtifact(UUID artifactId, String versionTag) {
+    if (kgi.isKnowledgeGraphCarrier(artifactId)) {
+      return Optional.of(kgi.knowledgeGraphArtifactId());
+    }
+    if (kgi.isKnowledgeGraphSurrogate(artifactId)) {
+      return Optional.of(kgi.knowledgeGraphSurrogateId());
+    }
+    return resolve(artifactId, versionTag);
+  }
+
+  protected Optional<ResourceIdentifier> resolve(UUID assetId, String versionTag) {
     List<Resource> versions = new ArrayList<>();
     Map<String, Literal> literalParams = new HashMap<>();
     literalParams.put("?tag",
@@ -602,11 +656,26 @@ public class SparqlIndex implements Index {
   }
 
   @Override
-  public Optional<ResourceIdentifier> resolve(UUID assetId) {
+  public Optional<ResourceIdentifier> resolveAsset(UUID assetId) {
+    if (kgi.isKnowledgeGraphAsset(assetId)) {
+      return Optional.of(kgi.knowledgeGraphAssetId());
+    }
+    return resolve(assetId);
+  }
+
+  @Override
+  public Optional<ResourceIdentifier> resolveArtifact(UUID artifactId) {
+    if (kgi.isKnowledgeGraphAsset(artifactId)) {
+      return Optional.of(kgi.knowledgeGraphArtifactId());
+    }
+    return resolve(artifactId);
+  }
+
+  protected Optional<ResourceIdentifier> resolve(UUID resourceId) {
     List<Resource> versions = new ArrayList<>();
     Map<String, Literal> literalParams = new HashMap<>();
     literalParams.put("?tag",
-        ResourceFactory.createPlainLiteral(assetId.toString()));
+        ResourceFactory.createPlainLiteral(resourceId.toString()));
 
     this.jenaSparqlDao.runSparql(
         new ParameterizedSparqlString(InternalQueryManager.RESOLVE_TAG_SELECT),
@@ -627,6 +696,9 @@ public class SparqlIndex implements Index {
    */
   @Override
   public List<ResourceIdentifier> getAssetVersions(UUID assetSeriesId) {
+    if (kgi.isKnowledgeGraphAsset(assetSeriesId)) {
+      return singletonList(kgi.knowledgeGraphAssetId());
+    }
     List<ResourceIdentifier> versions = new ArrayList<>();
     Map<String, Literal> literalParams = new HashMap<>();
     literalParams.put("?tag",
@@ -654,6 +726,9 @@ public class SparqlIndex implements Index {
    */
   @Override
   public List<Pointer> getSurrogateVersions(UUID surrogateSeriesId) {
+    if (kgi.isKnowledgeGraphSurrogate(surrogateSeriesId)) {
+      return singletonList(kgi.knowledgeGraphSurrogateId().toPointer());
+    }
     List<Pointer> versions = new ArrayList<>();
     Map<String, Literal> literalParams = new HashMap<>();
     literalParams.put("?tag",
@@ -682,6 +757,9 @@ public class SparqlIndex implements Index {
    */
   @Override
   public List<Pointer> getCarrierVersions(UUID carrierSeriesId) {
+    if (kgi.isKnowledgeGraphCarrier(carrierSeriesId)) {
+      return singletonList(kgi.knowledgeGraphArtifactId().toPointer());
+    }
     List<Pointer> versions = new ArrayList<>();
     Map<String, Literal> literalParams = new HashMap<>();
     literalParams.put("?tag",
@@ -714,7 +792,7 @@ public class SparqlIndex implements Index {
   protected Pointer versionInfoToPointer(
       Resource resourceId, Resource resourceVersionId,
       Literal versionTag, Literal versionTimestamp, Literal mimeType) {
-    Pointer rid = SemanticIdentifier
+    var rid = SemanticIdentifier
         .newVersionIdAsPointer(URI.create(resourceVersionId.getURI()));
     if (!rid.getResourceId().equals(URI.create(resourceId.getURI()))) {
       throw new IllegalStateException("Mismatch between entity " + resourceId.getURI()

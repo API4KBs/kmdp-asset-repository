@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright © 2018 Mayo Clinic (RSTKNOWLEDGEMGMT@mayo.edu)
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -28,12 +28,10 @@ import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.C
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.Forbidden;
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.NoContent;
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.NotAcceptable;
-import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.OK;
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.PreconditionFailed;
 import static java.nio.charset.Charset.defaultCharset;
 import static java.util.Arrays.stream;
 import static java.util.Collections.emptyMap;
-import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
@@ -46,6 +44,7 @@ import static org.omg.spec.api4kp._20200801.AbstractCompositeCarrier.ofUniformAn
 import static org.omg.spec.api4kp._20200801.AbstractCompositeCarrier.ofUniformNamedComposite;
 import static org.omg.spec.api4kp._20200801.Answer.conflict;
 import static org.omg.spec.api4kp._20200801.Answer.failed;
+import static org.omg.spec.api4kp._20200801.Answer.merge;
 import static org.omg.spec.api4kp._20200801.Answer.notFound;
 import static org.omg.spec.api4kp._20200801.Answer.succeed;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.timedSemverComparator;
@@ -111,7 +110,6 @@ import java.util.stream.Stream;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.inject.Named;
-import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.omg.spec.api4kp._20200801.AbstractCarrier;
 import org.omg.spec.api4kp._20200801.AbstractCarrier.Encodings;
@@ -212,7 +210,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   private final DetectApiInternal detector;
 
-  private ValidateApiInternal validator;
+  private final ValidateApiInternal validator;
 
   private final TransxionApiInternal translator;
 
@@ -223,7 +221,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   /* Internal helpers */
   private final Index index;
 
-  private KnowledgeGraphHolder kGraphHolder;
+  private final KnowledgeGraphHolder kGraphHolder;
 
   private final HrefBuilder hrefBuilder;
 
@@ -330,20 +328,11 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   @PreDestroy
   private void shutdown() {
-    logger.info("Ensuring that Knowledge Graph is persisted before shutdown");
-    kGraphHolder.persistGraph();
-  }
-
-  private ResourceIdentifier toAssetId(UUID assetId) {
-    return identityMapper.toAssetId(assetId);
+    // Nothing to do - components will @Predestroy themselves
   }
 
   private ResourceIdentifier toAssetId(UUID assetId, String versionTag) {
     return identityMapper.toAssetId(assetId, versionTag);
-  }
-
-  private ResourceIdentifier toArtifactId(UUID artifactId) {
-    return identityMapper.toArtifactId(artifactId);
   }
 
   private ResourceIdentifier toArtifactId(UUID artifactId, String versionTag) {
@@ -367,7 +356,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .collect(Collectors.toList());
 
     return Answer.of(new KnowledgeAssetCatalog()
-        .withId(kGraphHolder.getKnowledgeGraphAssetId())
+        .withId(kGraphHolder.getInfo().knowledgeGraphAssetId())
         .withName("Knowledge Asset Repository")
         .withSupportedAssetTypes(types)
         .withSupportedAnnotations(
@@ -421,7 +410,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     if (queryExecutor == null) {
       return Answer.unsupported();
     }
-    ResourceIdentifier kbId = kGraphHolder.getKnowledgeBaseId();
+    ResourceIdentifier kbId = kGraphHolder.getInfo().graphKnowledgeBaseId();
     return queryExecutor.askQuery(kbId.getUuid(), kbId.getVersionTag(), graphQuery, null);
   }
 
@@ -562,10 +551,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    */
   @Override
   public Answer<KnowledgeAsset> getKnowledgeAsset(UUID assetId, String xAccept) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
-      // FUTURE: consider an interceptor
-      return Answer.of(kGraphHolder.getSurrogate());
-    }
     return retrieveLatestCanonicalSurrogateForLatestAsset(assetId)
         .flatMap(latestCanonicalSurrogate ->
             negotiator.negotiateCanonicalSurrogate(latestCanonicalSurrogate, xAccept,
@@ -586,12 +571,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<List<Pointer>> listKnowledgeAssetVersions(UUID assetId, Integer offset,
       Integer limit, String beforeTag, String afterTag, String sort) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
-      // FUTURE: consider an interceptor
-      return Answer.of(
-          Collections.singletonList(kGraphHolder.getKnowledgeGraphAssetId().toPointer()));
-    }
-    if (index.resolve(assetId).isEmpty()) {
+    if (index.resolveAsset(assetId).isEmpty()) {
       return Answer.notFound();
     }
 
@@ -623,7 +603,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       logger.warn("DELETE all versions of Knowledge Asset {}", assetId);
     }
 
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
+    if (kGraphHolder.getInfo().isKnowledgeGraphAsset(assetId)) {
       // FUTURE: consider an interceptor
       return Answer.of(Forbidden);
     }
@@ -665,10 +645,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<KnowledgeAsset> getKnowledgeAssetVersion(UUID assetId, String versionTag,
       String xAccept) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
-      // FUTURE: consider an interceptor
-      return Answer.of(kGraphHolder.getSurrogate());
-    }
     return retrieveLatestCanonicalSurrogateForAssetVersion(assetId, toSemVer(versionTag))
         .flatMap(assetVersionCanonicalSurrogate ->
             negotiator.negotiateCanonicalSurrogate(assetVersionCanonicalSurrogate, xAccept,
@@ -690,7 +666,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<Void> setKnowledgeAssetVersion(UUID assetId, String versionTag,
       KnowledgeAsset assetSurrogate) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
+    if (kGraphHolder.getInfo().isKnowledgeGraphAsset(assetId)) {
       // FUTURE: consider an interceptor
       return Answer.of(Forbidden);
     }
@@ -729,7 +705,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       logger.warn("DELETE Version {} of Knowledge Asset {}",
           versionTag, assetId);
     }
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
+    if (kGraphHolder.getInfo().isKnowledgeGraphAsset(assetId)) {
       // FUTURE: consider an interceptor
       return Answer.of(Forbidden);
     }
@@ -760,26 +736,30 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   private Answer<Void> removeAssetVersion(KnowledgeAsset asset, boolean hardDelete) {
-    logger.info("DELETE Carriers for {}:{}", asset.getAssetId().getUuid(), asset.getAssetId().getVersionTag());
+    logger.info("DELETE Carriers for {}:{}", asset.getAssetId().getUuid(),
+        asset.getAssetId().getVersionTag());
     Answer<Void> artfs = asset.getCarriers().stream()
         .map(carrier -> removeArtifact(asset, carrier, hardDelete))
         .reduce(Answer::merge)
         // succeed automatically if no artifact to delete
         .orElseGet(Answer::succeed);
 
-    logger.info("DELETE Surrogates for {}:{}", asset.getAssetId().getUuid(), asset.getAssetId().getVersionTag());
+    logger.info("DELETE Surrogates for {}:{}", asset.getAssetId().getUuid(),
+        asset.getAssetId().getVersionTag());
     Answer<Void> surrs = asset.getSurrogate().stream()
         .map(surrogate -> removeArtifact(asset, surrogate, hardDelete))
         .reduce(Answer::merge)
         // it should be impossible for no surrogate to exist
         .orElseGet(Answer::failed);
 
-    logger.info("UN-INDEX Asset {}:{}", asset.getAssetId().getUuid(), asset.getAssetId().getVersionTag());
+    logger.info("UN-INDEX Asset {}:{}", asset.getAssetId().getUuid(),
+        asset.getAssetId().getVersionTag());
     index.unregisterAssetVersion(asset.getAssetId());
-    return Answer.merge(artfs, surrs);
+    return merge(artfs, surrs);
   }
 
-  private Answer<Void> removeArtifact(KnowledgeAsset asset, KnowledgeArtifact artifact, boolean hardDelete) {
+  private Answer<Void> removeArtifact(KnowledgeAsset asset, KnowledgeArtifact artifact,
+      boolean hardDelete) {
     ResourceIdentifier id = artifact.getArtifactId();
     logger.info("DELETE Carrier Artifact {}:{} for Asset {}:{}",
         artifact.getArtifactId().getUuid(), artifact.getArtifactId().getVersionTag(),
@@ -795,7 +775,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
           asset.getAssetId().getUuid(), asset.getAssetId().getVersionTag());
       Answer<Void> sans = knowledgeArtifactSeriesApi
           .deleteKnowledgeArtifact(artifactRepositoryId, id.getUuid(), hardDelete);
-      ans = Answer.merge(ans, sans);
+      ans = merge(ans, sans);
     }
     return ans;
   }
@@ -817,10 +797,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<KnowledgeCarrier> getKnowledgeAssetCanonicalCarrier(
       UUID assetId, String xAccept) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
-      // FUTURE: consider an interceptor
-      return Answer.of(kGraphHolder.getKnowledgeGraph());
-    }
     return getLatestAssetVersion(assetId)
         .map(assetVersionId ->
             getKnowledgeAssetVersionCanonicalCarrier(
@@ -843,10 +819,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<byte[]> getKnowledgeAssetCanonicalCarrierContent(
       UUID assetId, String xAccept) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
-      // FUTURE: consider an interceptor
-      return kGraphHolder.getEncodedGraph();
-    }
     return getKnowledgeAssetCanonicalCarrier(assetId, xAccept)
         .flatOpt(AbstractCarrier::asBinary);
   }
@@ -856,8 +828,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * per content standard negotiation
    * <p>
    * If no preference is expressed, returns the "default" carrier, assuming that there is one and
-   * only one carrier (TODO there should be a default preference order, or a non-deterministic
-   * selection TODO in case two or more carriers are present)
+   * only one carrier (TO DO there should be a default preference order, or a non-deterministic
+   * selection TO DO in case two or more carriers are present)
    * <p>
    * If one or more preferences are expressed, an attempt is made to find the best available carrier
    * that matches the preference(s): returns the binary artifact if inlined or stored in the
@@ -876,10 +848,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<KnowledgeCarrier> getKnowledgeAssetVersionCanonicalCarrier(
       UUID assetId, String versionTag, String xAccept) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
-      // FUTURE: consider an interceptor
-      return Answer.of(kGraphHolder.getKnowledgeGraph());
-    }
     boolean withNegotiation = !isEmpty(xAccept);
     // retrieves the surrogate, which has the representation information
     return retrieveLatestCanonicalSurrogateForAssetVersion(assetId, toSemVer(versionTag))
@@ -903,8 +871,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
                   xAccept))
                   : tryConstructEphemeral(surrogate, preferences);
 
-              if (carrier.isNotFound() && withNegotiation
-                  && bestAvailableCarrier.map(this::isRedirectable).orElse(false)) {
+              boolean redirect = carrier.isNotFound() && withNegotiation
+                  && bestAvailableCarrier.map(this::isRedirectable).orElse(false);
+              if (redirect) {
                 return bestAvailableCarrier.flatMap(ka -> Answer.referTo(ka.getLocator(), false));
               } else {
                 return carrier;
@@ -925,10 +894,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<byte[]> getKnowledgeAssetVersionCanonicalCarrierContent(
       UUID assetId, String versionTag, String xAccept) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
-      // FUTURE: consider an interceptor
-      return kGraphHolder.getEncodedGraph();
-    }
     return getKnowledgeAssetVersionCanonicalCarrier(assetId, versionTag, xAccept)
         .flatOpt(KnowledgeCarrier::asBinary);
   }
@@ -949,11 +914,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<List<Pointer>> listKnowledgeAssetCarriers(UUID assetId, String versionTag,
       Integer offset, Integer limit, String beforeTag, String afterTag, String sort) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
-      // FUTURE: consider an interceptor
-      return Answer.of(singletonList(kGraphHolder.getKnowledgeGraphArtifactId().toPointer()));
-    }
-    Optional<ResourceIdentifier> assetRefOpt = index.resolve(assetId, toSemVer(versionTag));
+
+    Optional<ResourceIdentifier> assetRefOpt = index.resolveAsset(assetId, toSemVer(versionTag));
 
     if (assetRefOpt.isEmpty()) {
       return Answer.notFound();
@@ -988,12 +950,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<KnowledgeCarrier> getKnowledgeAssetCarrier(UUID assetId, String versionTag,
       UUID artifactId, String xAccept) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
-      // FUTURE: consider an interceptor
-      return kGraphHolder.isGraphCarrier(artifactId)
-          ? Answer.of(kGraphHolder.getKnowledgeGraph())
-          : notFound();
-    }
     return Answer.of(getLatestCarrierVersion(artifactId))
         .flatMap(artifactVersionId ->
             getKnowledgeAssetCarrierVersion(
@@ -1028,12 +984,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       UUID artifactId,
       String artifactVersionTag,
       String xAccept) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
-      // FUTURE: consider an interceptor
-      return kGraphHolder.isGraphCarrier(artifactId)
-          ? Answer.of(kGraphHolder.getKnowledgeGraph())
-          : notFound();
-    }
     boolean withNegotiation = !isEmpty(xAccept);
 
     Answer<KnowledgeAsset> assetMetadata = getKnowledgeAssetVersion(assetId, toSemVer(versionTag));
@@ -1058,8 +1008,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
                     bytes))
         );
 
-    if (carrier.isNotFound() && withNegotiation && artifactMetadata.map(this::isRedirectable)
-        .orElse(false)) {
+    boolean redirect = carrier.isNotFound() && withNegotiation
+        && artifactMetadata.map(this::isRedirectable).orElse(false);
+    if (redirect) {
       return artifactMetadata.flatMap(ka -> Answer.referTo(ka.getLocator(), false));
     } else {
       return carrier;
@@ -1085,12 +1036,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       UUID artifactId,
       String artifactVersionTag,
       String xAccept) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
-      // FUTURE: consider an interceptor
-      return kGraphHolder.isGraphCarrier(artifactId)
-          ? kGraphHolder.getEncodedGraph()
-          : notFound();
-    }
     return getKnowledgeAssetCarrierVersion(assetId, versionTag, artifactId, artifactVersionTag,
         xAccept)
         .flatOpt(KnowledgeCarrier::asBinary);
@@ -1110,9 +1055,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<Void> setKnowledgeAssetCarrierVersion(UUID assetId, String versionTag,
       UUID artifactId, String artifactVersion, byte[] exemplar) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
+    if (kGraphHolder.getInfo().isKnowledgeGraphAsset(assetId)) {
       // FUTURE: consider an interceptor
-      return kGraphHolder.persistGraph();
+      return kGraphHolder.saveGraph();
     }
 
     KnowledgeAsset asset = retrieveLatestCanonicalSurrogateForAssetVersion(assetId,
@@ -1122,14 +1067,14 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     logger.debug(
         "ADDING CARRIER TO ASSET {} : {} >>> {} : {}",
-        assetId, toSemVer(versionTag), artifactId, artifactVersion);
+        assetId, versionTag, artifactId, artifactVersion);
 
-    persistKnowledgeCarrier(asset.getAssetId(), artifactRef, exemplar);
-    updateCanonicalSurrogateWithCarrier(asset, artifactRef, exemplar);
+    Answer<Void> a1 = persistKnowledgeCarrier(asset.getAssetId(), artifactRef, exemplar);
+    Answer<Void> a2 = updateCanonicalSurrogateWithCarrier(asset, artifactRef, exemplar);
 
     logger.debug("Artifact has been set on asset {}", asset.getAssetId());
 
-    return Answer.of(OK);
+    return merge(a1,a2);
   }
 
   //*****************************************************************************************/
@@ -1149,11 +1094,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<KnowledgeCarrier> getKnowledgeAssetCanonicalSurrogate(UUID assetId,
       String xAccept) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
-      // FUTURE: consider an interceptor
-      return getKnowledgeAssetVersionCanonicalSurrogate(assetId, null, xAccept);
-    }
-
     return getLatestAssetVersion(assetId)
         .map(assetVersionId ->
             getKnowledgeAssetVersionCanonicalSurrogate(
@@ -1178,10 +1118,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<KnowledgeCarrier> getKnowledgeAssetVersionCanonicalSurrogate(UUID assetId,
       String versionTag, String xAccept) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
-      // FUTURE: consider an interceptor
-      return encodeCanonicalSurrogate(kGraphHolder.getSurrogate());
-    }
+
     boolean withNegotiation = !Util.isEmpty(xAccept);
     List<WeightedRepresentation> preferences =
         decodePreferences(xAccept, defaultSurrogateRepresentation);
@@ -1209,20 +1146,16 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   /**
-   * Returns a list of pointers to the Surrogates registered for a given Knowledge Asset
+   * Returns a list of pointers to the Surrogates registered for a given Knowledge Asset Version
    *
-   * @param assetId
-   * @param versionTag
-   * @return
+   * @param assetId the ID of the Asset
+   * @param versionTag the version of the Asset
+   * @return the list of Pointers to the Surrogates for that version of the Asset
    */
   @Override
   public Answer<List<Pointer>> listKnowledgeAssetSurrogates(UUID assetId, String versionTag,
       Integer offset, Integer limit, String beforeTag, String afterTag, String sort) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
-      // FUTURE: consider an interceptor
-      return Answer.of(singletonList(kGraphHolder.getKnowledgeGraphSurrogateId().toPointer()));
-    }
-    Optional<ResourceIdentifier> assetRefOpt = index.resolve(assetId, versionTag);
+    Optional<ResourceIdentifier> assetRefOpt = index.resolveAsset(assetId, versionTag);
 
     if (assetRefOpt.isEmpty()) {
       return Answer.notFound();
@@ -1264,12 +1197,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   public Answer<KnowledgeCarrier> getKnowledgeAssetSurrogateVersion(
       UUID assetId, String versionTag, UUID surrogateId, String surrogateVersionTag,
       String xAccept) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
-      // FUTURE: consider an interceptor
-      return kGraphHolder.isGraphSurrogate(surrogateId)
-          ? encodeCanonicalSurrogate(kGraphHolder.getSurrogate())
-          : Answer.notFound();
-    }
     Answer<KnowledgeAsset> assetMetadata = getKnowledgeAssetVersion(assetId, versionTag);
 
     // get the specific surrogate requested by the client
@@ -1334,12 +1261,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @param versionTag            The version of the Asset for which a Surrogate is being
    *                              registered
    * @param assetSurrogateCarrier The Carrier of a (Composite) Canonical Surrogate
-   * @return
+   * @return the Asset Surrogate, wrapped in a KnowledgeCarreir
    */
   @Override
   public Answer<Void> addCanonicalKnowledgeAssetSurrogate(UUID assetId, String versionTag,
       KnowledgeCarrier assetSurrogateCarrier) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
+    if (kGraphHolder.getInfo().isKnowledgeGraphAsset(assetId)) {
       // FUTURE: consider an interceptor
       return Answer.failed(Forbidden);
     }
@@ -1365,7 +1292,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
                 .flatOpt(kc -> kc.as(KnowledgeAsset.class))
                 .flatMap(ax -> setKnowledgeAssetVersion(
                     ax.getAssetId().getUuid(), ax.getAssetId().getVersionTag(), ax));
-        ans = Answer.merge(ans, compositeAns);
+        ans = merge(ans, compositeAns);
       }
 
       return ans;
@@ -1393,11 +1320,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   public Answer<CompositeKnowledgeCarrier> getAnonymousCompositeKnowledgeAssetSurrogate(
       UUID assetId, String versionTag, String xAccept) {
     SerializationFormat fmt = negotiator.decodePreferredFormat(xAccept, defaultSurrogateFormat);
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
+    if (kGraphHolder.getInfo().isKnowledgeGraphAsset(assetId)) {
       // FUTURE: consider an interceptor
       return Answer.failed(Forbidden);
     }
-    return Answer.of(index.resolve(assetId, versionTag))
+
+    return Answer.of(index.resolveAsset(assetId, versionTag))
         .flatMap(rootId -> compositeHelper.getComponentsQuery(rootId, Depends_On))
         .flatMap(this::getComponentIds)
         .flatMap(componentIds ->
@@ -1416,13 +1344,13 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<CompositeKnowledgeCarrier> getAnonymousCompositeKnowledgeAssetCarrier(
       UUID assetId, String versionTag, String xAccept) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
+    if (kGraphHolder.getInfo().isKnowledgeGraphAsset(assetId)) {
       // FUTURE: consider an interceptor
       return Answer.failed(Forbidden);
     }
 
     ResourceIdentifier rootId = toAssetId(assetId, versionTag);
-    if (!index.isKnownAsset(rootId)) {
+    if (isUnknownAsset(rootId)) {
       return Answer.notFound();
     }
 
@@ -1449,13 +1377,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   public Answer<List<Pointer>> listKnowledgeAssetSurrogateVersions(UUID assetId, String versionTag,
       UUID surrogateId, Integer offset, Integer limit, String beforeTag, String afterTag,
       String sort) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
-      // FUTURE: consider an interceptor
-      return (kGraphHolder.isGraphSurrogate(surrogateId))
-          ? Answer.of(singletonList(kGraphHolder.getKnowledgeGraphSurrogateId().toPointer()))
-          : Answer.notFound();
-    }
-    Optional<ResourceIdentifier> axIdOpt = index.resolve(assetId, versionTag);
+
+    Optional<ResourceIdentifier> axIdOpt = index.resolveAsset(assetId, versionTag);
 
     if (axIdOpt.isEmpty()) {
       return Answer.notFound();
@@ -1484,15 +1407,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * Returns Pointers to the versions of a given carrier of a given (version of a) KnowledgeAsset
    */
   @Override
-  public Answer<List<Pointer>> listKnowledgeAssetCarrierVersions(UUID assetId, String versionTag,
-      UUID artifactId) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
-      // FUTURE: consider an interceptor
-      return kGraphHolder.isGraphCarrier(artifactId)
-          ? Answer.of(singletonList(kGraphHolder.getKnowledgeGraphArtifactId().toPointer()))
-          : Answer.notFound();
-    }
-    Optional<ResourceIdentifier> axIdOpt = index.resolve(assetId, versionTag);
+  public Answer<List<Pointer>> listKnowledgeAssetCarrierVersions(
+      UUID assetId, String versionTag, UUID artifactId) {
+    Optional<ResourceIdentifier> axIdOpt = index.resolveAsset(assetId, versionTag);
 
     if (axIdOpt.isEmpty()) {
       return Answer.notFound();
@@ -1520,7 +1437,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<KnowledgeCarrier> getCompositeKnowledgeAssetStructure(UUID assetId,
       String versionTag, String xAccept) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
+    if (kGraphHolder.getInfo().isKnowledgeGraphAsset(assetId)) {
       // FUTURE: consider an interceptor
       return Answer.failed(Forbidden);
     }
@@ -1540,16 +1457,19 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   }
 
   /**
-   * @param assetId
-   * @param versionTag
-   * @param flat
-   * @param xAccept
-   * @return
+   * Creates a Composite Knowledge Asset Surrogate, retrieving and combining the Surrogates
+   * of the Composite with the Surrogates of the components
+   *
+   * @param assetId the Composite Asset ID
+   * @param versionTag the Composite version Tag
+   * @param flat (not supported)
+   * @param xAccept content negotiation header
+   * @return a CompositeKnowledgeCarrier wrapping the components Surrogates
    */
   @Override
   public Answer<CompositeKnowledgeCarrier> getCompositeKnowledgeAssetSurrogate(UUID assetId,
       String versionTag, Boolean flat, String xAccept) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
+    if (kGraphHolder.getInfo().isKnowledgeGraphAsset(assetId)) {
       // FUTURE: consider an interceptor
       return Answer.failed(Forbidden);
     }
@@ -1561,9 +1481,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     }
 
     Answer<ResourceIdentifier> structId = compositeSurr.flatOpt(compositeHelper::getStructId);
+    boolean isAtomic = compositeSurr.map(KnowledgeAsset::getRole)
+        .map(Composite_Knowledge_Asset::isNoneOf).orElse(true);
     if (structId.isFailure()
-        && compositeSurr.map(KnowledgeAsset::getRole).map(Composite_Knowledge_Asset::isNoneOf)
-        .orElse(true)) {
+        && isAtomic) {
       return Answer.failedOnServer(new ServerSideException(PreconditionFailed));
     }
 
@@ -1614,7 +1535,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    */
   private Answer<KnowledgeCarrier> inferBasicStruct(
       KnowledgeAsset composite, SemanticIdentifier structId) {
-    Model model = ModelFactory.createDefaultModel();
+    var model = ModelFactory.createDefaultModel();
     composite.getLinks().stream()
         .flatMap(StreamUtil.filterAs(Component.class))
         .map(link ->
@@ -1636,12 +1557,13 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<KnowledgeCarrier> getAnonymousCompositeKnowledgeAssetStructure(
       UUID assetId, String versionTag, String xAccept) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
+    if (kGraphHolder.getInfo().isKnowledgeGraphAsset(assetId)) {
       // FUTURE: consider an interceptor
       return Answer.failed(Forbidden);
     }
+
     ResourceIdentifier rootId = toAssetId(assetId, versionTag);
-    if (!index.isKnownAsset(rootId)) {
+    if (isUnknownAsset(rootId)) {
       return Answer.notFound();
     }
     return compositeHelper.getAnonStructQuery(rootId)
@@ -1653,10 +1575,11 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   public Answer<CompositeKnowledgeCarrier> getCompositeKnowledgeAssetCarrier(UUID assetId,
       String versionTag,
       Boolean flat, String xAccept) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
+    if (kGraphHolder.getInfo().isKnowledgeGraphAsset(assetId)) {
       // FUTURE: consider an interceptor
       return Answer.failed(Forbidden);
     }
+
     ResourceIdentifier compositeAssetId = toAssetId(assetId, versionTag);
 
     Answer<KnowledgeAsset> compositeSurr = getKnowledgeAssetVersion(assetId, versionTag, xAccept);
@@ -1695,10 +1618,11 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<Void> addKnowledgeAssetCarrier(UUID assetId, String versionTag,
       KnowledgeCarrier assetCarrier) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
+    if (kGraphHolder.getInfo().isKnowledgeGraphAsset(assetId)) {
       // FUTURE: consider an interceptor
       return Answer.failed(Forbidden);
     }
+
     logger.info("Add Carrier Artifact for Asset {}:{}", assetId, versionTag);
     Answer<KnowledgeAsset> currentSurrogate = getKnowledgeAsset(assetId, versionTag);
     if (!currentSurrogate.isSuccess()) {
@@ -1745,7 +1669,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
             binary))
         .orElseGet(Answer::failed);
 
-    return Answer.merge(a1, a2);
+    return merge(a1, a2);
   }
 
   //*****************************************************************************************/
@@ -1755,7 +1679,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Override
   public Answer<Void> addKnowledgeAssetSurrogate(UUID assetId, String versionTag,
       KnowledgeCarrier surrogateCarrier) {
-    if (kGraphHolder.isKnowledgeGraphAsset(assetId)) {
+    if (kGraphHolder.getInfo().isKnowledgeGraphAsset(assetId)) {
       // FUTURE: consider an interceptor
       return Answer.failed(Forbidden);
     }
@@ -1792,17 +1716,16 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @param exemplar  a copy of the carrier Artifact, used to infer metadata
    * @return A flag that indicates whether an update was actually performed or not
    */
-  private boolean updateCanonicalSurrogateWithCarrier(KnowledgeAsset asset,
+  private Answer<Void> updateCanonicalSurrogateWithCarrier(KnowledgeAsset asset,
       ResourceIdentifier carrierId, byte[] exemplar) {
     if (asset.getCarriers().stream()
         .noneMatch(
             art -> art.getArtifactId().sameAs(carrierId.getUuid(), carrierId.getVersionTag()))) {
       // the Artifact needs to be attached to the surrogate
       ResourceIdentifier newSurrogateId = attachCarrier(asset, carrierId, exemplar);
-      persistCanonicalKnowledgeAssetVersion(asset.getAssetId(), newSurrogateId, asset);
-      return true;
+      return persistCanonicalKnowledgeAssetVersion(asset.getAssetId(), newSurrogateId, asset);
     }
-    return false;
+    return Answer.of(NoContent);
   }
 
   /**
@@ -1939,9 +1862,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   private KnowledgeCarrier buildKnowledgeCarrier(UUID assetId, String versionTag, UUID artifactId,
       String artifactVersionTag,
       SyntacticRepresentation representation, String label, byte[] bytes) {
-    ResourceIdentifier axtId = index.resolve(assetId, toSemVer(versionTag))
+    ResourceIdentifier axtId = index.resolveAsset(assetId, toSemVer(versionTag))
         .orElseThrow();
-    ResourceIdentifier artId = index.resolve(artifactId, toSemVer(artifactVersionTag))
+    ResourceIdentifier artId = index.resolveArtifact(artifactId, toSemVer(artifactVersionTag))
         .orElseThrow();
 
     SyntacticRepresentation rep = (SyntacticRepresentation) representation.clone();
@@ -2024,7 +1947,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
 
   /**
-   * Uses a locator (URL) to get a copy of an external artifact TODO: this method assumes the URL is
+   * Uses a locator (URL) to get a copy of an external artifact TO-DO: this method assumes the URL is
    * openly available. This method may need to delegate to a helper
    *
    * @param artifact The KnowledgeArtifact metadata, which could include the locator URL
@@ -2055,12 +1978,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
 
   /**
-   * Ensures that Asset, Carrier and Surrogate IDs follow the SemVer pattern, rewriting any ID that
-   * does not
+   * Ensures that Asset, Carrier and Surrogate IDs follow the SemVer pattern,
+   * rewriting any ID that does not
    * <p>
    * This method might be later changed to throw an exception
    *
-   * @param assetSurrogate
+   * @param assetSurrogate the KnowledgeAsset surrogate to validate
    */
   private void ensureSemanticVersionedIdentifiers(KnowledgeAsset assetSurrogate) {
     ResourceIdentifier axId = assetSurrogate.getAssetId();
@@ -2121,7 +2044,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       if (existingSurrogate.isSuccess()) {
         KnowledgeAsset existing = existingSurrogate.get();
         if (!SurrogateDiffer.isEquivalent(assetSurrogate, existing)) {
-          SurrogateDiffer differ = new SurrogateDiffer();
+          var differ = new SurrogateDiffer();
           String msg = differ.diff(assetSurrogate, existing).prettyPrint();
           throw new ServerSideException(Conflict, emptyMap(), msg.getBytes());
         }
@@ -2132,7 +2055,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   /**
    * Registers and saves a version of a canonical Surrogate for a given Asset version
    * <p>
-   * Assigns a random surrogate ID if not present (TODO should reject?)
+   * Assigns a random surrogate ID if not present (TO-DO should reject?)
    * <p>
    * If the Asset already has a Canonical Surrogate, it must be the same Surrogate, or a version
    * thereof.
@@ -2141,7 +2064,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @param surrogateId    the Id of the Surrogate
    * @param assetSurrogate the Canonical Surrogate
    */
-  private void persistCanonicalKnowledgeAssetVersion(
+  private Answer<Void> persistCanonicalKnowledgeAssetVersion(
       ResourceIdentifier assetId,
       ResourceIdentifier surrogateId,
       KnowledgeAsset assetSurrogate) {
@@ -2149,8 +2072,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     if (surrogateBinary.isSuccess()) {
       logger.info("PERSIST Surrogate {}:{} for Asset {}:{}",
-          surrogateId.getUuid(), surrogateId.getVersionTag(), assetId.getUuid(), assetId.getVersionTag());
-      this.knowledgeArtifactApi.setKnowledgeArtifactVersion(
+          surrogateId.getUuid(), surrogateId.getVersionTag(), assetId.getUuid(),
+          assetId.getVersionTag());
+      Answer<Void> ans = this.knowledgeArtifactApi.setKnowledgeArtifactVersion(
           artifactRepositoryId,
           surrogateId.getUuid(),
           surrogateId.getVersionTag(),
@@ -2164,6 +2088,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
               .map(ModelMIMECoder::encode)
               .orElseThrow(IllegalStateException::new),
           index);
+      return ans;
+    } else {
+      return Answer.failed(surrogateBinary);
     }
   }
 
@@ -2174,15 +2101,16 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @param artifactId the Id of the Carrier Artifact
    * @param exemplar   A binary-encoded copy of the Carrier Artifact
    */
-  private void persistKnowledgeCarrier(ResourceIdentifier assetId, ResourceIdentifier artifactId,
+  private Answer<Void> persistKnowledgeCarrier(ResourceIdentifier assetId, ResourceIdentifier artifactId,
       byte[] exemplar) {
 
-    this.knowledgeArtifactApi.setKnowledgeArtifactVersion(
+    Answer<Void> ans = this.knowledgeArtifactApi.setKnowledgeArtifactVersion(
         artifactRepositoryId,
         artifactId.getUuid(), artifactId.getVersionTag(),
         exemplar);
 
     this.index.registerArtifactToAsset(assetId, artifactId, null);
+    return ans;
   }
 
   /**
@@ -2280,11 +2208,11 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * Reconciles any missing asset Id and version in a Canonical Surrogate, using the parameters of
    * an asset-related call (e.g. getKnowledgeAsset)
    * <p>
-   * TODO this method should probably throw a 403-BAD REQUEST exception
+   * TO-DO this method should probably throw a 403-BAD REQUEST exception
    *
-   * @param assetSurrogate
-   * @param assetId
-   * @param versionTag
+   * @param assetSurrogate the KnowledgeAsset canonical surrogate to validate
+   * @param assetId the client-provided asset ID
+   * @param versionTag the client-provided asset version tag
    */
   private void setIdAndVersionIfMissing(KnowledgeAsset assetSurrogate, UUID assetId,
       String versionTag) {
@@ -2324,10 +2252,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * Converts the identifier of a Knowledge Asset to a Pointer, including additional information
    * such as the name, type(s) and URL on this server at which thise resource can be provided.
    *
-   * @param assetId  the Id of the Asset to be mapped to a Pointer
-   * @param hrefType the type of resource (only ASSET and ASSET_VERSION are supported)
-   * @param mime     the MIME type of the resource the Pointer resolves to
-   * @param assetTypeTag
+   * @param assetId      the Id of the Asset to be mapped to a Pointer
+   * @param hrefType     the type of resource (only ASSET and ASSET_VERSION are supported)
+   * @param mime         the MIME type of the resource the Pointer resolves to
+   * @param assetTypeTag the 'primary' asset type
    * @return a Pointer that includes a URL to this server
    */
   private Pointer toKnowledgeAssetPointer(
@@ -2337,7 +2265,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       String assetTypeTag) {
     var pointer = assetId.toPointer();
 
-    // TODO: Assess if the information is worthy the cost of the queries
+    // TO-DO: Assess if the information is worthy the cost of the queries
     // or the queries should be optimized
     // e.g. into a single query that returns the Id information with name and type
     index.getAssetName(assetId)
@@ -2361,9 +2289,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    */
   private Pointer toKnowledgeArtifactPointer(
       ResourceIdentifier assetId, ResourceIdentifier artifactId, HrefType hrefType) {
-    Pointer pointer = artifactId.toPointer();
-
-    return pointer
+    return artifactId.toPointer()
         .withHref(hrefBuilder.getHref(assetId, artifactId, hrefType));
   }
 
@@ -2388,8 +2314,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @param assetId the id of the asset for which the canonical surrogate is requested
    * @return true if the Asset is indexed, false otherwise
    */
-  public boolean hasKnowledgeAsset(ResourceIdentifier assetId) {
-    return index.isKnownAsset(assetId);
+  public boolean isUnknownAsset(ResourceIdentifier assetId) {
+    return ! index.isKnownAsset(assetId);
   }
 
   /**
@@ -2402,7 +2328,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   private Answer<KnowledgeAsset> retrieveLatestCanonicalSurrogateForAssetVersion(UUID assetId,
       String versionTag) {
     Optional<ResourceIdentifier> surrogateId =
-        index.resolve(assetId, versionTag)
+        index.resolveAsset(assetId, versionTag)
             .flatMap(index::getCanonicalSurrogateForAsset);
     return Answer.of(surrogateId)
         .flatMap(this::retrieveLatestCanonicalSurrogate);
@@ -2550,7 +2476,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * Method that encapsulates the logic used to determine whether or not this repository should
    * allow the DELETEion of content.
    *
-   * @return
+   * @return a flag that indicates whether this repository supports the deletion of content
    */
   protected boolean isDeleteAllowed() {
     return this.allowClearAll;

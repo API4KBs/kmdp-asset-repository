@@ -3,7 +3,6 @@ package edu.mayo.kmdp.repository.asset;
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.Forbidden;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
 import static org.omg.spec.api4kp._20200801.id.IdentifierConstants.VERSION_ZERO;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Assertional_Knowledge;
@@ -36,15 +35,15 @@ import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
  */
 class KnowledgeGraphAssetTest extends RepositoryTestBase {
 
-  private static final UUID GRAPH_UUID = kgHolder.getKnowledgeGraphAssetId().getUuid();
+  private static final UUID GRAPH_UUID = kgHolder.getInfo().knowledgeGraphAssetId().getUuid();
 
   private JenaRdfParser parser = new JenaRdfParser();
   private Surrogate2Parser metaParser = new Surrogate2Parser();
 
-  private static ResourceIdentifier graphArtifactId = kgHolder
-      .getKnowledgeGraphArtifactId();
-  private static ResourceIdentifier graphSurrogateId = kgHolder
-      .getKnowledgeGraphSurrogateId();
+  private static ResourceIdentifier graphArtifactId = kgHolder.getInfo()
+      .knowledgeGraphArtifactId();
+  private static ResourceIdentifier graphSurrogateId = kgHolder.getInfo()
+      .knowledgeGraphSurrogateId();
 
   @Test
   void testGraphAssetId() {
@@ -88,9 +87,7 @@ class KnowledgeGraphAssetTest extends RepositoryTestBase {
     assertEquals(GRAPH_UUID, surr.getAssetId().getUuid());
     assertEquals(VERSION_ZERO, surr.getAssetId().getVersionTag());
 
-    semanticRepository.getKnowledgeAssetVersion(GRAPH_UUID, null)
-        .orElseGet(Assertions::fail);
-    semanticRepository.getKnowledgeAssetVersion(GRAPH_UUID, "irrelevant")
+    semanticRepository.getKnowledgeAssetVersion(GRAPH_UUID, VERSION_ZERO)
         .orElseGet(Assertions::fail);
   }
 
@@ -234,7 +231,7 @@ class KnowledgeGraphAssetTest extends RepositoryTestBase {
     assertTrue(str.startsWith("<rdf:RDF"));
 
     byte[] binary2 = semanticRepository.getKnowledgeAssetCarrierVersionContent(
-        GRAPH_UUID, "na", graphArtifactId.getUuid(), null)
+        GRAPH_UUID, "na", graphArtifactId.getUuid(), VERSION_ZERO)
         .orElseGet(Assertions::fail);
     String str2 = new String(binary2);
     assertTrue(str2.startsWith("<rdf:RDF"));
@@ -283,15 +280,16 @@ class KnowledgeGraphAssetTest extends RepositoryTestBase {
     KnowledgeCarrier kc = semanticRepository.getKnowledgeAssetVersionCanonicalSurrogate(
         GRAPH_UUID,
         VERSION_ZERO)
-        .flatMap(x -> metaParser.applyLift(x, Abstract_Knowledge_Expression, codedRep(Knowledge_Asset_Surrogate_2_0), null))
+        .flatMap(x -> metaParser
+            .applyLift(x, Abstract_Knowledge_Expression, codedRep(Knowledge_Asset_Surrogate_2_0),
+                null))
         .orElseGet(Assertions::fail);
     assertTrue(kc.as(KnowledgeAsset.class).isPresent());
   }
 
   @Test
   void testListGraphAssetSurrogates() {
-    List<Pointer> ptrs = semanticRepository.listKnowledgeAssetSurrogates(
-        GRAPH_UUID, VERSION_ZERO)
+    List<Pointer> ptrs = semanticRepository.listKnowledgeAssetSurrogates(GRAPH_UUID, VERSION_ZERO)
         .orElseGet(Assertions::fail);
     assertEquals(1, ptrs.size());
     assertEquals(graphSurrogateId.asKey(), ptrs.get(0).asKey());

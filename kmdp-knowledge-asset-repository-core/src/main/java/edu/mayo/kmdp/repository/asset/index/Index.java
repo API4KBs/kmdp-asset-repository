@@ -25,7 +25,6 @@ import java.util.UUID;
 import org.omg.spec.api4kp._20200801.id.ConceptIdentifier;
 import org.omg.spec.api4kp._20200801.id.Pointer;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
-import org.omg.spec.api4kp._20200801.services.KnowledgeBase;
 import org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder;
 import org.omg.spec.api4kp._20200801.surrogate.Annotation;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
@@ -260,7 +259,11 @@ public interface Index {
   void reset();
 
 
-  Optional<ResourceIdentifier> resolve(UUID assetId, String versionTag);
+  Optional<ResourceIdentifier> resolveAsset(UUID assetId, String versionTag);
 
-  Optional<ResourceIdentifier> resolve(UUID assetId);
+  Optional<ResourceIdentifier> resolveAsset(UUID assetId);
+
+  Optional<ResourceIdentifier> resolveArtifact(UUID artifactId, String versionTag);
+
+  Optional<ResourceIdentifier> resolveArtifact(UUID artifactId);
 }

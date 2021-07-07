@@ -68,7 +68,8 @@ class ContentNegotiationTest extends SemanticRepoAPITestBase {
   private KnowledgeAssetCatalogApi ckac;
 
   @BeforeEach
-  void init() {
+  protected void init() {
+    super.init();
     ApiClientFactory apiClientFactory = new ApiClientFactory("http://localhost:" + port,
         WithFHIR.NONE);
 
