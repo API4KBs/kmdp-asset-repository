@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.assetId;
 import static org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.ClinicalKnowledgeAssetTypeSeries.Clinical_Rule;
@@ -32,11 +33,17 @@ import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeReprese
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.KNART_1_3;
 
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
+import edu.mayo.kmdp.util.FileUtil;
 import edu.mayo.kmdp.util.JaxbUtil;
 import edu.mayo.kmdp.util.Util;
+import edu.mayo.kmdp.util.XMLUtil;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
+import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.UUID;
 import org.hl7.cdsdt.r2.ST;
 import org.hl7.elm.r1.And;
@@ -61,6 +68,7 @@ import org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
+import org.w3c.dom.Document;
 
 class ContentNegotiationTest extends SemanticRepoAPITestBase {
 
@@ -76,7 +84,6 @@ class ContentNegotiationTest extends SemanticRepoAPITestBase {
     repo = KnowledgeAssetRepositoryApi.newInstance(apiClientFactory);
     ckac = KnowledgeAssetCatalogApi.newInstance(apiClientFactory);
   }
-
 
 
   @Test
@@ -119,6 +126,34 @@ class ContentNegotiationTest extends SemanticRepoAPITestBase {
     assertTrue(ans3.isSuccess());
     assertTrue(ans3.getOptionalValue().isPresent());
     assertTrue(KNART_1_3.sameAs(ans3.get().getRepresentation().getLanguage()));
+  }
+
+  @Test
+  void testContentNegotiationWithXMLBuilder() throws MalformedURLException {
+    UUID assetId = UUID.nameUUIDFromBytes("xml".getBytes());
+    String versionTag = "1.0.0";
+
+    // Asset primary manifestation is XML based
+    KnowledgeDocument knart = buildExampleArtifact();
+    KnowledgeAsset asset = buildComputableAsset(assetId, versionTag, serializeExample(knart));
+
+    Answer<Void> set = ckac.setKnowledgeAssetVersion(assetId, versionTag, asset);
+    assertTrue(set.isSuccess());
+
+    String srcUrl = "http://localhost:" + port + "/cat/assets/" + assetId + "/carrier/content";
+
+    // load XML
+    Optional<Document> dox = XMLUtil.loadXMLDocument(new URL(srcUrl));
+    assertTrue(dox.isPresent());
+
+    // openStream triggers the content negotiation, returning HTML
+    URL scrUrl2 = new URL(srcUrl);
+    try {
+      Optional<String> str = FileUtil.read(scrUrl2.openStream());
+      assertTrue(str.isPresent());
+    } catch (IOException e) {
+      fail(e.getMessage());
+    }
   }
 
 

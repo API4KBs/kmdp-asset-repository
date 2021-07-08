@@ -14,13 +14,15 @@
 package edu.mayo.kmdp.language.test;
 
 
+import static java.util.Collections.singletonList;
+import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.TXT;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.XML_1_1;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.KNART_1_3;
-import static java.util.Collections.singletonList;
-import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
+import static org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevelSeries.Serialized_Knowledge_Expression;
 
+import edu.mayo.kmdp.language.parsers.html.HtmlDeserializer;
 import edu.mayo.kmdp.language.translators.AbstractSimpleTranslator;
 import java.nio.charset.Charset;
 import java.util.List;
@@ -29,17 +31,20 @@ import java.util.Properties;
 import java.util.UUID;
 import javax.inject.Named;
 import org.omg.spec.api4kp._20200801.AbstractCarrier.Encodings;
+import org.omg.spec.api4kp._20200801.Answer;
+import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.DeserializeApiInternal._applyLower;
 import org.omg.spec.api4kp._20200801.id.IdentifierConstants;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
 import org.omg.spec.api4kp._20200801.services.KPOperation;
+import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._20200801.services.SyntacticRepresentation;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeoperation.KnowledgeProcessingOperationSeries;
 import org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguage;
 
 @Named
 @KPOperation(KnowledgeProcessingOperationSeries.Syntactic_Translation_Task)
-public class MockTranslator extends AbstractSimpleTranslator<byte[],String> {
+public class MockTranslator extends AbstractSimpleTranslator<byte[], String> {
 
   public static final UUID kpIdentifier = UUID.fromString("41c9758e-00d1-4348-bf05-73aae9c5e43e");
 
@@ -82,5 +87,13 @@ public class MockTranslator extends AbstractSimpleTranslator<byte[],String> {
         + "<body>";
   }
 
-
+  @Override
+  protected Answer<_applyLower> getTargetParser() {
+    return Answer.of(new HtmlDeserializer() {
+      public Optional<KnowledgeCarrier> innerConcretize(KnowledgeCarrier carrier,
+          SyntacticRepresentation into, Properties config) {
+        return Optional.of(carrier.withLevel(Serialized_Knowledge_Expression));
+      }
+    });
+  }
 }
