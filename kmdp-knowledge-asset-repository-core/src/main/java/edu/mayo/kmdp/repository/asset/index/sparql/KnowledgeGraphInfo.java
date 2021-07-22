@@ -54,7 +54,7 @@ public class KnowledgeGraphInfo {
       rep(OWL_2);
 
   @Value("${edu.mayo.kmdp.repository.graph.identifier:4bea6c68-25a8-4c9b-9b5e-41b4cd1fe29b}")
-  private static final UUID graphUUID = DEFAULT_GRAPH_UUID;
+  private UUID graphUUID;
 
   private ResourceIdentifier graphAssetId;
   private ResourceIdentifier graphKBaseId;
@@ -74,6 +74,10 @@ public class KnowledgeGraphInfo {
    */
   @PostConstruct
   public void init() {
+    if (graphUUID == null) {
+      graphUUID = DEFAULT_GRAPH_UUID;
+    }
+
     this.graphAssetId = newId(graphUUID, VERSION_ZERO);
     this.graphKBaseId = newId(Util.hashUUID(graphUUID, Util.uuid(KBASE_URI)), VERSION_ZERO);
     this.graphArtifactId = defaultArtifactId(graphAssetId, OWL_2);

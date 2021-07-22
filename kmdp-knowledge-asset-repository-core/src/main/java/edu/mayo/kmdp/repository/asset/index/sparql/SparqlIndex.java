@@ -38,13 +38,17 @@ import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
+import org.omg.spec.api4kp._20200801.aspects.LogLevel;
+import org.omg.spec.api4kp._20200801.aspects.Loggable;
 import org.omg.spec.api4kp._20200801.id.ConceptIdentifier;
 import org.omg.spec.api4kp._20200801.id.Pointer;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
+import org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder;
 import org.omg.spec.api4kp._20200801.surrogate.Annotation;
 import org.omg.spec.api4kp._20200801.surrogate.Dependency;
 import org.omg.spec.api4kp._20200801.surrogate.Derivative;
+import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 import org.omg.spec.api4kp._20200801.surrogate.Link;
 import org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.ClinicalKnowledgeAssetTypeSeries;
 import org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries;
@@ -136,6 +140,33 @@ public class SparqlIndex implements Index {
   @Override
   public void reset() {
     this.jenaSparqlDao.reinitialize();
+  }
+
+  @Override
+  @Loggable
+  public void registerAssetByCanonicalSurrogate(KnowledgeAsset assetSurrogate,
+      ResourceIdentifier surrogateId, String surrogateMimeType) {
+    registerAsset(
+        assetSurrogate.getAssetId(),
+        assetSurrogate.getName(),
+        surrogateId,
+        surrogateMimeType,
+        assetSurrogate.getFormalType(),
+        assetSurrogate.getRole(),
+        assetSurrogate.getAnnotation(),
+        assetSurrogate.getLinks());
+    assetSurrogate.getCarriers()
+        .forEach(ka -> registerArtifactToAsset(
+            assetSurrogate.getAssetId(),
+            ka.getArtifactId(),
+            Util.coalesce(ModelMIMECoder.encode(ka.getRepresentation()), ka.getMimeType())));
+    // exclude the canonical surrogate, which is processed by 'registerAsset'
+    assetSurrogate.getSurrogate().stream()
+        .filter(surr -> !surr.getArtifactId().sameAs(surrogateId))
+        .forEach(surr -> registerSurrogateToAsset(
+            assetSurrogate.getAssetId(),
+            surr.getArtifactId(),
+            ModelMIMECoder.encode(surr.getRepresentation())));
   }
 
   /**
@@ -378,6 +409,7 @@ public class SparqlIndex implements Index {
 
 
   @Override
+  @Loggable(level = LogLevel.INFO)
   public void unregisterAsset(ResourceIdentifier asset) {
     if (kgi.isKnowledgeGraphAsset(asset.getUuid())) {
       throw new IllegalArgumentException("Unable remove the Knowledge Graph from the Index");
@@ -387,6 +419,7 @@ public class SparqlIndex implements Index {
   }
 
   @Override
+  @Loggable(level = LogLevel.INFO)
   public void unregisterAssetVersion(ResourceIdentifier asset) {
     if (kgi.isKnowledgeGraphAsset(asset.getUuid())) {
       throw new IllegalArgumentException("Unable remove the Knowledge Graph from the Index");

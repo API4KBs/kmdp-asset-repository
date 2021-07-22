@@ -66,7 +66,7 @@ public class JenaSparqlDAO {
    */
   @PreDestroy
   public void shutdown() {
-    knowledgeGraphHolder.shutdown();
+    knowledgeGraphHolder.shutdownKnowledgeGraph();
   }
 
   /**

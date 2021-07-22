@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -44,6 +43,8 @@ import org.omg.spec.api4kp._20200801.Answer;
 import org.omg.spec.api4kp._20200801.api.knowledgebase.v4.server.KnowledgeBaseApiInternal;
 import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactApiInternal;
 import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactRepositoryApiInternal;
+import org.omg.spec.api4kp._20200801.aspects.LogLevel;
+import org.omg.spec.api4kp._20200801.aspects.Loggable;
 import org.omg.spec.api4kp._20200801.services.KnowledgeBase;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.ClinicalKnowledgeAssetTypeSeries;
@@ -126,7 +127,7 @@ public class KnowledgeGraphHolder implements KnowledgeBaseApiInternal._getKnowle
    * {@link Once} operator used to persist the Graph on shutdown
    */
   private final Once<Answer<Void>> graphClosed =
-      new Once<>("GraphSealer", this::persistEncodedGraphIntoArtifactRepository);
+      new Once<>("GraphSealer", this::persistKnowledgeGraphIntoArtifactRepository);
 
   /**
    * Atomic flag that marks Graphs that have been shut down (no more writes allowed)
@@ -182,7 +183,7 @@ public class KnowledgeGraphHolder implements KnowledgeBaseApiInternal._getKnowle
     kgh.artifactApi = artifactRepo;
     kgh.kgi = kgi;
     kgh.autoSaveDelay = cfg.getTyped(KnowledgeAssetRepositoryOptions.AUTOSAVE_DELAY);
-    kgh.init();
+    kgh.initKnowledgeGraph();
     return kgh;
   }
 
@@ -191,12 +192,12 @@ public class KnowledgeGraphHolder implements KnowledgeBaseApiInternal._getKnowle
    * Loads the Graph from the Artifact Repository, if exists, or creates and persists a new one
    */
   @PostConstruct
-  public void init() {
-    logger.info("INITIALIZE Knowledge Graph {}", kgi.getKnowledgeGraphLabel());
+  @Loggable(level = LogLevel.INFO)
+  public void initKnowledgeGraph() {
     this.defaultRepositoryId = validateArtifactRepositoryId();
     this.saver =
         new LatchedScheduleExecutor<>(autoSaveDelay,
-            this::persistEncodedGraphIntoArtifactRepository);
+            this::persistKnowledgeGraphIntoArtifactRepository);
     graphLoaded.executeIfNotDone();
   }
 
@@ -205,8 +206,8 @@ public class KnowledgeGraphHolder implements KnowledgeBaseApiInternal._getKnowle
    * Tries to close any pending tasks, before finally persisting the Graph one last time
    */
   @PreDestroy
-  protected void shutdown() {
-    logger.info("SHUT DOWN Knowledge Graph {}", kgi.getKnowledgeGraphLabel());
+  @Loggable(level = LogLevel.INFO)
+  protected void shutdownKnowledgeGraph() {
     try {
       if (!shutdown.getAndSet(true)) {
         saver.shutdown();
@@ -225,10 +226,10 @@ public class KnowledgeGraphHolder implements KnowledgeBaseApiInternal._getKnowle
    * Cancels any pending scheduled writes
    * @return the Answer resulting from the persistence, or FORBIDDEN if the Graph has been shut down
    */
-  public Answer<Void> saveGraph() {
-    logger.info("EXPLICIT PERSIST the Knowledge Graph {}", kgi.getKnowledgeGraphLabel());
+  @Loggable(level = LogLevel.INFO)
+  public Answer<Void> saveKnowledgeGraph() {
     saver.cancelExecution(false);
-    return persistEncodedGraphIntoArtifactRepository();
+    return persistKnowledgeGraphIntoArtifactRepository();
   }
 
   /**
@@ -242,13 +243,12 @@ public class KnowledgeGraphHolder implements KnowledgeBaseApiInternal._getKnowle
    * Resets the Knowledge Graph
    * Cancels any pending write, and re-creates a new empty Graph, persisting it in the process
    */
+  @Loggable(level = LogLevel.INFO)
   public synchronized void resetGraph() {
-    logger.info("RESET Knowledge Graph {}", kgi.getKnowledgeGraphLabel());
     saver.cancelExecution(true);
     boolean success = reinitialize().isSuccess();
     if (! success) {
       var msg = "Unable to RESET a Knowledge Graph Successfully";
-      logger.error(msg);
       throw new IllegalStateException(msg);
     }
   }
@@ -363,8 +363,8 @@ public class KnowledgeGraphHolder implements KnowledgeBaseApiInternal._getKnowle
   protected Answer<Void> reinitialize() {
     KnowledgeCarrier newGraph = newEmptyGraph();
     initializeKnowledgeResources(newGraph);
-    Answer<Void> a1 = persistEncodedSurrogateIntoArtifactRepository();
-    Answer<Void> a2 = persistEncodedGraphIntoArtifactRepository();
+    Answer<Void> a1 = persistKnowledgeGraphSurrogateIntoArtifactRepository();
+    Answer<Void> a2 = persistKnowledgeGraphIntoArtifactRepository();
     return Answer.merge(a1, a2);
   }
 
@@ -390,8 +390,8 @@ public class KnowledgeGraphHolder implements KnowledgeBaseApiInternal._getKnowle
    * Reads the encoded graph from the Artifact Repository
    * @return a Knowledge Carrier at the Encoded expression Level, wrapping the Graph
    */
+  @Loggable(level = LogLevel.INFO)
   protected Answer<byte[]> retrieveEncodedGraphFromArtifactRepository() {
-    logger.info("Load Knowledge Graph from the Artifact Repository");
     return artifactApi.getKnowledgeArtifactVersion(
         defaultRepositoryId,
         kgi.knowledgeGraphArtifactId().getUuid(),
@@ -428,8 +428,8 @@ public class KnowledgeGraphHolder implements KnowledgeBaseApiInternal._getKnowle
    * Persists the Knowledge Surrogate in the Artifact Repository
    * @return the result of the setKnowledgeArtifactVersion operation
    */
-  protected Answer<Void> persistEncodedSurrogateIntoArtifactRepository() {
-    logger.info("Writing Knowledge Graph Metadata to the Artifact Repository");
+  @Loggable(level = LogLevel.INFO)
+  protected Answer<Void> persistKnowledgeGraphSurrogateIntoArtifactRepository() {
     return encodeGraphSurrogate()
         .flatMap(binary ->
             artifactApi.setKnowledgeArtifactVersion(
@@ -444,9 +444,8 @@ public class KnowledgeGraphHolder implements KnowledgeBaseApiInternal._getKnowle
    * The operation is 'Forbidden' if the Graph has been shut down
    * @return the result of the setKnowledgeArtifactVersion operation
    */
-  protected synchronized Answer<Void> persistEncodedGraphIntoArtifactRepository() {
-    logger.info("Writing Knowledge Graph {} to the Artifact Repository",
-        kgi.getKnowledgeGraphLabel());
+  @Loggable(level = LogLevel.INFO)
+  protected synchronized Answer<Void> persistKnowledgeGraphIntoArtifactRepository() {
     if (shutdown.get()) {
       return Answer.failed(Forbidden);
     }

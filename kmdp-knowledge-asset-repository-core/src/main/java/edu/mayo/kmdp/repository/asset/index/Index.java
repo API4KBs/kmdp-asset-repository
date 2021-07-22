@@ -43,32 +43,9 @@ public interface Index {
    *@param assetSurrogate
    * @param surrogateId
    * @param surrogateMimeType
-   * @param index
    */
-  static void registerAssetByCanonicalSurrogate(KnowledgeAsset assetSurrogate,
-      ResourceIdentifier surrogateId, String surrogateMimeType, Index index) {
-    index.registerAsset(
-        assetSurrogate.getAssetId(),
-        assetSurrogate.getName(),
-        surrogateId,
-        surrogateMimeType,
-        assetSurrogate.getFormalType(),
-        assetSurrogate.getRole(),
-        assetSurrogate.getAnnotation(),
-        assetSurrogate.getLinks());
-    assetSurrogate.getCarriers()
-        .forEach(ka -> index.registerArtifactToAsset(
-            assetSurrogate.getAssetId(),
-            ka.getArtifactId(),
-            Util.coalesce(ModelMIMECoder.encode(ka.getRepresentation()), ka.getMimeType())));
-    // exclude the canonical surrogate, which is processed by 'registerAsset'
-    assetSurrogate.getSurrogate().stream()
-        .filter(surr -> ! surr.getArtifactId().sameAs(surrogateId))
-        .forEach(surr -> index.registerSurrogateToAsset(
-            assetSurrogate.getAssetId(),
-            surr.getArtifactId(),
-            ModelMIMECoder.encode(surr.getRepresentation())));
-  }
+  void registerAssetByCanonicalSurrogate(KnowledgeAsset assetSurrogate,
+      ResourceIdentifier surrogateId, String surrogateMimeType);
 
   /**
    * Register an Asset and its initial metadata.
