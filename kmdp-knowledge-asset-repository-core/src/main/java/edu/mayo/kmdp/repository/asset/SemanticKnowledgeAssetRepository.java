@@ -338,7 +338,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
 
   @PreDestroy
-  @Loggable(level = LogLevel.INFO, beforeCode = "KARS-999.A", afterCode = "KARS-999.Z")
+  @Loggable(level = LogLevel.INFO, beforeCode = "KARS-900.A", afterCode = "KARS-900.Z")
   private void shutdown() {
     // Nothing to do - components will @Predestroy themselves
   }

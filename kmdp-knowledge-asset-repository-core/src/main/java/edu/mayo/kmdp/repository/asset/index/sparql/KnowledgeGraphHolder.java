@@ -132,7 +132,7 @@ public class KnowledgeGraphHolder implements KnowledgeBaseApiInternal._getKnowle
   /**
    * Atomic flag that marks Graphs that have been shut down (no more writes allowed)
    */
-  private AtomicBoolean shutdown = new AtomicBoolean(false);
+  private final AtomicBoolean shutdown = new AtomicBoolean(false);
 
   /**
    * Delay between the last Graph Write Operation and its persistence
@@ -360,6 +360,7 @@ public class KnowledgeGraphHolder implements KnowledgeBaseApiInternal._getKnowle
    * and persisting it in the Artifact Repository
    * @return an Answer describing the outcome of the persistence operations
    */
+  @Loggable(level = LogLevel.INFO)
   protected Answer<Void> reinitialize() {
     KnowledgeCarrier newGraph = newEmptyGraph();
     initializeKnowledgeResources(newGraph);
