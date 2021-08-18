@@ -100,6 +100,7 @@ import edu.mayo.kmdp.util.Util;
 import edu.mayo.ontology.taxonomies.kmdo.semanticannotationreltype.SemanticAnnotationRelTypeSeries;
 import edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -157,6 +158,7 @@ import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetT
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries;
 import org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormat;
 import org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguage;
+import org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevel;
 import org.omg.spec.api4kp._20200801.taxonomy.publicationstatus.PublicationStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -364,8 +366,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Loggable(beforeCode = "KARS-012.A")
   public Answer<KnowledgeAssetCatalog> getKnowledgeAssetCatalog() {
     List<KnowledgeAssetType> types = Stream.concat(
-        stream(KnowledgeAssetTypeSeries.values()),
-        stream(ClinicalKnowledgeAssetTypeSeries.values()))
+            stream(KnowledgeAssetTypeSeries.values()),
+            stream(ClinicalKnowledgeAssetTypeSeries.values()))
         .collect(Collectors.toList());
 
     return Answer.of(new KnowledgeAssetCatalog()
@@ -931,7 +933,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
                   artf.getArtifactId().getUuid(),
                   artf.getArtifactId().getVersionTag(),
                   xAccept))
-                  : tryConstructEphemeral(surrogate, preferences);
+                  : tryConstructEphemeral(surrogate, preferences, Encoded_Knowledge_Expression);
 
               boolean redirect = carrier.isNotFound() && withNegotiation
                   && bestAvailableCarrier.map(this::isRedirectable).orElse(false);
@@ -1207,7 +1209,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
                   binaryCarrier.flatMap(bin ->
                       Answer.firstDo(
                           preferences,
-                          preferredRep -> attemptTranslation(bin, preferredRep.getRep())))
+                          preferredRep -> attemptTranslation(
+                              bin, preferredRep.getRep(), Encoded_Knowledge_Expression)))
                   : binaryCarrier;
             }
         );
@@ -1309,7 +1312,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
                           assetMetadata.get(),
                           canonicalSurrogateMeta,
                           rep(tgtRep.getRep().getLanguage(), tgtRep.getRep().getFormat(),
-                              defaultCharset(), Encodings.DEFAULT))))
+                              defaultCharset(), Encodings.DEFAULT),
+                          Encoded_Knowledge_Expression)))
           .findFirst()
           .orElse(Answer.unacceptable());
     } else {
@@ -1394,7 +1398,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   private Answer<Void> introspectCompositeAsset(
       CompositeKnowledgeCarrier ckc) {
     return compositeStructIntrospector.applyNamedIntrospectDirect(
-        CompositeAssetMetadataIntrospector.id, ckc, null)
+            CompositeAssetMetadataIntrospector.id, ckc, null)
         .flatOpt(kc -> kc.as(KnowledgeAsset.class))
         .flatMap(ax -> setKnowledgeAssetVersion(
             ax.getAssetId().getUuid(), ax.getAssetId().getVersionTag(), ax));
@@ -1597,7 +1601,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     return compositeSurr.flatMap(composite -> {
       List<KnowledgeCarrier> components =
           index.getRelatedAssets(composite.getAssetId(),
-              Has_Structural_Component.getReferentId()).stream()
+                  Has_Structural_Component.getReferentId()).stream()
               .map(cid -> getKnowledgeAssetVersion(cid.getUuid(), cid.getVersionTag(), xAccept)
                   .flatMap(ax -> encodeCanonicalSurrogate(ax, fmt)))
               .flatMap(Answer::trimStream)
@@ -1771,10 +1775,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     }
 
     Answer<Void> a2 = assetCarrier.asBinary().map(binary ->
-        setKnowledgeAssetCarrierVersion(
-            assetId, versionTag,
-            artifactId.getUuid(), artifactId.getVersionTag(),
-            binary))
+            setKnowledgeAssetCarrierVersion(
+                assetId, versionTag,
+                artifactId.getUuid(), artifactId.getVersionTag(),
+                binary))
         .orElseGet(Answer::failed);
 
     return merge(a1, a2);
@@ -1875,13 +1879,13 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * Knowledge Artifact
    */
   private Answer<KnowledgeCarrier> tryConstructEphemeral(KnowledgeAsset asset,
-      List<WeightedRepresentation> preferences) {
+      List<WeightedRepresentation> preferences, ParsingLevel targetLevel) {
     if (translator == null) {
       return Answer.unacceptable();
     }
     return Answer.firstDo(
         preferences,
-        preferred -> attemptTranslation(asset, preferred.getRep()),
+        preferred -> attemptTranslation(asset, preferred.getRep(), targetLevel),
         Answer::unacceptable);
   }
 
@@ -1895,7 +1899,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * Knowledge Artifact
    */
   private Answer<KnowledgeCarrier> attemptTranslation(KnowledgeAsset asset,
-      SyntacticRepresentation targetRepresentation) {
+      SyntacticRepresentation targetRepresentation, ParsingLevel targetLevel) {
     if (translator == null) {
       return Answer.unacceptable();
     }
@@ -1905,7 +1909,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
             .collect(toList());
 
     return Answer.anyDo(computableCarriers,
-        carrier -> attemptTranslation(asset, carrier, targetRepresentation));
+        carrier -> attemptTranslation(asset, carrier, targetRepresentation, targetLevel));
   }
 
   /**
@@ -1919,12 +1923,15 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @return The result of a transrepresentation the Artifact into an ephemeral Knowledge Artifact
    */
   private Answer<KnowledgeCarrier> attemptTranslation(KnowledgeAsset asset,
-      KnowledgeArtifact carrier, SyntacticRepresentation targetRepresentation) {
+      KnowledgeArtifact carrier,
+      SyntacticRepresentation targetRepresentation,
+      ParsingLevel targetLevel) {
     if (translator == null) {
       return Answer.unacceptable();
     }
     return retrieveWrappedBinaryArtifact(asset, carrier)
-        .flatMap(sourceCarrier -> attemptTranslation(sourceCarrier, targetRepresentation));
+        .flatMap(
+            sourceCarrier -> attemptTranslation(sourceCarrier, targetRepresentation, targetLevel));
   }
 
   /**
@@ -1936,7 +1943,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @return The result of a transrepresentation the Artifact into an ephemeral Knowledge Artifact
    */
   private Answer<KnowledgeCarrier> attemptTranslation(
-      KnowledgeCarrier sourceBinaryArtifact, SyntacticRepresentation targetRepresentation) {
+      KnowledgeCarrier sourceBinaryArtifact, SyntacticRepresentation targetRepresentation,
+      ParsingLevel targetLevel) {
     if (translator == null) {
       return Answer.unacceptable();
     }
@@ -1946,6 +1954,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       return Answer.of(sourceBinaryArtifact);
     }
 
+    String tgtMime = encodeRepresentationForLevel(targetRepresentation, targetLevel);
     return translator.listTxionOperators(encode(from), encode(targetRepresentation))
         .flatMap(tranxOperators ->
             Answer.anyDo(
@@ -1953,9 +1962,22 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
                 txOp -> translator.applyNamedTransrepresent(
                     txOp.getOperatorId().getUuid(),
                     sourceBinaryArtifact,
-                    encode(targetRepresentation),
+                    tgtMime,
                     null)
             ));
+  }
+
+  private String encodeRepresentationForLevel(SyntacticRepresentation rep,
+      ParsingLevel targetLevel) {
+    SyntacticRepresentation target = (SyntacticRepresentation) rep.clone();
+    if (isEmpty(target.getCharset())) {
+      target.setCharset(Charset.defaultCharset().name());
+    }
+    if (targetLevel.sameAs(Encoded_Knowledge_Expression)
+        && isEmpty(target.getEncoding())) {
+      target.withEncoding(Encodings.DEFAULT.name());
+    }
+    return encode(target);
   }
 
   /**

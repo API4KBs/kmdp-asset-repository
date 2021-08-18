@@ -13,6 +13,7 @@ import edu.mayo.kmdp.util.Util;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.omg.spec.api4kp._20200801.Answer;
@@ -259,6 +260,7 @@ public class ContentNegotiationHelper {
     return preferences.stream()
         .map(WeightedRepresentation::getRep)
         .map(SyntacticRepresentation::getFormat)
+        .filter(Objects::nonNull)
         .findFirst();
   }
 
