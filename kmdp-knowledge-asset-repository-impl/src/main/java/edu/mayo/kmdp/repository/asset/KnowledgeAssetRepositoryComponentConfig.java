@@ -44,7 +44,6 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.PropertySource;
-import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.core.env.MutablePropertySources;
@@ -112,10 +111,11 @@ public class KnowledgeAssetRepositoryComponentConfig {
   }
 
   /**
-   * Configures a default instance of {@link KnowledgeArtifactRepositoryService} to be used by the Assert
-   * Repoository. This will look for Spring JDBC connection info (such as 'spring.datasource.url'), set as
-   * either environment variables or in the application-*.properties files. If not found will set up a default
-   * in-memory datasource that will clear on server restarts.
+   * Configures a default instance of {@link KnowledgeArtifactRepositoryService} to be used by the
+   * Assert Repoository. This will look for Spring JDBC connection info (such as
+   * 'spring.datasource.url'), set as either environment variables or in the
+   * application-*.properties files. If not found will set up a default in-memory datasource that
+   * will clear on server restarts.
    *
    * @param dataSource
    * @return

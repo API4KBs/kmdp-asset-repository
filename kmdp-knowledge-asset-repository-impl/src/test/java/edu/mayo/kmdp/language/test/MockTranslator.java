@@ -25,11 +25,14 @@ import static org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevelSe
 import edu.mayo.kmdp.language.parsers.html.HtmlDeserializer;
 import edu.mayo.kmdp.language.translators.AbstractSimpleTranslator;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
 import javax.inject.Named;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.omg.spec.api4kp._20200801.AbstractCarrier.Encodings;
 import org.omg.spec.api4kp._20200801.Answer;
 import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.DeserializeApiInternal._applyLower;
@@ -44,7 +47,7 @@ import org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentation
 
 @Named
 @KPOperation(KnowledgeProcessingOperationSeries.Syntactic_Translation_Task)
-public class MockTranslator extends AbstractSimpleTranslator<byte[], String> {
+public class MockTranslator extends AbstractSimpleTranslator<byte[], Document> {
 
   public static final UUID kpIdentifier = UUID.fromString("41c9758e-00d1-4348-bf05-73aae9c5e43e");
 
@@ -59,7 +62,11 @@ public class MockTranslator extends AbstractSimpleTranslator<byte[], String> {
 
   @Override
   public List<SyntacticRepresentation> getInto() {
-    return singletonList(rep(HTML, TXT));
+    return Arrays.asList(
+        rep(HTML, TXT),
+        rep(HTML, TXT, Charset.defaultCharset()),
+        rep(HTML, TXT, Charset.defaultCharset(), Encodings.DEFAULT)
+    );
   }
 
   @Override
@@ -73,18 +80,18 @@ public class MockTranslator extends AbstractSimpleTranslator<byte[], String> {
   }
 
   @Override
-  protected Optional<String> transformBinary(ResourceIdentifier assetId, byte[] bytes,
+  protected Optional<Document> transformBinary(ResourceIdentifier assetId, byte[] bytes,
       SyntacticRepresentation srcRep,
       SyntacticRepresentation tgtRep, Properties config) {
     return Optional.of(translate(bytes));
   }
 
-  public String translate(byte[] source) {
-    return "<html>\n"
+  public Document translate(byte[] source) {
+    return Jsoup.parse("<html>\n"
         + "<head>\n"
         + "<title>" + "Mock Rule" + "</title>\n"
         + "</head>\n"
-        + "<body>";
+        + "<body>");
   }
 
   @Override

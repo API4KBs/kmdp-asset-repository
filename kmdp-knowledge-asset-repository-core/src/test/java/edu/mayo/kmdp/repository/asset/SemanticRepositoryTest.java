@@ -76,6 +76,7 @@ import org.omg.spec.api4kp._20200801.id.Pointer;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
 import org.omg.spec.api4kp._20200801.id.Term;
+import org.omg.spec.api4kp._20200801.services.CompositeKnowledgeCarrier;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._20200801.services.repository.KnowledgeAssetCatalog;
 import org.omg.spec.api4kp._20200801.surrogate.Annotation;
@@ -971,30 +972,32 @@ class SemanticRepositoryTest extends RepositoryTestBase {
   void getRelatedTransitive() {
     UUID u1 = UUID.nameUUIDFromBytes("1".getBytes());
     UUID u2 = UUID.nameUUIDFromBytes("2".getBytes());
+    String versiOne = "1.0.0";
 
-    semanticRepository.setKnowledgeAssetVersion(u1, "1", new KnowledgeAsset()
+    semanticRepository.setKnowledgeAssetVersion(u1, versiOne, new KnowledgeAsset()
         .withCarriers(new KnowledgeArtifact()
             .withArtifactId(SurrogateBuilder.randomArtifactId())
             .withRepresentation(rep(HL7_ELM))));
     semanticRepository.setKnowledgeAssetCarrierVersion(
-        u1, "1", UUID.randomUUID(), "0", "HI1!".getBytes());
+        u1, versiOne, UUID.randomUUID(), versiOne, "HI1!".getBytes());
 
-    KnowledgeAsset asset1 = semanticRepository.getKnowledgeAssetVersion(u1, "1")
-        .orElse(new KnowledgeAsset());
+    KnowledgeAsset asset1 = semanticRepository.getKnowledgeAssetVersion(u1, versiOne)
+        .orElseGet(Assertions::fail);
 
-    semanticRepository.setKnowledgeAssetVersion(u2, "1", new KnowledgeAsset()
+    semanticRepository.setKnowledgeAssetVersion(u2, versiOne, new KnowledgeAsset()
         .withLinks(new Dependency().withRel(Depends_On).withHref(asset1.getAssetId()))
         .withCarriers(new KnowledgeArtifact()
             .withArtifactId(SurrogateBuilder.randomArtifactId())
             .withRepresentation(rep(HL7_ELM))));
     semanticRepository.setKnowledgeAssetCarrierVersion(
-        u2, "1", UUID.randomUUID(), "0", "HI2!".getBytes());
+        u2, versiOne, UUID.randomUUID(), versiOne, "HI2!".getBytes());
 
-//    List<KnowledgeCarrier> carriers = semanticRepository.getKnowledgeArtifactBundle(u2, "1",
-//        Depends_On.getTag(), -1, null).getOptionalValue()
-//        .orElseGet(Collections::emptyList);
-//
-//    assertEquals(2, carriers.size());
+    List<KnowledgeCarrier> carriers = semanticRepository
+        .getAnonymousCompositeKnowledgeAssetSurrogate(u2, versiOne).getOptionalValue()
+        .map(CompositeKnowledgeCarrier::getComponent)
+        .orElseGet(Collections::emptyList);
+
+    assertEquals(2, carriers.size());
   }
 
 
@@ -1081,7 +1084,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
   }
 
   @Test
-  public void testContentNegotiationWithHTMLExpectRedirect() {
+  void testContentNegotiationWithHTMLExpectRedirect() {
     UUID assetId = UUID.nameUUIDFromBytes("2".getBytes());
     String versionTag = "2";
     String mockRedirectURL = "http://localhost:123/foo";
@@ -1107,7 +1110,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
   }
 
   @Test
-  public void testNegotiateCarrierForLatestVersion() {
+  void testNegotiateCarrierForLatestVersion() {
     UUID assetId = UUID.nameUUIDFromBytes("2".getBytes());
     String versionTag = "2";
     String mockRedirectURL = "http://localhost:123/foo";
@@ -1132,7 +1135,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
   }
 
   @Test
-  public void testContentNegotiationSurrogateWithMetaFormats() {
+  void testContentNegotiationSurrogateWithMetaFormats() {
     UUID assetId = UUID.nameUUIDFromBytes("2".getBytes());
     String versionTag = "2";
 
@@ -1182,13 +1185,13 @@ class SemanticRepositoryTest extends RepositoryTestBase {
 
     List<Pointer> surrPointers =
         semanticRepository.listKnowledgeAssetSurrogateVersions(
-            assetId.getUuid(), assetId.getVersionTag(), extraSurrogateIdV1.getUuid())
+                assetId.getUuid(), assetId.getVersionTag(), extraSurrogateIdV1.getUuid())
             .orElse(Collections.emptyList());
     assertEquals(2, surrPointers.size());
 
     List<Pointer> surrPointers2 =
         semanticRepository.listKnowledgeAssetSurrogateVersions(
-            assetId.getUuid(), assetId.getVersionTag(), extraSurrogateId2.getUuid())
+                assetId.getUuid(), assetId.getVersionTag(), extraSurrogateId2.getUuid())
             .orElse(Collections.emptyList());
     assertEquals(1, surrPointers2.size());
 
@@ -1233,13 +1236,13 @@ class SemanticRepositoryTest extends RepositoryTestBase {
 
     List<Pointer> carrPointers =
         semanticRepository.listKnowledgeAssetSurrogateVersions(
-            assetId.getUuid(), assetId.getVersionTag(), extraCarrierIdV1.getUuid())
+                assetId.getUuid(), assetId.getVersionTag(), extraCarrierIdV1.getUuid())
             .orElse(Collections.emptyList());
     assertEquals(2, carrPointers.size());
 
     List<Pointer> carrPointers2 =
         semanticRepository.listKnowledgeAssetSurrogateVersions(
-            assetId.getUuid(), assetId.getVersionTag(), extraCarrierId2.getUuid())
+                assetId.getUuid(), assetId.getVersionTag(), extraCarrierId2.getUuid())
             .orElse(Collections.emptyList());
     assertEquals(1, carrPointers2.size());
 
@@ -1277,9 +1280,9 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     ResourceIdentifier latestArtId = semanticRepository.getLatestCarrierVersion(artId.getUuid())
         .orElseGet(Assertions::fail);
     List<Pointer> artPtrs = semanticRepository.listKnowledgeAssetCarrierVersions(
-        ans.getAssetId().getUuid(),
-        ans.getAssetId().getVersionTag(),
-        artId.getUuid())
+            ans.getAssetId().getUuid(),
+            ans.getAssetId().getVersionTag(),
+            artId.getUuid())
         .orElseGet(Assertions::fail);
     assertEquals(1, artPtrs.size());
 
@@ -1321,11 +1324,11 @@ class SemanticRepositoryTest extends RepositoryTestBase {
 
     Answer<KnowledgeCarrier> xmlCarrier =
         semanticRepository.getKnowledgeAssetSurrogateVersion(
-            assetUUID,
-            versionTag,
-            surrPtr.getUuid(),
-            surrPtr.getVersionTag(),
-            codedRep(Knowledge_Asset_Surrogate_2_0, XML_1_1))
+                assetUUID,
+                versionTag,
+                surrPtr.getUuid(),
+                surrPtr.getVersionTag(),
+                codedRep(Knowledge_Asset_Surrogate_2_0, XML_1_1))
             .flatMap(kc -> new Surrogate2Parser()
                 .applyLift(
                     kc,

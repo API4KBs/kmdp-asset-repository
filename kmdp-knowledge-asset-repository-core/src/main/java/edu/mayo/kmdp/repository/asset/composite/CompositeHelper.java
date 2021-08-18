@@ -29,7 +29,6 @@ import edu.mayo.kmdp.util.StreamUtil;
 import java.net.URI;
 import java.util.List;
 import java.util.Optional;
-import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.omg.spec.api4kp._20200801.AbstractCarrier.Encodings;
 import org.omg.spec.api4kp._20200801.Answer;
