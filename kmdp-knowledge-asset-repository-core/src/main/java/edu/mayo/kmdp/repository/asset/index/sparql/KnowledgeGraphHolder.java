@@ -43,6 +43,7 @@ import org.omg.spec.api4kp._20200801.Answer;
 import org.omg.spec.api4kp._20200801.api.knowledgebase.v4.server.KnowledgeBaseApiInternal;
 import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactApiInternal;
 import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactRepositoryApiInternal;
+import org.omg.spec.api4kp._20200801.aspects.Failsafe;
 import org.omg.spec.api4kp._20200801.aspects.LogLevel;
 import org.omg.spec.api4kp._20200801.aspects.Loggable;
 import org.omg.spec.api4kp._20200801.services.KnowledgeBase;
@@ -392,6 +393,7 @@ public class KnowledgeGraphHolder implements KnowledgeBaseApiInternal._getKnowle
    * @return a Knowledge Carrier at the Encoded expression Level, wrapping the Graph
    */
   @Loggable(level = LogLevel.INFO)
+  @Failsafe(LogLevel.INFO)
   protected Answer<byte[]> retrieveEncodedGraphFromArtifactRepository() {
     return artifactApi.getKnowledgeArtifactVersion(
         defaultRepositoryId,

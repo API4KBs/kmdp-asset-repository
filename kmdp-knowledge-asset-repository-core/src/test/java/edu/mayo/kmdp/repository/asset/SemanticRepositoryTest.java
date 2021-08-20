@@ -17,6 +17,7 @@ import static edu.mayo.kmdp.registry.Registry.BASE_UUID_URN_URI;
 import static edu.mayo.kmdp.util.Util.isEmpty;
 import static edu.mayo.kmdp.util.Util.uuid;
 import static edu.mayo.ontology.taxonomies.kmdo.semanticannotationreltype.SemanticAnnotationRelTypeSeries.Defines;
+import static edu.mayo.ontology.taxonomies.kmdo.semanticannotationreltype.SemanticAnnotationRelTypeSeries.Has_Focus;
 import static edu.mayo.ontology.taxonomies.kmdo.semanticannotationreltype.SemanticAnnotationRelTypeSeries.In_Terms_Of;
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.Conflict;
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.Created;
@@ -28,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
 import static org.omg.spec.api4kp._20200801.id.IdentifierConstants.VERSION_ZERO;
@@ -43,9 +45,11 @@ import static org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.
 import static org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.ClinicalKnowledgeAssetTypeSeries.Cognitive_Care_Process_Model;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Depends_On;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRoleSeries.Operational_Concept_Definition;
+import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Assessment_Model;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Decision_Model;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Formal_Ontology;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Predictive_Model;
+import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Protocol;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Service_Profile;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.JSON;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.TXT;
@@ -1623,6 +1627,53 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     });
   }
 
+  @Test
+  void testFilterWithFocusConcept() {
+    ResourceIdentifier axId1 =
+        assetId(testAssetNS(), UUID.randomUUID(), VERSION_ZERO);
+    ResourceIdentifier axId2 =
+        assetId(testAssetNS(), UUID.randomUUID(), VERSION_ZERO);
+    ResourceIdentifier axId3 =
+        assetId(testAssetNS(), UUID.randomUUID(), VERSION_ZERO);
+
+    KnowledgeAsset surr1 = SurrogateBuilder.newSurrogate(axId1)
+        .withName("Test With Annotations 1", "")
+        .get()
+        .withFormalType(Assessment_Model)
+        .withAnnotation(new Annotation()
+            .withRel(Has_Focus.asConceptIdentifier())
+            .withRef(Term.mock("mock", "123").asConceptIdentifier()));
+
+    KnowledgeAsset surr2 = SurrogateBuilder.newSurrogate(axId2)
+        .withName("Test With Annotations 2", "")
+        .get()
+        .withFormalType(Assessment_Model)
+        .withAnnotation(new Annotation()
+            .withRel(Defines.asConceptIdentifier())
+            .withRef(Term.mock("mock", "678").asConceptIdentifier()));
+    KnowledgeAsset surr3 = SurrogateBuilder.newSurrogate(axId3)
+        .withName("Test With Annotations 3", "")
+        .get()
+        .withFormalType(Protocol)
+        .withAnnotation(new Annotation()
+            .withRel(Has_Focus.asConceptIdentifier())
+            .withRef(Term.mock("mock", "123").asConceptIdentifier()));
+
+    semanticRepository
+        .setKnowledgeAssetVersion(axId1.getUuid(), axId1.getVersionTag(), surr1);
+    semanticRepository
+        .setKnowledgeAssetVersion(axId2.getUuid(), axId2.getVersionTag(), surr2);
+    semanticRepository
+        .setKnowledgeAssetVersion(axId3.getUuid(), axId3.getVersionTag(), surr3);
+
+    List<Pointer> ptrs = semanticRepository.listKnowledgeAssets(
+            Assessment_Model.getTag(), Has_Focus.getTag(),
+            Term.mock("mock", "123").getReferentId().toString(), 0, -1)
+        .orElse(Collections.emptyList());
+    assertEquals(1, ptrs.size());
+    assertEquals(axId1.getUuid(), ptrs.get(0).getUuid());
+  }
+
   void publishForPointer(String seedId, KnowledgeAssetRole role, KnowledgeAssetType... types) {
     ResourceIdentifier axId =
         assetId(testAssetNS(), uuid(seedId), VERSION_ZERO);
@@ -1635,6 +1686,8 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     }
     Answer<Void> ans1 = semanticRepository
         .setKnowledgeAssetVersion(axId.getUuid(), axId.getVersionTag(), surr);
-
+    if (!ans1.isSuccess()) {
+      fail(ans1.printExplanation());
+    }
   }
 }
