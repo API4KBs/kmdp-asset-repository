@@ -1880,6 +1880,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    */
   private Answer<KnowledgeCarrier> tryConstructEphemeral(KnowledgeAsset asset,
       List<WeightedRepresentation> preferences, ParsingLevel targetLevel) {
+    if (asset.getCarriers().isEmpty()) {
+      return Answer.notFound();
+    }
     if (translator == null) {
       return Answer.unacceptable();
     }

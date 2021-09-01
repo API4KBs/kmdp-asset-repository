@@ -1674,6 +1674,29 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     assertEquals(axId1.getUuid(), ptrs.get(0).getUuid());
   }
 
+  @Test
+  void testNotFoundWhenNoCarrier() {
+    ResourceIdentifier axId1 =
+        assetId(testAssetNS(), UUID.randomUUID(), VERSION_ZERO);
+
+    KnowledgeAsset surr1 = SurrogateBuilder.newSurrogate(axId1)
+        .withName("Test No Carrier", "")
+        .get();
+
+    semanticRepository
+        .setKnowledgeAssetVersion(axId1.getUuid(), axId1.getVersionTag(), surr1);
+
+    assertTrue(NotFound.sameAs(
+        semanticRepository.getKnowledgeAssetCanonicalCarrier(
+            axId1.getUuid()).getOutcomeType()));
+    assertTrue(NotFound.sameAs(
+        semanticRepository.getKnowledgeAssetCanonicalCarrier(
+            axId1.getUuid(), "text/html").getOutcomeType()));
+    assertTrue(NotFound.sameAs(
+        semanticRepository.getKnowledgeAssetVersionCanonicalCarrier(
+            axId1.getUuid(), axId1.getVersionTag(), "text/html").getOutcomeType()));
+  }
+
   void publishForPointer(String seedId, KnowledgeAssetRole role, KnowledgeAssetType... types) {
     ResourceIdentifier axId =
         assetId(testAssetNS(), uuid(seedId), VERSION_ZERO);
