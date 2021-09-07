@@ -61,6 +61,7 @@ import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getComputa
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getComputableSurrogateMetadata;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getSurrogateId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getSurrogateMetadata;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.nextVersion;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Depends_On;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRoleSeries.Composite_Knowledge_Asset;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.JSON;
@@ -153,6 +154,7 @@ import org.omg.spec.api4kp._20200801.surrogate.Publication;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateDiffer;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper;
+import org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.VersionIncrement;
 import org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.ClinicalKnowledgeAssetTypeSeries;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetType;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries;
@@ -1138,8 +1140,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
                 "Unable to retrieve metadata information for " + assetId + ":" + versionTag));
     ResourceIdentifier artifactRef = toArtifactId(artifactId, artifactVersion);
 
-    Answer<Void> a1 = persistKnowledgeCarrier(asset.getAssetId(), artifactRef, exemplar);
-    Answer<Void> a2 = updateCanonicalSurrogateWithCarrier(asset, artifactRef, exemplar);
+    Answer<Void> a1 = updateCanonicalSurrogateWithCarrier(asset, artifactRef, exemplar);
+    Answer<Void> a2 = persistKnowledgeCarrier(
+        asset.getAssetId(),
+        getComputableCarrierMetadata(artifactId, artifactVersion, asset)
+            .orElseThrow(() -> new IllegalStateException("Artifact metadata is inconsistent")),
+        exemplar);
 
     return merge(a1, a2);
   }
@@ -1835,8 +1841,11 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         .noneMatch(
             art -> art.getArtifactId().sameAs(carrierId.getUuid(), carrierId.getVersionTag()))) {
       // the Artifact needs to be attached to the surrogate
-      ResourceIdentifier newSurrogateId = attachCarrier(asset, carrierId, exemplar);
-      return persistCanonicalKnowledgeAssetVersion(asset.getAssetId(), newSurrogateId, asset);
+      attachCarrier(asset, carrierId, exemplar);
+      return persistCanonicalKnowledgeAssetVersion(
+          asset.getAssetId(),
+          nextVersion(asset, VersionIncrement.PATCH),
+          asset);
     }
     return Answer.of(NoContent);
   }
@@ -1848,23 +1857,25 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @param asset      the Canonical Surrogate
    * @param artifactId the Id of the artifact
    * @param exemplar   a copy of the carrier Artifact, used to infer metadata
-   * @return The updated identifier
+   * @return The metadta about the new Carrier
    */
-  private ResourceIdentifier attachCarrier(
+  private KnowledgeArtifact attachCarrier(
       KnowledgeAsset asset, ResourceIdentifier artifactId, byte[] exemplar) {
-    asset.withCarriers(
-        new KnowledgeArtifact()
-            .withArtifactId(artifactId)
-            .withRepresentation(
-                detector.applyDetect(of(exemplar))
-                    .map(KnowledgeCarrier::getRepresentation)
-                    .orElse(rep(null, null, defaultCharset(), Encodings.DEFAULT))
-            ));
+    KnowledgeArtifact meta = new KnowledgeArtifact()
+        .withArtifactId(artifactId)
+        .withRepresentation(
+            detector.applyDetect(of(exemplar))
+                .map(KnowledgeCarrier::getRepresentation)
+                .orElse(rep(null, null, defaultCharset(), Encodings.DEFAULT))
+        );
+
+    asset.withCarriers(meta);
 
     return getCanonicalSurrogateId(asset)
         .map(id -> toArtifactId(id.getUuid(),
             id.getSemanticVersionTag().incrementMinorVersion().toString()))
         .map(newId -> setCanonicalSurrogateId(asset, newId))
+        .map(id -> meta)
         .orElseThrow(() -> new ServerSideException(InternalServerError,
             "Unable to increment the ID of the Canonical Surrogate"));
   }
@@ -2233,20 +2244,20 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   /**
    * Persists and indexes a Knowledge Carrier (version) for a given Asset (version)
    *
-   * @param assetId    the Id of the Asset
-   * @param artifactId the Id of the Carrier Artifact
-   * @param exemplar   A binary-encoded copy of the Carrier Artifact
+   * @param assetId  the Id of the Asset
+   * @param artifact the metadata about the Carrier Artifact
+   * @param exemplar A binary-encoded copy of the Carrier Artifact
    */
   private Answer<Void> persistKnowledgeCarrier(ResourceIdentifier assetId,
-      ResourceIdentifier artifactId,
+      KnowledgeArtifact artifact,
       byte[] exemplar) {
 
     Answer<Void> ans = this.knowledgeArtifactApi.setKnowledgeArtifactVersion(
         artifactRepositoryId,
-        artifactId.getUuid(), artifactId.getVersionTag(),
+        artifact.getArtifactId().getUuid(), artifact.getArtifactId().getVersionTag(),
         exemplar);
 
-    this.index.registerArtifactToAsset(assetId, artifactId, null);
+    this.index.registerArtifactToAsset(assetId, artifact, null);
     return ans;
   }
 
@@ -2407,6 +2418,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     // e.g. into a single query that returns the Id information with name and type
     index.getAssetName(assetId)
         .ifPresent(pointer::setName);
+
+    index.getEstablishmentDate(assetId)
+        .ifPresent(pointer::setEstablishedOn);
 
     StaticFilter.choosePrimaryType(index.getAssetTypes(assetId), assetTypeTag)
         .ifPresent(ci -> pointer.setType(ci.getReferentId()));

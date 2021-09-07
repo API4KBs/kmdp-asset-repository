@@ -19,9 +19,11 @@ import edu.mayo.kmdp.util.DateTimeUtil;
 import edu.mayo.kmdp.util.StreamUtil;
 import edu.mayo.kmdp.util.Util;
 import java.net.URI;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -48,8 +50,10 @@ import org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder
 import org.omg.spec.api4kp._20200801.surrogate.Annotation;
 import org.omg.spec.api4kp._20200801.surrogate.Dependency;
 import org.omg.spec.api4kp._20200801.surrogate.Derivative;
+import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 import org.omg.spec.api4kp._20200801.surrogate.Link;
+import org.omg.spec.api4kp._20200801.surrogate.Publication;
 import org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.ClinicalKnowledgeAssetTypeSeries;
 import org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRole;
@@ -147,25 +151,20 @@ public class SparqlIndex implements Index {
   public void registerAssetByCanonicalSurrogate(KnowledgeAsset assetSurrogate,
       ResourceIdentifier surrogateId, String surrogateMimeType) {
     registerAsset(
-        assetSurrogate.getAssetId(),
-        assetSurrogate.getName(),
+        assetSurrogate,
         surrogateId,
-        surrogateMimeType,
-        assetSurrogate.getFormalType(),
-        assetSurrogate.getRole(),
-        assetSurrogate.getAnnotation(),
-        assetSurrogate.getLinks());
+        surrogateMimeType);
     assetSurrogate.getCarriers()
         .forEach(ka -> registerArtifactToAsset(
             assetSurrogate.getAssetId(),
-            ka.getArtifactId(),
+            ka,
             Util.coalesce(ModelMIMECoder.encode(ka.getRepresentation()), ka.getMimeType())));
     // exclude the canonical surrogate, which is processed by 'registerAsset'
     assetSurrogate.getSurrogate().stream()
         .filter(surr -> !surr.getArtifactId().sameAs(surrogateId))
         .forEach(surr -> registerSurrogateToAsset(
             assetSurrogate.getAssetId(),
-            surr.getArtifactId(),
+            surr,
             ModelMIMECoder.encode(surr.getRepresentation())));
   }
 
@@ -177,12 +176,13 @@ public class SparqlIndex implements Index {
    * @param types
    * @param roles
    * @param annotations
+   * @param lifecycle
    * @return
    */
   public List<Statement> toRdf(ResourceIdentifier asset, String assetName,
       ResourceIdentifier surrogate, String surrogateMimeType,
       List<KnowledgeAssetType> types, List<KnowledgeAssetRole> roles, List<Annotation> annotations,
-      List<Link> related) {
+      List<Link> related, Publication lifecycle) {
     List<Statement> statements = Lists.newArrayList();
 
     URI assetId = asset.getResourceId();
@@ -239,7 +239,7 @@ public class SparqlIndex implements Index {
     statements.add(this.toLongValueStatement(
         assetVersionId,
         ESTABLISHED_URI,
-        asset.getEstablishedOn().toInstant().toEpochMilli()));
+        getEstablishedOn(lifecycle, asset)));
 
     // Surrogate link
     statements.add(this.toStatement(
@@ -397,14 +397,12 @@ public class SparqlIndex implements Index {
         .collect(Collectors.toSet());
   }
 
-  @Override
-  public void registerAsset(ResourceIdentifier asset, String assetName,
-      ResourceIdentifier surrogate, String surrogateMimeType,
-      List<KnowledgeAssetType> types, List<KnowledgeAssetRole> roles, List<Annotation> annotations,
-      List<Link> related) {
+  private void registerAsset(KnowledgeAsset asset,
+      ResourceIdentifier surrogate, String surrogateMimeType) {
     this.jenaSparqlDao
-        .store(this.toRdf(asset, assetName, surrogate, surrogateMimeType, types, roles, annotations,
-            related));
+        .store(this.toRdf(asset.getAssetId(), asset.getName(), surrogate, surrogateMimeType,
+            asset.getFormalType(), asset.getRole(), asset.getAnnotation(),
+            asset.getLinks(), asset.getLifecycle()));
   }
 
 
@@ -453,41 +451,51 @@ public class SparqlIndex implements Index {
 
   @Override
   public void registerArtifactToAsset(ResourceIdentifier assetPointer,
-      ResourceIdentifier artifact, String mimeType) {
+      KnowledgeArtifact artifact, String mimeType) {
     if (kgi.isKnowledgeGraphAsset(assetPointer.getUuid())) {
       throw new IllegalArgumentException("Unable to register a Carrier for the Knowledge Graph");
     }
+    ResourceIdentifier artifactId = artifact.getArtifactId();
     List<Statement> statements = Arrays.asList(
-        toStatement(assetPointer.getVersionId(), HAS_CARRIER_URI, artifact.getResourceId()),
-        toStatement(artifact.getResourceId(), HAS_VERSION_URI, artifact.getVersionId()),
-        toStringValueStatement(artifact.getResourceId(), TAG_ID_URI, artifact.getUuid().toString()),
-        toStringValueStatement(artifact.getVersionId(), HAS_VERSION_TAG_URI,
-            artifact.getVersionTag()),
-        toStringValueStatement(artifact.getResourceId(), FORMAT_URI,
+        toStatement(assetPointer.getVersionId(), HAS_CARRIER_URI, artifactId.getResourceId()),
+        toStatement(artifactId.getResourceId(), HAS_VERSION_URI, artifactId.getVersionId()),
+        toStringValueStatement(artifactId.getResourceId(), TAG_ID_URI,
+            artifactId.getUuid().toString()),
+        toStringValueStatement(artifactId.getVersionId(), HAS_VERSION_TAG_URI,
+            artifactId.getVersionTag()),
+        toStringValueStatement(artifactId.getResourceId(), FORMAT_URI,
             Util.isNotEmpty(mimeType) ? mimeType : "/"),
-        toLongValueStatement(artifact.getVersionId(),
-            ESTABLISHED_URI, artifact.getEstablishedOn().toInstant().toEpochMilli())
+        toLongValueStatement(artifactId.getVersionId(),
+            ESTABLISHED_URI, getEstablishedOn(artifact.getLifecycle(), artifactId))
     );
     this.jenaSparqlDao.store(statements);
   }
 
+  private Long getEstablishedOn(Publication lifecycle, ResourceIdentifier resourceId) {
+    return Optional.ofNullable(lifecycle)
+        .map(Publication::getCreatedOn)
+        .orElseGet(resourceId::getEstablishedOn)
+        .getTime();
+  }
+
   @Override
   public void registerSurrogateToAsset(ResourceIdentifier assetPointer,
-      ResourceIdentifier surrogate, String mimeType) {
+      KnowledgeArtifact surrogate, String mimeType) {
     if (kgi.isKnowledgeGraphAsset(assetPointer.getUuid())) {
       throw new IllegalArgumentException("Unable to register a Surrogate for the Knowledge Graph");
     }
+    ResourceIdentifier surrogateId = surrogate.getArtifactId();
     List<Statement> statements = Arrays.asList(
-        toStatement(assetPointer.getVersionId(), HAS_SURROGATE_URI, surrogate.getResourceId()),
-        toStatement(surrogate.getResourceId(), HAS_VERSION_URI, surrogate.getVersionId()),
-        toStringValueStatement(surrogate.getResourceId(), TAG_ID_URI,
-            surrogate.getUuid().toString()),
-        toStringValueStatement(surrogate.getResourceId(), FORMAT_URI,
+        toStatement(assetPointer.getVersionId(), HAS_SURROGATE_URI, surrogateId.getResourceId()),
+        toStatement(surrogateId.getResourceId(), HAS_VERSION_URI, surrogateId.getVersionId()),
+        toStringValueStatement(surrogateId.getResourceId(), TAG_ID_URI,
+            surrogateId.getUuid().toString()),
+        toStringValueStatement(surrogateId.getResourceId(), FORMAT_URI,
             Util.isNotEmpty(mimeType) ? mimeType : null),
-        toStringValueStatement(surrogate.getVersionId(), HAS_VERSION_TAG_URI,
-            surrogate.getVersionTag()),
-        toLongValueStatement(surrogate.getVersionId(),
-            ESTABLISHED_URI, surrogate.getEstablishedOn().toInstant().toEpochMilli())
+        toStringValueStatement(surrogateId.getVersionId(), HAS_VERSION_TAG_URI,
+            surrogateId.getVersionTag()),
+        toLongValueStatement(surrogateId.getVersionId(),
+            ESTABLISHED_URI, getEstablishedOn(surrogate.getLifecycle(), surrogateId))
     );
     this.jenaSparqlDao.store(statements);
   }
@@ -702,6 +710,23 @@ public class SparqlIndex implements Index {
       return Optional.of(kgi.knowledgeGraphArtifactId());
     }
     return resolve(artifactId);
+  }
+
+  @Override
+  public Optional<Date> getEstablishmentDate(ResourceIdentifier resourceId) {
+    List<Instant> dates = new ArrayList<>();
+    Map<String, URI> params = Maps.newHashMap();
+    params.put("?s", resourceId.getVersionId());
+
+    this.jenaSparqlDao.runSparql(
+        new ParameterizedSparqlString(InternalQueryManager.ESTABLISHED_DATE_SELECT),
+        params,
+        Collections.emptyMap(),
+        qs -> dates.add(Instant.ofEpochMilli(qs.getLiteral("?o").getLong()))
+    );
+    return dates.isEmpty()
+        ? Optional.empty()
+        : Optional.of(Date.from(dates.get(0)));
   }
 
   protected Optional<ResourceIdentifier> resolve(UUID resourceId) {
@@ -920,6 +945,13 @@ public class SparqlIndex implements Index {
         "SELECT ?o \n" +
             "WHERE { \n" +
             "    ?s " + TRAVERSE_DEPS_SPARQL + " ?o\n" +
+            "}";
+
+    static final String ESTABLISHED_DATE_SELECT =
+        PREAMBLE +
+            "SELECT ?o \n" +
+            "WHERE { \n" +
+            "    ?s api4kp-series:" + ESTABLISHED + " ?o\n" +
             "}";
 
     static final String TRIPLE_OBJECT_SELECT =

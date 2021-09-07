@@ -17,6 +17,7 @@ package edu.mayo.kmdp.repository.asset.index;
 
 
 import java.net.URI;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -24,11 +25,8 @@ import java.util.UUID;
 import org.omg.spec.api4kp._20200801.id.ConceptIdentifier;
 import org.omg.spec.api4kp._20200801.id.Pointer;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
-import org.omg.spec.api4kp._20200801.surrogate.Annotation;
+import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
-import org.omg.spec.api4kp._20200801.surrogate.Link;
-import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRole;
-import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetType;
 
 /**
  * An interface to index Assets and their relationships.
@@ -37,26 +35,13 @@ public interface Index {
 
   /**
    * Registers an Asset, using the information contained in the canonical Surrogate
-   * @see Index#registerAsset(ResourceIdentifier, String, ResourceIdentifier, String, List, List, List, List)
-   *@param assetSurrogate
+   *
+   * @param assetSurrogate
    * @param surrogateId
    * @param surrogateMimeType
    */
   void registerAssetByCanonicalSurrogate(KnowledgeAsset assetSurrogate,
       ResourceIdentifier surrogateId, String surrogateMimeType);
-
-  /**
-   * Register an Asset and its initial metadata.
-   * @param assetId
-   * @param surrogateId
-   * @param types
-   * @param roles
-   * @param annotations
-   * @param related
-   */
-  void registerAsset(ResourceIdentifier assetId, String assetName, ResourceIdentifier surrogateId,
-      String surrogateMimeType, List<KnowledgeAssetType> types,
-      List<KnowledgeAssetRole> roles, List<Annotation> annotations, List<Link> related);
 
   /**
    * Unregisters an Asset
@@ -77,9 +62,10 @@ public interface Index {
    *
    * @param assetPointer
    * @param artifact
+   * @param mimeType
    * @parm
    */
-  void registerArtifactToAsset(ResourceIdentifier assetPointer, ResourceIdentifier artifact, String mimeTypes);
+  void registerArtifactToAsset(ResourceIdentifier assetPointer, KnowledgeArtifact artifact, String mimeType);
 
 
   /**
@@ -115,7 +101,7 @@ public interface Index {
    * @param surrogate
    */
   void registerSurrogateToAsset(ResourceIdentifier assetPointer,
-      ResourceIdentifier surrogate, String mimeType);
+      KnowledgeArtifact surrogate, String mimeType);
 
   /**
    * Retrieve a pointer to the Surrogate given an Asset.
@@ -241,4 +227,6 @@ public interface Index {
   Optional<ResourceIdentifier> resolveArtifact(UUID artifactId, String versionTag);
 
   Optional<ResourceIdentifier> resolveArtifact(UUID artifactId);
+
+  Optional<Date> getEstablishmentDate(ResourceIdentifier resourceId);
 }

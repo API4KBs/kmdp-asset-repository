@@ -58,6 +58,7 @@ import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeReprese
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate_2_0;
 import static org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevelSeries.Abstract_Knowledge_Expression;
+import static org.omg.spec.api4kp._20200801.taxonomy.publicationstatus.PublicationStatusSeries.Published;
 
 import com.github.zafarkhaja.semver.Version;
 import edu.mayo.kmdp.comparator.Contrastor.Comparison;
@@ -67,12 +68,16 @@ import edu.mayo.kmdp.util.DateTimeUtil;
 import edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._20200801.AbstractCarrier;
+import org.omg.spec.api4kp._20200801.AbstractCarrier.Encodings;
 import org.omg.spec.api4kp._20200801.Answer;
 import org.omg.spec.api4kp._20200801.id.ConceptIdentifier;
 import org.omg.spec.api4kp._20200801.id.IdentifierConstants;
@@ -82,15 +87,18 @@ import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
 import org.omg.spec.api4kp._20200801.id.Term;
 import org.omg.spec.api4kp._20200801.services.CompositeKnowledgeCarrier;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
+import org.omg.spec.api4kp._20200801.services.SyntacticRepresentation;
 import org.omg.spec.api4kp._20200801.services.repository.KnowledgeAssetCatalog;
 import org.omg.spec.api4kp._20200801.surrogate.Annotation;
 import org.omg.spec.api4kp._20200801.surrogate.Dependency;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
+import org.omg.spec.api4kp._20200801.surrogate.Publication;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateDiffer;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRole;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetType;
+import org.omg.spec.api4kp._20200801.taxonomy.publicationstatus.PublicationStatusSeries;
 
 
 class SemanticRepositoryTest extends RepositoryTestBase {
@@ -1695,6 +1703,66 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     assertTrue(NotFound.sameAs(
         semanticRepository.getKnowledgeAssetVersionCanonicalCarrier(
             axId1.getUuid(), axId1.getVersionTag(), "text/html").getOutcomeType()));
+  }
+
+  @Test
+  void testVersionEstablishedOn() {
+    ResourceIdentifier axId1 =
+        assetId(testAssetNS(), UUID.randomUUID(), VERSION_ZERO);
+    Date t0 = Date.from(Instant.ofEpochMilli(1000));
+    Date t1 = Date.from(Instant.ofEpochMilli(5000));
+    Date t3 = Date.from(Instant.ofEpochMilli(10000));
+
+    KnowledgeAsset surr1 = SurrogateBuilder.newSurrogate(axId1)
+        .withName("Test No Carrier", "")
+        .get()
+        .withLifecycle(new Publication()
+            .withPublicationStatus(Published)
+            .withCreatedOn(t0));
+
+    KnowledgeArtifact carrier = new KnowledgeArtifact()
+        .withArtifactId(randomArtifactId())
+        .withLifecycle(new Publication()
+            .withPublicationStatus(Published)
+            .withCreatedOn(t1))
+        .withRepresentation(rep(HTML,TXT,Charset.defaultCharset(), Encodings.DEFAULT))
+        .withLocator(URI.create("http://foo.com/bar"));
+
+    KnowledgeArtifact altSurr = new KnowledgeArtifact()
+        .withArtifactId(randomArtifactId())
+        .withLifecycle(new Publication()
+            .withPublicationStatus(Published)
+            .withCreatedOn(t3))
+        .withRepresentation(rep(HTML,TXT,Charset.defaultCharset(), Encodings.DEFAULT))
+        .withLocator(URI.create("http://foo.com/bar/metadata"));
+
+    surr1.withCarriers(carrier);
+    surr1.withSurrogate(altSurr);
+
+    Date t2 = Date.from(Instant.now());
+    semanticRepository
+        .setKnowledgeAssetVersion(axId1.getUuid(), axId1.getVersionTag(), surr1);
+
+    Pointer ptr0 = semanticRepository.listKnowledgeAssets()
+        .orElseGet(Assertions::fail)
+        .get(0);
+    assertEquals(t0, ptr0.getEstablishedOn());
+
+    Pointer ptr1 = semanticRepository.listKnowledgeAssetCarriers(axId1.getUuid(), axId1.getVersionTag())
+        .orElseGet(Assertions::fail)
+        .get(0);
+    assertEquals(t1, ptr1.getEstablishedOn());
+
+    Pointer ptr2 = semanticRepository.listKnowledgeAssetSurrogates(axId1.getUuid(), axId1.getVersionTag())
+        .orElseGet(Assertions::fail)
+        .get(0);
+    assertEquals(ptr2.getEstablishedOn().toInstant().truncatedTo(ChronoUnit.DAYS),
+        t2.toInstant().truncatedTo(ChronoUnit.DAYS));
+
+    Pointer ptr3 = semanticRepository.listKnowledgeAssetSurrogates(axId1.getUuid(), axId1.getVersionTag())
+        .orElseGet(Assertions::fail)
+        .get(1);
+    assertEquals(ptr3.getEstablishedOn().toInstant(), t3.toInstant());
   }
 
   void publishForPointer(String seedId, KnowledgeAssetRole role, KnowledgeAssetType... types) {
