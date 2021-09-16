@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.UUID;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,6 +58,11 @@ abstract class RepositoryTestBase {
   @BeforeEach
   void reset() {
     semanticRepository.clearKnowledgeAssetCatalog();
+  }
+
+  @AfterEach
+  void cleanup() {
+    kgHolder.cancelScheduledPersistGraph(true);
   }
 
   @AfterAll

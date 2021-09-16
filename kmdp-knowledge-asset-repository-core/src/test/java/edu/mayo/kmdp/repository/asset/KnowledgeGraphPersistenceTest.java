@@ -25,7 +25,6 @@ import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._20200801.Answer;
 import org.omg.spec.api4kp._20200801.id.Pointer;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
-import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
@@ -56,7 +55,6 @@ class KnowledgeGraphPersistenceTest extends RepositoryTestBase {
 
   @Test
   void testEmptyOnStart() {
-    semanticRepository.clearKnowledgeAssetCatalog();
     Model graph = readGraphFromArtifactRepo();
     assertEquals(kgHolder.getTBoxTriples().size(), graph.size());
   }
@@ -66,8 +64,6 @@ class KnowledgeGraphPersistenceTest extends RepositoryTestBase {
     ResourceIdentifier axId = randomAssetId();
     KnowledgeAsset asset = SurrogateBuilder.newSurrogate(axId).get();
 
-    assertTrue(
-        semanticRepository.clearKnowledgeAssetCatalog().isSuccess());
     assertTrue(
         semanticRepository.setKnowledgeAssetVersion(
             axId.getUuid(), axId.getVersionTag(), asset).isSuccess());
@@ -100,8 +96,6 @@ class KnowledgeGraphPersistenceTest extends RepositoryTestBase {
     ResourceIdentifier axId = randomAssetId();
     KnowledgeAsset asset = SurrogateBuilder.newSurrogate(axId).get();
 
-    assertTrue(
-        semanticRepository.clearKnowledgeAssetCatalog().isSuccess());
     assertTrue(
         semanticRepository.setKnowledgeAssetVersion(
             axId.getUuid(), axId.getVersionTag(), asset).isSuccess());

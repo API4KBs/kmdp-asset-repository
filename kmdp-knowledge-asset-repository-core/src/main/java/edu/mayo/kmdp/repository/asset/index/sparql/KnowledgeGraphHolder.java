@@ -229,7 +229,7 @@ public class KnowledgeGraphHolder implements KnowledgeBaseApiInternal._getKnowle
    */
   @Loggable(level = LogLevel.INFO)
   public Answer<Void> saveKnowledgeGraph() {
-    saver.cancelExecution(false);
+    cancelScheduledPersistGraph(false);
     return persistKnowledgeGraphIntoArtifactRepository();
   }
 
@@ -246,7 +246,7 @@ public class KnowledgeGraphHolder implements KnowledgeBaseApiInternal._getKnowle
    */
   @Loggable(level = LogLevel.INFO)
   public synchronized void resetGraph() {
-    saver.cancelExecution(true);
+    cancelScheduledPersistGraph(true);
     boolean success = reinitialize().isSuccess();
     if (! success) {
       var msg = "Unable to RESET a Knowledge Graph Successfully";
@@ -308,6 +308,14 @@ public class KnowledgeGraphHolder implements KnowledgeBaseApiInternal._getKnowle
     } finally {
       kg.leaveCriticalSection();
     }
+  }
+
+  /**
+   * Cancels any currently scheduled persistence of the Knowledge Graph
+   * @param withInterrupt if true, send an interrupt to the thread
+   */
+  public void cancelScheduledPersistGraph(boolean withInterrupt) {
+    saver.cancelExecution(withInterrupt);
   }
 
   /*
