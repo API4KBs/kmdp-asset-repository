@@ -1353,7 +1353,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     }
 
     if (assetSurrogateCarrier instanceof CompositeKnowledgeCarrier) {
-      return addCanonicalSurrogateAsComposite(assetId, versionTag, assetSurrogateCarrier);
+      return liftCompositeCanonicalSurrogate(assetSurrogateCarrier)
+          .flatWhole(ckc ->
+              addCanonicalSurrogateAsComposite(assetId, versionTag, ckc));
     } else {
       return liftCanonicalSurrogate(assetSurrogateCarrier)
           .flatMap(ax -> setKnowledgeAssetVersion(
@@ -2585,6 +2587,19 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     return parser
         .applyLift(surrogate, Abstract_Knowledge_Expression)
         .flatOpt(kc -> kc.as(KnowledgeAsset.class));
+  }
+
+  /**
+   * Lifts a wrapped Composite Knowledge Asset Surrogate into its AST/object form
+   *
+   * @param surrogate a KnowledgeCarrier that wraps a uniform Composite of Canonical Knowledge Asset
+   *                  Surrogates
+   * @return A Composite of KnowledgeAsset surrogate objects
+   */
+  protected Answer<KnowledgeCarrier> liftCompositeCanonicalSurrogate(KnowledgeCarrier surrogate) {
+    return Answer.of(surrogate)
+        .flatMap(ckc ->
+            parser.applyLift(ckc, Abstract_Knowledge_Expression));
   }
 
   /**
