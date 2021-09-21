@@ -87,7 +87,6 @@ import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
 import org.omg.spec.api4kp._20200801.id.Term;
 import org.omg.spec.api4kp._20200801.services.CompositeKnowledgeCarrier;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
-import org.omg.spec.api4kp._20200801.services.SyntacticRepresentation;
 import org.omg.spec.api4kp._20200801.services.repository.KnowledgeAssetCatalog;
 import org.omg.spec.api4kp._20200801.surrogate.Annotation;
 import org.omg.spec.api4kp._20200801.surrogate.Dependency;
@@ -98,10 +97,9 @@ import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateDiffer;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRole;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetType;
-import org.omg.spec.api4kp._20200801.taxonomy.publicationstatus.PublicationStatusSeries;
 
 
-class SemanticRepositoryTest extends RepositoryTestBase {
+class   SemanticRepositoryTest extends RepositoryTestBase {
 
   private static final String BASE_URI = Registry.MAYO_ASSETS_BASE_URI;
 
@@ -1756,8 +1754,10 @@ class SemanticRepositoryTest extends RepositoryTestBase {
     Pointer ptr2 = semanticRepository.listKnowledgeAssetSurrogates(axId1.getUuid(), axId1.getVersionTag())
         .orElseGet(Assertions::fail)
         .get(0);
-    assertEquals(ptr2.getEstablishedOn().toInstant().truncatedTo(ChronoUnit.DAYS),
-        t2.toInstant().truncatedTo(ChronoUnit.DAYS));
+
+    Instant i1 = t2.toInstant();
+    Instant i2 = ptr2.getEstablishedOn().toInstant();
+    assertTrue(ChronoUnit.MINUTES.between(i1, i2) < 10);
 
     Pointer ptr3 = semanticRepository.listKnowledgeAssetSurrogates(axId1.getUuid(), axId1.getVersionTag())
         .orElseGet(Assertions::fail)
