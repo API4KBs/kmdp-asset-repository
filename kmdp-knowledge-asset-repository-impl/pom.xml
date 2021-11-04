@@ -80,6 +80,12 @@
     </dependency>
 
     <dependency>
+      <groupId>edu.mayo.kmdp</groupId>
+      <artifactId>kmdp-spring-monitoring</artifactId>
+      <version>${kmdp.servers.version}</version>
+    </dependency>
+
+    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
