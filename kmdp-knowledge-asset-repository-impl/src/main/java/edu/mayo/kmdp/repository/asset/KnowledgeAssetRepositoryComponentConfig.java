@@ -15,7 +15,15 @@ package edu.mayo.kmdp.repository.asset;
 
 import static org.springframework.jdbc.support.JdbcUtils.extractDatabaseMetaData;
 
+import edu.mayo.kmdp.language.LanguageDeSerializer;
+import edu.mayo.kmdp.language.LanguageDetector;
+import edu.mayo.kmdp.language.LanguageValidator;
 import edu.mayo.kmdp.language.TransrepresentationExecutor;
+import edu.mayo.kmdp.language.parsers.html.HtmlDeserializer;
+import edu.mayo.kmdp.language.parsers.owl2.JenaOwlParser;
+import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
+import edu.mayo.kmdp.language.translators.surrogate.v2.SurrogateV2toHTMLTranslator;
+import edu.mayo.kmdp.language.translators.surrogate.v2.SurrogateV2toLibraryTranslator;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties.KnowledgeArtifactRepositoryOptions;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
@@ -30,8 +38,13 @@ import edu.mayo.kmdp.repository.asset.server.configuration.HTMLAdapter;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.stream.StreamSupport;
 import javax.sql.DataSource;
+import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.DeserializeApiInternal;
+import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.DetectApiInternal;
+import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.TransxionApiInternal;
+import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.ValidateApiInternal;
 import org.omg.spec.api4kp._20200801.services.KPServer;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
 import org.slf4j.Logger;
@@ -55,8 +68,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @Configuration
 @ComponentScan(basePackageClasses = {
     SemanticKnowledgeAssetRepository.class,
-    JPAArtifactDAO.class,
-    TransrepresentationExecutor.class})
+    JPAArtifactDAO.class})
 @PropertySource(value = {"classpath:application.properties"})
 @EnableJpaRepositories(basePackageClasses = ArtifactVersionRepository.class)
 @EntityScan(basePackageClasses = ArtifactVersionEntity.class)
@@ -142,4 +154,36 @@ public class KnowledgeAssetRepositoryComponentConfig {
   HttpMessageConverter<KnowledgeCarrier> knowledgeCarrierToHTMLAdapter() {
     return new HTMLAdapter();
   }
+
+  @Bean
+  @KPServer
+  public TransxionApiInternal translator() {
+    return new TransrepresentationExecutor(Arrays.asList(
+        new SurrogateV2toHTMLTranslator(),
+        new SurrogateV2toLibraryTranslator()
+    ));
+  }
+
+  @Bean
+  @KPServer
+  public DeserializeApiInternal parser() {
+    return new LanguageDeSerializer(Arrays.asList(
+        new HtmlDeserializer(),
+        new Surrogate2Parser(),
+        new JenaOwlParser()
+    ));
+  }
+
+  @Bean
+  @KPServer
+  public ValidateApiInternal validator() {
+    return new LanguageValidator(Collections.emptyList());
+  }
+
+  @Bean
+  @KPServer
+  public DetectApiInternal detector() {
+    return new LanguageDetector(Collections.emptyList());
+  }
+
 }
