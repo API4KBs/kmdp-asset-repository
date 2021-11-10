@@ -68,6 +68,7 @@
     <dependency>
       <groupId>com.h2database</groupId>
       <artifactId>h2</artifactId>
+      <scope>test</scope>
     </dependency>
 
     <dependency>
@@ -131,5 +132,25 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>in-memory</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+        <property>
+          <name>env</name>
+          <value>local</value>
+        </property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>com.h2database</groupId>
+          <artifactId>h2</artifactId>
+          <scope>compile</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
 
 </project>
