@@ -193,40 +193,40 @@ steps:
         **/*.war
       TargetFolder: '$(build.artifactstagingdirectory)'
 
-# Make directory for veracode scan
-- task: PowerShell@2
-  displayName: 'Make directory for veracode scan'
-  inputs:
-    targetType: 'inline'
-    script: |
-        mkdir veracode
+# # Make directory for veracode scan
+# - task: PowerShell@2
+#   displayName: 'Make directory for veracode scan'
+#   inputs:
+#     targetType: 'inline'
+#     script: |
+#         mkdir veracode
 
-# Veracode Files to scan
-- task: CopyFiles@2
-  displayName: 'Copy Files to veracode folder'
-  inputs:
-      SourceFolder: '$(system.defaultworkingdirectory)'
-      Contents: |
-        **/*.war
-      TargetFolder: 'veracode'
+# # Veracode Files to scan
+# - task: CopyFiles@2
+#   displayName: 'Copy Files to veracode folder'
+#   inputs:
+#       SourceFolder: '$(system.defaultworkingdirectory)'
+#       Contents: |
+#         **/*.war
+#       TargetFolder: 'veracode'
 
-# Download Veracode Pipeline Scanner
-- task: CmdLine@2
-  displayName: 'Download latest Veracode pipeline scanner'
-  inputs:
-    script: |
-      echo Download Pipeline Scanner
+# # Download Veracode Pipeline Scanner
+# - task: CmdLine@2
+#   displayName: 'Download latest Veracode pipeline scanner'
+#   inputs:
+#     script: |
+#       echo Download Pipeline Scanner
       
-      curl -O -L https://downloads.veracode.com/securityscan/pipeline-scan-LATEST.zip
+#       curl -O -L https://downloads.veracode.com/securityscan/pipeline-scan-LATEST.zip
 
-# Unzip Veracode Pipeline Scanner
-- task: ExtractFiles@1
-  displayName: 'Unzip Veracode Pipeline Scan'
-  inputs:
-    archiveFilePatterns: 'pipeline-scan-LATEST.zip'
-    cleanDestinationFolder: false
-    overwriteExistingFiles: false
-    destinationFolder: 'veracode'
+# # Unzip Veracode Pipeline Scanner
+# - task: ExtractFiles@1
+#   displayName: 'Unzip Veracode Pipeline Scan'
+#   inputs:
+#     archiveFilePatterns: 'pipeline-scan-LATEST.zip'
+#     cleanDestinationFolder: false
+#     overwriteExistingFiles: false
+#     destinationFolder: 'veracode'
 
 # - script: |
 #       echo Project War Version $(PROJECT_SLM_VERSION)
@@ -253,12 +253,12 @@ steps:
   condition: succeededOrFailed()
 
 # Publish to Azure Pipelines
-- task: PublishBuildArtifacts@1
-  displayName: 'Publish Artifact: veracode'
-  inputs:
-    PathtoPublish: 'veracode'
-    ArtifactName: veracode
-  condition: succeededOrFailed()
+# - task: PublishBuildArtifacts@1
+#   displayName: 'Publish Artifact: veracode'
+#   inputs:
+#     PathtoPublish: 'veracode'
+#     ArtifactName: veracode
+#   condition: succeededOrFailed()
 
 # ------------------ END PIPELINE  ------------------
 - script: |
