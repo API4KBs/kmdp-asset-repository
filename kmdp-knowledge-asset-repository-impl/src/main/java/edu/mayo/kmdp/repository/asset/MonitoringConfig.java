@@ -11,6 +11,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
@@ -55,6 +56,7 @@ public class MonitoringConfig {
   }
 
   @Bean
+  @Qualifier("flag")
   public Predicate<String> featureFlags() {
     return "allowClearAll"::equals;
   }
