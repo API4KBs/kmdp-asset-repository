@@ -238,12 +238,6 @@ steps:
     PROJECT_SLM_VERSION: $(projectSlmVersionFinal)
   displayName: 'Run Veracode Pipeline Scan'
 
-- task: PublishBuildArtifacts@1
-  displayName: 'Publish Artifact: Veracode'
-  inputs:
-    PathtoPublish: results.json
-    ArtifactName: veracode
-    
 # Export Variables
 - task: ImportExportVariables@1
   displayName: 'Export Build Variables'
@@ -259,12 +253,12 @@ steps:
   condition: succeededOrFailed()
 
 # Publish to Azure Pipelines
-# - task: PublishBuildArtifacts@1
-#   displayName: 'Publish Artifact: veracode'
-#   inputs:
-#     PathtoPublish: 'veracode'
-#     ArtifactName: veracode
-#   condition: succeededOrFailed()
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: veracode'
+  inputs:
+    PathtoPublish: 'veracode'
+    ArtifactName: veracode
+  condition: succeededOrFailed()
 
 # ------------------ END PIPELINE  ------------------
 - script: |
