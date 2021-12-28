@@ -237,6 +237,12 @@ steps:
     VERACODE_API_KEY: $(VERACODE_API_KEY)
     PROJECT_SLM_VERSION: $(projectSlmVersionFinal)
   displayName: 'Run Veracode Pipeline Scan'
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: Veracode'
+  inputs:
+    PathtoPublish: results.json
+    ArtifactName: veracode
     
 # Export Variables
 - task: ImportExportVariables@1
