@@ -99,7 +99,7 @@ public class StaticFilter {
     }
 
     Optional<URI> annotationURI = resolveAnnotationTag(assetAnnotationTag);
-    Optional<URI> annotationValueURI = URIUtil.asUri(assetAnnotationConcept);
+    Optional<URI> annotationValueURI = URIUtil.asURI(assetAnnotationConcept);
 
     Set<ResourceIdentifier> filteredResources;
     if (annotationURI.isPresent() && annotationValueURI.isPresent()) {
