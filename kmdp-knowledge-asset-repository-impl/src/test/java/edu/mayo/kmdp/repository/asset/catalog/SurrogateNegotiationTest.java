@@ -47,8 +47,6 @@ import org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetCatal
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.client.ApiClientFactory;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 
 class SurrogateNegotiationTest extends SemanticRepoAPITestBase {

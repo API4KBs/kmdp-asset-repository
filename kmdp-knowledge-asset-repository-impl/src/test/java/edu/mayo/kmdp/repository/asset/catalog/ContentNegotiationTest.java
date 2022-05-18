@@ -205,7 +205,7 @@ class ContentNegotiationTest extends SemanticRepoAPITestBase {
             .withLocalization(English)
             .withName("Some Text")
             .withRepresentation(rep(HTML,TXT))
-            .withLocator(URI.create("http://localhost:" + port))
+            .withLocator(URI.create("http://localhost:" + port + "/test"))
         );
   }
 

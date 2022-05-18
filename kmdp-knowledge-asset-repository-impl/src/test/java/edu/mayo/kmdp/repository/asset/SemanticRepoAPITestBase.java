@@ -30,9 +30,13 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Controller;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 @SpringBootTest(
     webEnvironment = WebEnvironment.RANDOM_PORT,
@@ -76,6 +80,16 @@ public abstract class SemanticRepoAPITestBase {
           new SurrogateV2toLibraryTranslator(),
           new MockTranslator()
       ));
+    }
+  }
+
+  @Controller
+  public static class MockHTMLRepo {
+    @GetMapping(value = "/test", produces = MediaType.TEXT_HTML_VALUE)
+    @ResponseBody
+    public String welcomeAsHTML() {
+      return "<html>\n" + "<header><title>Welcome</title></header>\n" +
+          "<body>\n" + "Hello world\n" + "</body>\n" + "</html>";
     }
   }
 }
