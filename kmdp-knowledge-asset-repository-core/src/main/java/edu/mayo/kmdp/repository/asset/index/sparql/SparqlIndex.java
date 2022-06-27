@@ -678,6 +678,9 @@ public class SparqlIndex implements Index {
   }
 
   protected Optional<ResourceIdentifier> resolve(UUID assetId, String versionTag) {
+    if (assetId == null || versionTag == null) {
+      return Optional.empty();
+    }
     List<Resource> versions = new ArrayList<>();
     Map<String, Literal> literalParams = new HashMap<>();
     literalParams.put("?tag",
