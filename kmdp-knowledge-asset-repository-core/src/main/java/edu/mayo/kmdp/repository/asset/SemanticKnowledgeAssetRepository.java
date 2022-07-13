@@ -49,6 +49,7 @@ import static org.omg.spec.api4kp._20200801.Answer.failed;
 import static org.omg.spec.api4kp._20200801.Answer.merge;
 import static org.omg.spec.api4kp._20200801.Answer.notFound;
 import static org.omg.spec.api4kp._20200801.Answer.succeed;
+import static org.omg.spec.api4kp._20200801.id.IdentifierConstants.VERSION_ZERO;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.timedSemverComparator;
 import static org.omg.spec.api4kp._20200801.id.VersionIdentifier.toSemVer;
 import static org.omg.spec.api4kp._20200801.services.CompositeStructType.GRAPH;
@@ -115,6 +116,13 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.inject.Named;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.javers.core.diff.Change;
+import org.javers.core.diff.Diff;
+import org.javers.core.diff.changetype.NewObject;
+import org.javers.core.diff.changetype.PropertyChange;
+import org.javers.core.diff.changetype.PropertyChangeType;
+import org.javers.core.diff.changetype.container.ContainerChange;
+import org.javers.core.diff.changetype.container.ValueAdded;
 import org.omg.spec.api4kp._20200801.AbstractCarrier;
 import org.omg.spec.api4kp._20200801.AbstractCarrier.Encodings;
 import org.omg.spec.api4kp._20200801.Answer;
@@ -1035,8 +1043,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * <p>
    * If content negotiation preferences are specified, this operation will validate that the actual
    * artifact fits the client's preferences, or respond with 'not acceptable' In particular, this
-   * operation will not attempt to translate/transform the Artifact (if needed, @see {@link
-   * SemanticKnowledgeAssetRepository._getKnowledgeAssetVersionCanonicalCarrier})
+   * operation will not attempt to translate/transform the Artifact (if needed, @see
+   * {@link SemanticKnowledgeAssetRepository._getKnowledgeAssetVersionCanonicalCarrier})
    *
    * @param assetId            The id of the Asset for which the Artifact is a Carrier
    * @param versionTag         The version of the Asset for which the Artifact is a Carrier
@@ -1179,8 +1187,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   /**
    * Returns the Canonical Surrogate for the given Knowledge Asset, serialized using the server's
-   * default format, and encoded in binary form. To get the Surrogate as an object, use {@link
-   * SemanticKnowledgeAssetRepository#}getVersionedKnowledgeAsset} and related operations instead.
+   * default format, and encoded in binary form. To get the Surrogate as an object, use
+   * {@link SemanticKnowledgeAssetRepository#}getVersionedKnowledgeAsset} and related operations
+   * instead.
    * <p>
    * Supports content negotiation to create alternative representation of the same Surrogate
    *
@@ -1260,8 +1269,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * <p>
    * If content negotiation preferences are specified, this operation will validate that the actual
    * artifact fits the client's preferences, or respond with 'not acceptable' In particular, this
-   * operation will not attempt to translate/transform the Artifact (if needed, @see {@link
-   * SemanticKnowledgeAssetRepository#getKnowledgeAssetVersionCanonicalSurrogate} )
+   * operation will not attempt to translate/transform the Artifact (if needed, @see
+   * {@link SemanticKnowledgeAssetRepository#getKnowledgeAssetVersionCanonicalSurrogate} )
    *
    * @param assetId             The id of the Asset for which the Artifact is a Carrier
    * @param versionTag          The version of the Asset for which the Artifact is a Carrier
@@ -1634,9 +1643,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   /**
    * Uses the Links in a Surrogate to derive a (TREE-based) struct for a composite
    * <p>
-   * This method is not recusrive, and is used as a fallback when getCompositeKnowledgeAssetStructure
-   * fails or is not supported Conversely, it is more efficient since it does not have to rely on a
-   * SPARQL query
+   * This method is not recusrive, and is used as a fallback when
+   * getCompositeKnowledgeAssetStructure fails or is not supported Conversely, it is more efficient
+   * since it does not have to rely on a SPARQL query
    * <p>
    * Note: this method performs the inverse of operation of a CompositeMetadataIntrospector, which
    * derives a Surrogate from a Structure instead
@@ -2168,7 +2177,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   /**
    * Detects whether : * the given Asset has a Canonical Surrogate, AND *  that Canonical Surrogate
    * is not the same as the provided Surrogate *  OR *  that Canonical Surrogate is the same, AND
-   * same version, but the existing and given representation differ
+   * same version, but the existing and given representation differ in a way that is not supported
    *
    * @param assetIdentifier     the id of the existing Asset
    * @param surrogateIdentifier the Id of the existing Surrogate
@@ -2195,10 +2204,55 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         KnowledgeAsset existing = existingSurrogate.get();
         if (!SurrogateDiffer.isEquivalent(assetSurrogate, existing)) {
           var differ = new SurrogateDiffer();
-          String msg = differ.diff(assetSurrogate, existing).prettyPrint();
-          throw new ServerSideException(Conflict, emptyMap(), msg.getBytes());
+          Diff differences = differ.diff(assetSurrogate, existing);
+          if (isSurrogateChangeVetoed(existing, differences)) {
+            String msg = differences.prettyPrint();
+            throw new ServerSideException(Conflict, emptyMap(), msg.getBytes());
+          }
         }
       }
+    }
+  }
+
+  /**
+   * Hard-coded policy that determines whether it is possible to modify the Surrogate of an existing
+   * Asset version, given the existing Surrogate and the number and type of changes.
+   * <p>
+   * The current policy allows for a change if: the Surrogates are not versioned explicitly (i.e.
+   * the Surrogate version is 0.0.0), AND, the changes are all and only incremental
+   * <p>
+   * 7/13/22 This capability is experimental, limited in scope, and not exposed for configuration
+   *
+   * @param existing    The existing Surrogate
+   * @param differences The differences between the newer Surrogate and the existing one
+   * @return true
+   */
+  protected boolean isSurrogateChangeVetoed(KnowledgeAsset existing, Diff differences) {
+    if (!existing.getSurrogate().isEmpty()
+        && !VERSION_ZERO.equals(existing.getSurrogate().get(0).getArtifactId().getVersionTag())) {
+      return false;
+    }
+    return differences.getChanges().stream()
+        .anyMatch(c -> !isChangeIncremental(c));
+  }
+
+  /**
+   * Predicate that determines whether a {@link Change} is incremental or not.
+   * <p>
+   * Incremental changes involve the creation of new objects, the setting of previously null
+   * properties, or the addition of elements to a collection, but nothing else.
+   *
+   * @param change the {@link Change} to be assessed
+   * @return true if the change is incremental, as defined before
+   */
+  private boolean isChangeIncremental(Change change) {
+    if (change instanceof ContainerChange) {
+      return ((ContainerChange) change).getChanges().stream()
+          .allMatch(x -> x instanceof ValueAdded);
+    } else if (change instanceof PropertyChange) {
+      return ((PropertyChange) change).getChangeType() == PropertyChangeType.PROPERTY_ADDED;
+    } else {
+      return change instanceof NewObject;
     }
   }
 

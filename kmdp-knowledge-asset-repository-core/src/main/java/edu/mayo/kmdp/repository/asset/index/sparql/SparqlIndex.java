@@ -40,6 +40,7 @@ import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
+import org.eclipse.rdf4j.model.vocabulary.OWL;
 import org.omg.spec.api4kp._20200801.aspects.LogLevel;
 import org.omg.spec.api4kp._20200801.aspects.Loggable;
 import org.omg.spec.api4kp._20200801.id.ConceptIdentifier;
@@ -172,6 +173,7 @@ public class SparqlIndex implements Index {
    * Deconstruct an Asset into RDF statements.
    *
    * @param asset
+   * @param aliases
    * @param surrogate
    * @param types
    * @param roles
@@ -179,7 +181,9 @@ public class SparqlIndex implements Index {
    * @param lifecycle
    * @return
    */
-  public List<Statement> toRdf(ResourceIdentifier asset, String assetName,
+  public List<Statement> toRdf(
+      ResourceIdentifier asset, List<ResourceIdentifier> aliases,
+      String assetName,
       ResourceIdentifier surrogate, String surrogateMimeType,
       List<KnowledgeAssetType> types, List<KnowledgeAssetRole> roles, List<Annotation> annotations,
       List<Link> related, Publication lifecycle) {
@@ -293,6 +297,9 @@ public class SparqlIndex implements Index {
           toStringValueStatement(assetVersionId, URI.create(RDFS.label.getURI()), assetName));
     }
 
+    aliases.forEach(alias -> statements.add(
+        toStatement(assetVersionId, URI.create(OWL.SAMEAS.toString()), alias.getVersionId())));
+
     return statements;
   }
 
@@ -400,7 +407,8 @@ public class SparqlIndex implements Index {
   private void registerAsset(KnowledgeAsset asset,
       ResourceIdentifier surrogate, String surrogateMimeType) {
     this.jenaSparqlDao
-        .store(this.toRdf(asset.getAssetId(), asset.getName(), surrogate, surrogateMimeType,
+        .store(this.toRdf(asset.getAssetId(), asset.getSecondaryId(),
+            asset.getName(), surrogate, surrogateMimeType,
             asset.getFormalType(), asset.getRole(), asset.getAnnotation(),
             asset.getLinks(), asset.getLifecycle()));
   }

@@ -44,6 +44,7 @@ import static org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.
 import static org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.ClinicalKnowledgeAssetTypeSeries.Clinical_Guidance_Rule;
 import static org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.ClinicalKnowledgeAssetTypeSeries.Cognitive_Care_Process_Model;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Depends_On;
+import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetcategory.KnowledgeAssetCategorySeries.Plans_Processes_Pathways_And_Protocol_Definitions;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRoleSeries.Operational_Concept_Definition;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Assessment_Model;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Decision_Model;
@@ -51,6 +52,7 @@ import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.Knowledg
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Predictive_Model;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Protocol;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Service_Profile;
+import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Value_Set;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.JSON;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.TXT;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.XML_1_1;
@@ -99,7 +101,7 @@ import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetR
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetType;
 
 
-class   SemanticRepositoryTest extends RepositoryTestBase {
+class SemanticRepositoryTest extends RepositoryTestBase {
 
   private static final String BASE_URI = Registry.MAYO_ASSETS_BASE_URI;
 
@@ -517,6 +519,56 @@ class   SemanticRepositoryTest extends RepositoryTestBase {
     assertNotNull(assetResult);
 
     assertTrue(Predictive_Model.sameAs(assetResult.getFormalType().get(0)));
+  }
+
+  @Test
+  void testIncrementalAdditiveChanges() {
+    ResourceIdentifier assetId = randomAssetId(testAssetNS());
+    semanticRepository
+        .setKnowledgeAssetVersion(assetId.getUuid(), assetId.getVersionTag(),
+            new KnowledgeAsset()
+                .withAssetId(assetId)
+                .withFormalType(Care_Process_Model));
+    KnowledgeAsset original = semanticRepository.getKnowledgeAsset(assetId.getUuid())
+        .orElseGet(Assertions::fail);
+
+    KnowledgeAsset changedAssetWithRemovals = new KnowledgeAsset()
+        .withAssetId(assetId)
+        .withFormalCategory(Plans_Processes_Pathways_And_Protocol_Definitions);
+
+    KnowledgeAsset changedAsset = new KnowledgeAsset()
+        .withAssetId(assetId)
+        .withFormalType(Value_Set);
+
+    KnowledgeAsset changedAssetWithIncrements = new KnowledgeAsset()
+        .withAssetId(assetId)
+        .withFormalType(Care_Process_Model)
+        .withFormalCategory(Plans_Processes_Pathways_And_Protocol_Definitions);
+
+    Answer<Void> response1 = semanticRepository
+        .setKnowledgeAssetVersion(assetId.getUuid(), assetId.getVersionTag(), changedAssetWithRemovals);
+    assertEquals(Conflict, response1.getOutcomeType());
+
+    Answer<Void> response2 = semanticRepository
+        .setKnowledgeAssetVersion(assetId.getUuid(), assetId.getVersionTag(), changedAsset);
+    assertEquals(Conflict, response2.getOutcomeType());
+
+    Answer<Void> response3 = semanticRepository
+        .setKnowledgeAssetVersion(assetId.getUuid(), assetId.getVersionTag(), changedAssetWithIncrements);
+    assertEquals(NoContent, response3.getOutcomeType());
+
+    KnowledgeAsset updated = semanticRepository.getKnowledgeAsset(assetId.getUuid())
+        .orElseGet(Assertions::fail);
+    assertTrue(Plans_Processes_Pathways_And_Protocol_Definitions
+        .isAnyOf(updated.getFormalCategory()));
+    assertTrue(Care_Process_Model
+        .isAnyOf(updated.getFormalType()));
+    assertEquals(1, updated.getFormalType().size());
+
+    ResourceIdentifier surrId1 = original.getSurrogate().get(0).getArtifactId();
+    ResourceIdentifier surrId2 = updated.getSurrogate().get(0).getArtifactId();
+    assertEquals(surrId1.getVersionId(), surrId2.getVersionId());
+    assertEquals("0.0.0", surrId1.getVersionTag());
   }
 
 
@@ -1723,7 +1775,7 @@ class   SemanticRepositoryTest extends RepositoryTestBase {
         .withLifecycle(new Publication()
             .withPublicationStatus(Published)
             .withCreatedOn(t1))
-        .withRepresentation(rep(HTML,TXT,Charset.defaultCharset(), Encodings.DEFAULT))
+        .withRepresentation(rep(HTML, TXT, Charset.defaultCharset(), Encodings.DEFAULT))
         .withLocator(URI.create("http://foo.com/bar"));
 
     KnowledgeArtifact altSurr = new KnowledgeArtifact()
@@ -1731,7 +1783,7 @@ class   SemanticRepositoryTest extends RepositoryTestBase {
         .withLifecycle(new Publication()
             .withPublicationStatus(Published)
             .withCreatedOn(t3))
-        .withRepresentation(rep(HTML,TXT,Charset.defaultCharset(), Encodings.DEFAULT))
+        .withRepresentation(rep(HTML, TXT, Charset.defaultCharset(), Encodings.DEFAULT))
         .withLocator(URI.create("http://foo.com/bar/metadata"));
 
     surr1.withCarriers(carrier);
@@ -1746,12 +1798,14 @@ class   SemanticRepositoryTest extends RepositoryTestBase {
         .get(0);
     assertEquals(t0, ptr0.getEstablishedOn());
 
-    Pointer ptr1 = semanticRepository.listKnowledgeAssetCarriers(axId1.getUuid(), axId1.getVersionTag())
+    Pointer ptr1 = semanticRepository.listKnowledgeAssetCarriers(axId1.getUuid(),
+            axId1.getVersionTag())
         .orElseGet(Assertions::fail)
         .get(0);
     assertEquals(t1, ptr1.getEstablishedOn());
 
-    Pointer ptr2 = semanticRepository.listKnowledgeAssetSurrogates(axId1.getUuid(), axId1.getVersionTag())
+    Pointer ptr2 = semanticRepository.listKnowledgeAssetSurrogates(axId1.getUuid(),
+            axId1.getVersionTag())
         .orElseGet(Assertions::fail)
         .get(0);
 
@@ -1759,7 +1813,8 @@ class   SemanticRepositoryTest extends RepositoryTestBase {
     Instant i2 = ptr2.getEstablishedOn().toInstant();
     assertTrue(ChronoUnit.MINUTES.between(i1, i2) < 10);
 
-    Pointer ptr3 = semanticRepository.listKnowledgeAssetSurrogates(axId1.getUuid(), axId1.getVersionTag())
+    Pointer ptr3 = semanticRepository.listKnowledgeAssetSurrogates(axId1.getUuid(),
+            axId1.getVersionTag())
         .orElseGet(Assertions::fail)
         .get(1);
     assertEquals(ptr3.getEstablishedOn().toInstant(), t3.toInstant());
