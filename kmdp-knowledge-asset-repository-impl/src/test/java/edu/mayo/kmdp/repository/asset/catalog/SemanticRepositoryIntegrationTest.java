@@ -219,7 +219,7 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
         asset);
     assertTrue(ans2.isSuccess());
 
-    ResourceIdentifier surrId = SurrogateBuilder.defaultArtifactId(
+    ResourceIdentifier surrId = SurrogateBuilder.defaultSurrogateId(
         BASE_UUID_URN_URI,
         asset.getAssetId(),
         Knowledge_Asset_Surrogate_2_0);

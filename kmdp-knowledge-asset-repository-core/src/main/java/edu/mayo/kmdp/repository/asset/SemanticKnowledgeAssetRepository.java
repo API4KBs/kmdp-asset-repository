@@ -50,6 +50,7 @@ import static org.omg.spec.api4kp._20200801.Answer.merge;
 import static org.omg.spec.api4kp._20200801.Answer.notFound;
 import static org.omg.spec.api4kp._20200801.Answer.succeed;
 import static org.omg.spec.api4kp._20200801.id.IdentifierConstants.VERSION_ZERO;
+import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.timedSemverComparator;
 import static org.omg.spec.api4kp._20200801.id.VersionIdentifier.toSemVer;
 import static org.omg.spec.api4kp._20200801.services.CompositeStructType.GRAPH;
@@ -60,7 +61,6 @@ import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomAss
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getCanonicalSurrogateId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getComputableCarrierMetadata;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getComputableSurrogateMetadata;
-import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getSurrogateId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.getSurrogateMetadata;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.nextVersion;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Depends_On;
@@ -116,11 +116,14 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.inject.Named;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.javers.common.string.PrettyValuePrinter;
+import org.javers.core.JaversCoreProperties.PrettyPrintDateFormats;
 import org.javers.core.diff.Change;
 import org.javers.core.diff.Diff;
 import org.javers.core.diff.changetype.NewObject;
 import org.javers.core.diff.changetype.PropertyChange;
 import org.javers.core.diff.changetype.PropertyChangeType;
+import org.javers.core.diff.changetype.ValueChange;
 import org.javers.core.diff.changetype.container.ContainerChange;
 import org.javers.core.diff.changetype.container.ValueAdded;
 import org.omg.spec.api4kp._20200801.AbstractCarrier;
@@ -1027,7 +1030,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Loggable(beforeCode = "KARS-122.A")
   public Answer<KnowledgeCarrier> getKnowledgeAssetCarrier(UUID assetId, String versionTag,
       UUID artifactId, String xAccept) {
-    return Answer.of(getLatestCarrierVersion(artifactId))
+    var latestCarrierId = getLatestCarrierVersion(artifactId);
+    return Answer.ofTry(latestCarrierId, newId(assetId, versionTag),
+            () -> "Unable to determine latest Carrier version for related artifact " + artifactId)
         .flatMap(artifactVersionId ->
             getKnowledgeAssetCarrierVersion(
                 assetId,
@@ -1443,7 +1448,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       return Answer.failed(Forbidden);
     }
 
-    return Answer.of(index.resolveAsset(assetId, versionTag))
+    var resolvedAssetId = index.resolveAsset(assetId, versionTag);
+    return Answer.ofTry(resolvedAssetId, newId(assetId, versionTag),
+            () -> "Unable to confirm asset Id as a known Asset")
         .flatMap(rootId -> compositeHelper.getComponentsQuery(rootId, Depends_On))
         .flatMap(this::getComponentIds)
         .flatMap(componentIds ->
@@ -2069,7 +2076,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    * @return a byte-encoded copy of the artifact
    */
   private Answer<byte[]> retrieveBinaryArtifact(KnowledgeArtifact artifact) {
-    return Answer.of(extractInlinedArtifact(artifact))
+    var carrier = extractInlinedArtifact(artifact);
+    return Answer.ofTry(carrier, artifact.getArtifactId(),
+            () -> "Unable to retrieve Artifact content")
         .or(() -> retrieveBinaryArtifactFromRepository(artifact.getArtifactId()))
         .or(() -> retrieveArtifactFromExternalLocation(artifact));
   }
@@ -2206,8 +2215,13 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
           var differ = new SurrogateDiffer();
           Diff differences = differ.diff(assetSurrogate, existing);
           if (isSurrogateChangeVetoed(existing, differences)) {
-            String msg = differences.prettyPrint();
-            throw new ServerSideException(Conflict, emptyMap(), msg.getBytes());
+            PrettyValuePrinter printer = new PrettyValuePrinter(new PrettyPrintDateFormats());
+            String msg = differences.getChanges().stream()
+                .filter(c -> !isChangeIncremental(c))
+                .map(c -> c.prettyPrint(printer))
+                .collect(Collectors.joining());
+            throw new ServerSideException(Conflict, emptyMap(),
+                existing.getAssetId().asKey() + " - surrogate changes not supported : " + msg);
           }
         }
       }
@@ -2250,7 +2264,11 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       return ((ContainerChange) change).getChanges().stream()
           .allMatch(x -> x instanceof ValueAdded);
     } else if (change instanceof PropertyChange) {
-      return ((PropertyChange) change).getChangeType() == PropertyChangeType.PROPERTY_ADDED;
+      var changeType = ((PropertyChange) change).getChangeType();
+      return changeType == PropertyChangeType.PROPERTY_ADDED ||
+          (changeType == PropertyChangeType.PROPERTY_VALUE_CHANGED
+              && change instanceof ValueChange
+              && ((ValueChange) change).getLeft() == null);
     } else {
       return change instanceof NewObject;
     }
@@ -2336,16 +2354,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       }
       return meta.getArtifactId();
     } else {
-      ResourceIdentifier rid = SurrogateBuilder.defaultArtifactId(
-          identityMapper.getArtifactNamespace(),
-          assetSurrogate.getAssetId(),
-          defaultSurrogateModel);
-      assetSurrogate.withSurrogate(
-          new KnowledgeArtifact()
-              .withArtifactId(rid)
-              .withRepresentation(rep(defaultSurrogateModel, defaultSurrogateFormat,
-                  defaultCharset(), Encodings.DEFAULT)));
-      return rid;
+      var surrogateDescr =
+          SurrogateBuilder.addCanonicalSurrogateMetadata(
+              assetSurrogate, defaultSurrogateModel, defaultSurrogateFormat);
+      return surrogateDescr.getArtifactId();
     }
   }
 
@@ -2389,7 +2401,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   private ResourceIdentifier setCanonicalSurrogateId(KnowledgeAsset assetSurrogate,
       ResourceIdentifier newSurrogateId) {
     return SurrogateHelper.setSurrogateId(
-        assetSurrogate, defaultSurrogateModel, defaultSurrogateFormat, newSurrogateId);
+        assetSurrogate, defaultSurrogateModel, null, newSurrogateId);
   }
 
   /**
@@ -2509,7 +2521,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   private Answer<KnowledgeAsset> retrieveLatestCanonicalSurrogateForLatestAsset(UUID assetId) {
     Optional<ResourceIdentifier> surrogateId = getLatestAssetVersion(assetId)
         .flatMap(index::getCanonicalSurrogateForAsset);
-    return Answer.of(surrogateId)
+    return Answer.ofTry(surrogateId, newId(assetId), () -> "No metadata found for asset " + assetId)
         .flatMap(this::retrieveLatestCanonicalSurrogate);
   }
 
@@ -2537,7 +2549,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     Optional<ResourceIdentifier> surrogateId =
         index.resolveAsset(assetId, versionTag)
             .flatMap(index::getCanonicalSurrogateForAsset);
-    return Answer.of(surrogateId)
+    return Answer.ofTry(surrogateId, newId(assetId, versionTag),
+            () -> "No metadata found for asset " + assetId + " # " + versionTag)
         .flatMap(this::retrieveLatestCanonicalSurrogate);
   }
 
@@ -2549,7 +2562,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    */
   private Answer<KnowledgeAsset> retrieveLatestCanonicalSurrogate(
       ResourceIdentifier surrogateIdentifier) {
-    return Answer.of(getLatestSurrogateVersion(surrogateIdentifier.getUuid()))
+    var latestSurrogateId =
+        getLatestSurrogateVersion(surrogateIdentifier.getUuid());
+    return Answer.ofTry(latestSurrogateId, surrogateIdentifier,
+            () -> "Unable to determine latest version for surrogate " + surrogateIdentifier.asKey())
         .flatMap(this::retrieveCanonicalSurrogateVersion);
   }
 
@@ -2674,17 +2690,13 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         (format != null && supportedDefaultSurrogateFormats.stream()
             .anyMatch(f -> f.sameAs(format)))
             ? format : defaultSurrogateFormat;
-    SyntacticRepresentation rep
+    SyntacticRepresentation targetRep
         = rep(defaultSurrogateModel, actualFormat, defaultCharset(), Encodings.DEFAULT);
+
     return parser.applyLower(
-        ofAst(assetSurrogate)
-            .withRepresentation(rep)
-            .withAssetId(assetSurrogate.getAssetId())
-            .withArtifactId(getSurrogateId(assetSurrogate, defaultSurrogateModel, actualFormat)
-                .orElseGet(SurrogateBuilder::randomArtifactId))
-            .withLabel(assetSurrogate.getName()),
+        SurrogateHelper.carry(assetSurrogate),
         Encoded_Knowledge_Expression,
-        encode(rep),
+        encode(targetRep),
         null
     );
   }

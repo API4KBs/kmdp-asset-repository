@@ -116,7 +116,7 @@ public class ContentNegotiationHelper {
       return anyCarrier(artifacts);
     }
 
-    Answer<KnowledgeArtifact> chosen = Answer.of(reps.stream()
+    Answer<KnowledgeArtifact> chosen = Answer.ofTry(reps.stream()
         .map(rep -> getBestCandidateForRepresentation(artifacts, rep))
         .flatMap(StreamUtil::trimStream)
         .findFirst());
@@ -171,7 +171,7 @@ public class ContentNegotiationHelper {
   public Answer<KnowledgeArtifact> negotiate(
       List<KnowledgeArtifact> artifacts,
       List<WeightedRepresentation> reps) {
-    return Answer.of(reps.stream()
+    return Answer.ofTry(reps.stream()
         .map(rep -> getBestCandidateForRepresentation(artifacts, rep))
         .flatMap(StreamUtil::trimStream)
         .findFirst());
@@ -192,7 +192,7 @@ public class ContentNegotiationHelper {
     return artifacts.stream()
         .flatMap(StreamUtil.filterAs(KnowledgeArtifact.class))
         .filter(x -> theRepContrastor.isBroaderOrEqual(rep.getRep(), x.getRepresentation()))
-        .findAny();
+        .findFirst();
   }
 
 

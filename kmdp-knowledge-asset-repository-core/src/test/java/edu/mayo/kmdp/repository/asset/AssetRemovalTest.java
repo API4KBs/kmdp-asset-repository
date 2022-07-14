@@ -185,7 +185,7 @@ class AssetRemovalTest extends RepositoryTestBase {
 
     surr = semanticRepository.getKnowledgeAsset(assetId, assetV)
         .orElseGet(Assertions::fail);
-    assertEquals("1.2.0",
+    assertEquals("0.2.0",
         surr.getSurrogate().get(0).getArtifactId().getVersionTag());
     assertTrue(surr.getDescription().contains("else"));
 
@@ -197,7 +197,7 @@ class AssetRemovalTest extends RepositoryTestBase {
         .listKnowledgeAssetSurrogateVersions(assetId, assetV, metas.get(0).getUuid())
         .orElseGet(Assertions::fail);
     assertEquals(3, history.size());
-    assertEquals(Arrays.asList("1.2.0", "1.1.0", "1.0.0"),
+    assertEquals(Arrays.asList("0.2.0", "0.1.0", "0.0.0"),
         history.stream().map(ResourceIdentifier::getVersionTag).collect(Collectors.toList()));
 
     assertTrue(
