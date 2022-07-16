@@ -115,7 +115,9 @@ import java.util.stream.Stream;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.inject.Named;
+import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.ResourceFactory;
 import org.javers.common.string.PrettyValuePrinter;
 import org.javers.core.JaversCoreProperties.PrettyPrintDateFormats;
 import org.javers.core.diff.Change;
@@ -1394,9 +1396,11 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     CompositeKnowledgeCarrier ckc = ((CompositeKnowledgeCarrier) assetSurrogateCarrier);
 
     Answer<Void> ans = ckc.getComponent().stream()
-        .map(comp -> addCanonicalKnowledgeAssetSurrogate(
-            comp.getAssetId().getUuid(), comp.getAssetId().getVersionTag(), comp))
-        .reduce(Answer::merge)
+        .map(comp -> {
+          var a = addCanonicalKnowledgeAssetSurrogate(
+              comp.getAssetId().getUuid(), comp.getAssetId().getVersionTag(), comp);
+          return handlePreExistingDependencies(a, comp, ckc);
+        }).reduce(Answer::merge)
         .orElseGet(() -> Answer.of(NoContent));
 
     // exclude aggregates with no struct
@@ -1408,6 +1412,36 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     }
 
     return ans;
+  }
+
+  /**
+   * Handles Conflict failures due to a pre-existing dependency.
+   * <p>
+   * If anonymous Asset A depends on B, and B is supposed to be published separately, two scenarios
+   * are possible. A is published first, with a reference/placeholder to B. When B is eventually
+   * published, it will be updated incrementally. If B has already been published, B will be
+   * rejected, and this rejection shuold be handled as a success
+   *
+   * @param answer The result to be processed
+   * @param comp   The component that resulted in the answer being processed
+   * @param ckc    The (anonymous) {@link CompositeKnowledgeCarrier} being publishd
+   * @return answer, or sucess if answer is a Conflict due to an already pre-published dependency
+   */
+  private Answer<Void> handlePreExistingDependencies(
+      Answer<Void> answer,
+      KnowledgeCarrier comp, CompositeKnowledgeCarrier ckc) {
+    if (Conflict.isSameEntity(answer.getOutcomeType())) {
+      Answer<Model> om = new JenaRdfParser().applyLift(ckc.getStruct(), Abstract_Knowledge_Expression, codedRep(OWL_2), null)
+          .flatOpt(kc -> kc.as(Model.class));
+      if (om.isSuccess() &&
+          om.get().contains(
+              ResourceFactory.createResource(ckc.getRootId().getVersionId().toString()),
+              ResourceFactory.createProperty(Depends_On.getReferentId().toString()),
+              ResourceFactory.createResource(comp.getAssetId().getVersionId().toString()))) {
+        return Answer.of(NoContent);
+      }
+    }
+    return answer;
   }
 
   /**

@@ -297,7 +297,9 @@ public class SparqlIndex implements Index {
           toStringValueStatement(assetVersionId, URI.create(RDFS.label.getURI()), assetName));
     }
 
-    aliases.forEach(alias -> statements.add(
+    aliases.stream()
+        .filter(alias -> alias.getVersionId() != null)
+        .forEach(alias -> statements.add(
         toStatement(assetVersionId, URI.create(OWL.SAMEAS.toString()), alias.getVersionId())));
 
     return statements;

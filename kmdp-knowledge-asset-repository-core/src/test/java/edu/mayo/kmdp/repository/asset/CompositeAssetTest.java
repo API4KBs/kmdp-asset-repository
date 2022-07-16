@@ -24,6 +24,7 @@ import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomArtifactId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomAssetId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateHelper.toAggregateAsset;
+import static org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.ClinicalKnowledgeAssetTypeSeries.Clinical_Decision_Model;
 import static org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.ClinicalKnowledgeAssetTypeSeries.Clinical_Rule;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Depends_On;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Imports;
@@ -710,7 +711,7 @@ class CompositeAssetTest extends RepositoryTestBase {
 
     CompositeKnowledgeCarrier ckc =
         semanticRepository.getCompositeKnowledgeAssetSurrogate(
-            axId0.getUuid(), axId0.getVersionTag())
+                axId0.getUuid(), axId0.getVersionTag())
             .orElseGet(Assertions::fail);
 
     JenaRdfParser parser = new JenaRdfParser();
@@ -721,9 +722,9 @@ class CompositeAssetTest extends RepositoryTestBase {
     KnowledgeCarrier compositeCarrier = ckc.componentById(ckc.getAssetId(), ckc)
         .orElseGet(Assertions::fail);
 
-
     KnowledgeAsset compositeSurrogate = new Surrogate2Parser()
-        .applyLift(compositeCarrier, Abstract_Knowledge_Expression, codedRep(Knowledge_Asset_Surrogate_2_0), null)
+        .applyLift(compositeCarrier, Abstract_Knowledge_Expression,
+            codedRep(Knowledge_Asset_Surrogate_2_0), null)
         .flatOpt(kc -> kc.as(KnowledgeAsset.class))
         .orElseGet(Assertions::fail);
 
@@ -732,6 +733,92 @@ class CompositeAssetTest extends RepositoryTestBase {
             .getComponent(compositeSurrogate, m, Decision_Model)
             .orElseGet(Assertions::fail);
     assertEquals(axId2.asKey(), typedComponentId.asKey());
+  }
+
+  @Test
+  void testCompositeWithPlaceholderReference() {
+    ResourceIdentifier axId0 = randomAssetId(testAssetNS());
+    ResourceIdentifier axId1 = randomAssetId(testAssetNS());
+
+    KnowledgeAsset ka0 = new KnowledgeAsset()
+        .withAssetId(axId0)
+        .withName("Root")
+        .withFormalType(Clinical_Decision_Model)
+        .withLinks(new Dependency().withRel(Depends_On).withHref(axId1));
+
+    KnowledgeAsset ka1 = new KnowledgeAsset()
+        .withAssetId(axId1)
+        .withName("Dep")
+        .withFormalType(Value_Set);
+
+    var ckc = SurrogateHelper.toAnonymousCompositeAsset(
+        axId0,
+        List.of(ka0, ka1));
+
+    var ans = semanticRepository
+        .addCanonicalKnowledgeAssetSurrogate(axId0.getUuid(), axId0.getVersionTag(), ckc);
+
+    assertTrue(ans.isSuccess());
+    assertEquals(2,
+        semanticRepository.listKnowledgeAssets().map(List::size).orElse(-1));
+
+    KnowledgeAsset ka1Full = new KnowledgeAsset()
+        .withAssetId(axId1)
+        .withDescription("Added details")
+        .withName("Dep")
+        .withFormalType(Value_Set);
+
+    var x =
+        semanticRepository.setKnowledgeAssetVersion(axId1.getUuid(), axId1.getVersionTag(), ka1Full);
+    assertTrue(x.isSuccess());
+    KnowledgeAsset ret =
+        semanticRepository.getKnowledgeAssetVersion(axId1.getUuid(), axId1.getVersionTag())
+            .orElseGet(Assertions::fail);
+    assertEquals("Added details", ret.getDescription());
+
+  }
+
+  @Test
+  void testCompositeWithPlaceholderReferenceAlreadyExist() {
+    ResourceIdentifier axId0 = randomAssetId(testAssetNS());
+    ResourceIdentifier axId1 = randomAssetId(testAssetNS());
+
+    KnowledgeAsset ka1Full = new KnowledgeAsset()
+        .withAssetId(axId1)
+        .withDescription("Added details")
+        .withName("Dep")
+        .withFormalType(Value_Set);
+    var x =
+        semanticRepository.setKnowledgeAssetVersion(axId1.getUuid(), axId1.getVersionTag(), ka1Full);
+    assertTrue(x.isSuccess());
+
+    KnowledgeAsset ka0 = new KnowledgeAsset()
+        .withAssetId(axId0)
+        .withName("Root")
+        .withFormalType(Clinical_Decision_Model)
+        .withLinks(new Dependency().withRel(Depends_On).withHref(axId1));
+
+    KnowledgeAsset ka1 = new KnowledgeAsset()
+        .withAssetId(axId1)
+        .withName("Dep")
+        .withFormalType(Value_Set);
+
+    var ckc = SurrogateHelper.toAnonymousCompositeAsset(
+        axId0,
+        List.of(ka0, ka1));
+
+    var ans = semanticRepository
+        .addCanonicalKnowledgeAssetSurrogate(axId0.getUuid(), axId0.getVersionTag(), ckc);
+
+    assertTrue(ans.isSuccess());
+    assertEquals(2,
+        semanticRepository.listKnowledgeAssets().map(List::size).orElse(-1));
+
+    KnowledgeAsset ret =
+        semanticRepository.getKnowledgeAssetVersion(axId1.getUuid(), axId1.getVersionTag())
+            .orElseGet(Assertions::fail);
+    assertEquals("Added details", ret.getDescription());
+
   }
 
 }
