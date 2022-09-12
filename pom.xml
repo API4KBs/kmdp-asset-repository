@@ -9,14 +9,14 @@
   </parent>
 
   <artifactId>kmdp-knowledge-asset-repository</artifactId>
-  <version>5.13.4</version>
+  <version>5.13.5-SNAPSHOT</version>
 
   <name>KMDP :: Server :: Knowledge Asset Repository Service</name>
 
   <packaging>pom</packaging>
 
   <properties>
-    <kmdp.servers.version>5.13.4</kmdp.servers.version>
+    <kmdp.servers.version>5.13.5-SNAPSHOT</kmdp.servers.version>
   </properties>
 
   <modules>
