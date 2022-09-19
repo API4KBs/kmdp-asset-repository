@@ -5,7 +5,7 @@
   <parent>
     <groupId>edu.mayo.kmdp</groupId>
     <artifactId>kmdp-asset-repository-service-base</artifactId>
-    <version>11.2.4</version>
+    <version>11.2.5-SNAPSHOT</version>
   </parent>
 
   <artifactId>kmdp-knowledge-asset-repository</artifactId>
