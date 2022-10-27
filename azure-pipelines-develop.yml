@@ -33,7 +33,6 @@ pool:
 # Gets Variables from Azure DevOps Library
 variables: 
   - group: kmdp-platform-variables
-  - group: kmd-veracode
 
 # ------------------ PIPELINE STEPS  ------------------
 steps:
@@ -42,12 +41,6 @@ steps:
     echo Starting Develop Branch Build Pipeline!
     echo Project :: kmdp-knowledge-asset-repository-service
   displayName: 'Starting Pipeline Steps'
-
-- script: |
-      echo VERACODE_API_ID $VERACODE_API_ID
-  env:
-    VERACODE_API_ID: $(veracodeApiId)
-  displayName: 'Test debug api key for veracode'
 
 # Reads Root pom.xml File
 # Gets/Sets GAV from POM to Pipeline Variables
@@ -193,58 +186,6 @@ steps:
         **/*.war
       TargetFolder: '$(build.artifactstagingdirectory)'
 
-# # Make directory for veracode scan
-#- task: PowerShell@2
-#  displayName: 'Make directory for veracode scan'
-#  inputs:
-#    targetType: 'inline'
-#    script: |
-#        mkdir veracode
-
-# # Veracode Files to scan
-# - task: CopyFiles@2
-#   displayName: 'Copy Files to veracode folder'
-#   inputs:
-#       SourceFolder: '$(system.defaultworkingdirectory)'
-#       Contents: |
-#         **/*.war
-#       TargetFolder: 'veracode'
-
-# # Download Veracode Pipeline Scanner
-# - task: CmdLine@2
-#   displayName: 'Download latest Veracode pipeline scanner'
-#   inputs:
-#     script: |
-#       echo Download Pipeline Scanner
-      
-#       curl -O -L https://downloads.veracode.com/securityscan/pipeline-scan-LATEST.zip
-
-# # # Unzip Veracode Pipeline Scanner
-# - task: ExtractFiles@1
-#   displayName: 'Unzip Veracode Pipeline Scan'
-#   inputs:
-#     archiveFilePatterns: 'pipeline-scan-LATEST.zip'
-#     cleanDestinationFolder: false
-#     overwriteExistingFiles: false
-#     destinationFolder: 'veracode'
-
-# - script: |
-#       echo Project War Version $(PROJECT_SLM_VERSION)
-#       chmod 777 "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$PROJECT_SLM_VERSION.war"
-#       java -Dpipeline.debug=true -jar veracode/pipeline-scan.jar --veracode_api_id "$VERACODE_API_ID" --veracode_api_key "$VERACODE_API_KEY" --file "veracode/kmdp-knowledge-asset-repository-impl/target/kmdp-knowledge-asset-repository-impl-$PROJECT_SLM_VERSION.war" --fail_on_severity="Very High, High" --fail_on_cwe="80" --json_output="true" --project_name="kmdp-knowledge-asset-repository-impl"
-#   env:
-#     VERACODE_API_ID: $(VERACODE_API_ID)
-#     VERACODE_API_KEY: $(VERACODE_API_KEY)
-#     PROJECT_SLM_VERSION: $(projectSlmVersionFinal)
-#   displayName: 'Run Veracode Pipeline Scan'
-
-# # Publish veracode scan results
-# - task: PublishBuildArtifacts@1
-#   displayName: 'Publish Artifact: Veracode'
-#   inputs:
-#     PathtoPublish: results.json
-#     ArtifactName: veracode
-
 # Export Variables
 - task: ImportExportVariables@1
   displayName: 'Export Build Variables'
@@ -258,14 +199,6 @@ steps:
     PathtoPublish: '$(build.artifactstagingdirectory)'
     ArtifactName: deploy
   condition: succeededOrFailed()
-
-# Publish to Azure Pipelines
-# - task: PublishBuildArtifacts@1
-#   displayName: 'Publish Artifact: veracode'
-#   inputs:
-#     PathtoPublish: 'veracode'
-#     ArtifactName: veracode
-#   condition: succeededOrFailed()
 
 # ------------------ END PIPELINE  ------------------
 - script: |
