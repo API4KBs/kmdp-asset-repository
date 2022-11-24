@@ -35,12 +35,15 @@ import edu.mayo.kmdp.repository.artifact.jpa.stores.ArtifactVersionRepository;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.repository.asset.server.ServerContextAwareHrefBuilder;
 import edu.mayo.kmdp.repository.asset.server.configuration.HTMLAdapter;
+import edu.mayo.kmdp.terms.TermsContextAwareHrefBuilder;
+import edu.mayo.kmdp.terms.TermsFHIRFacade;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.stream.StreamSupport;
 import javax.sql.DataSource;
+import org.omg.spec.api4kp._20200801.api.terminology.v4.server.TermsApiInternal;
 import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.DeserializeApiInternal;
 import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.DetectApiInternal;
 import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.TransxionApiInternal;
@@ -172,6 +175,15 @@ public class KnowledgeAssetRepositoryComponentConfig {
         new Surrogate2Parser(),
         new JenaOwlParser()
     ));
+  }
+
+  @Bean
+  @KPServer
+  public TermsApiInternal terminology(@Autowired SemanticKnowledgeAssetRepository kars) {
+    return new TermsFHIRFacade(
+        org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetCatalogApi.newInstance(kars),
+        org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetRepositoryApi.newInstance(kars))
+        .withHrefBuilder(new TermsContextAwareHrefBuilder());
   }
 
   @Bean

@@ -22,12 +22,21 @@
       <artifactId>kmdp-knowledge-asset-repository-core</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
+    <dependency>
+      <artifactId>kmdp-terminology-service-controllers</artifactId>
+      <groupId>edu.mayo.kmdp</groupId>
+      <version>${kmdp.impl.version}</version>
+    </dependency>
+    <dependency>
+      <artifactId>kmdp-terminology-provider</artifactId>
+      <groupId>edu.mayo.kmdp</groupId>
+      <version>${kmdp.servers.version}</version>
+    </dependency>
 
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-asset-repository-service-client</artifactId>
       <version>${kmdp.impl.version}</version>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
