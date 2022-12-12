@@ -7,7 +7,7 @@ import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMI
 import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.decodeAll;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
 
-import edu.mayo.kmdp.repository.asset.HrefBuilder;
+import org.omg.spec.api4kp._20200801.services.repository.asset.KARSHrefBuilder;
 import edu.mayo.kmdp.util.StreamUtil;
 import edu.mayo.kmdp.util.Util;
 import java.net.URI;
@@ -26,9 +26,9 @@ import org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormat;
 
 public class ContentNegotiationHelper {
 
-  HrefBuilder hrefBuilder;
+  KARSHrefBuilder hrefBuilder;
 
-  public ContentNegotiationHelper(HrefBuilder builder) {
+  public ContentNegotiationHelper(KARSHrefBuilder builder) {
     this.hrefBuilder = builder;
   }
 

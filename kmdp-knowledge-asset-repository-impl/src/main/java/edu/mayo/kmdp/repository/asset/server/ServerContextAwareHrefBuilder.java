@@ -1,6 +1,6 @@
 package edu.mayo.kmdp.repository.asset.server;
 
-import edu.mayo.kmdp.repository.asset.HrefBuilder;
+import org.omg.spec.api4kp._20200801.services.repository.asset.KARSHrefBuilder;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties;
 import edu.mayo.kmdp.util.Util;
 import javax.annotation.PostConstruct;
@@ -9,9 +9,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-public class ServerContextAwareHrefBuilder extends HrefBuilder {
+public class ServerContextAwareHrefBuilder extends KARSHrefBuilder {
 
-  private static Logger logger = LoggerFactory.getLogger(ServerContextAwareHrefBuilder.class);
+  private static final Logger logger = LoggerFactory.getLogger(ServerContextAwareHrefBuilder.class);
 
   @Value("${edu.mayo.kmdp.repository.asset.baseURL:}")
   private String environmentHost;

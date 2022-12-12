@@ -38,6 +38,7 @@ import org.omg.spec.api4kp._20200801.api.repository.asset.v4.server.KnowledgeAss
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.server.KnowledgeAssetRepositoryApiInternal;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
+import org.omg.spec.api4kp._20200801.services.repository.asset.KARSHrefBuilder;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 
 /**
@@ -109,7 +110,7 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
         new JenaQuery(kGraphHolder),
         index,
         kGraphHolder,
-        new HrefBuilder(cfg),
+        new KARSHrefBuilder(cfg),
         cfg
     );
   }
@@ -151,7 +152,7 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
         new JenaQuery(kGraphHolder),
         newSparqlIndex(dao, kgi),
         kGraphHolder,
-        new HrefBuilder(cfg),
+        new KARSHrefBuilder(cfg),
         cfg
     );
   }

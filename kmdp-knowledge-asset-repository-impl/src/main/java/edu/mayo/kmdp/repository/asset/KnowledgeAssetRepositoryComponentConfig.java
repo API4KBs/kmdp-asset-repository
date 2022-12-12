@@ -37,6 +37,7 @@ import edu.mayo.kmdp.repository.asset.server.ServerContextAwareHrefBuilder;
 import edu.mayo.kmdp.repository.asset.server.configuration.HTMLAdapter;
 import edu.mayo.kmdp.terms.TermsContextAwareHrefBuilder;
 import edu.mayo.kmdp.terms.TermsFHIRFacade;
+import edu.mayo.kmdp.util.ws.ContentNegotiationFilter;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -50,6 +51,7 @@ import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.Transxion
 import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.ValidateApiInternal;
 import org.omg.spec.api4kp._20200801.services.KPServer;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
+import org.omg.spec.api4kp._20200801.services.repository.asset.KARSHrefBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,6 +62,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.core.env.MutablePropertySources;
@@ -100,9 +103,15 @@ public class KnowledgeAssetRepositoryComponentConfig {
 
   @Bean
   @Primary
-  public HrefBuilder contextAwareHrefBuilder(
+  public KARSHrefBuilder contextAwareHrefBuilder(
       @Autowired KnowledgeAssetRepositoryServerProperties cfg) {
     return new ServerContextAwareHrefBuilder(cfg);
+  }
+
+  @Bean
+  @Order(1)
+  public ContentNegotiationFilter negotiationFilter() {
+    return new ContentNegotiationFilter();
   }
 
 

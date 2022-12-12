@@ -32,7 +32,7 @@ import edu.mayo.kmdp.language.translators.surrogate.v2.SurrogateV2Transcriptor;
 import edu.mayo.kmdp.language.translators.surrogate.v2.SurrogateV2toHTMLTranslator;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties;
 import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepository;
-import edu.mayo.kmdp.repository.asset.HrefBuilder;
+import org.omg.spec.api4kp._20200801.services.repository.asset.KARSHrefBuilder;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties;
 import edu.mayo.kmdp.repository.asset.SemanticKnowledgeAssetRepository;
 import edu.mayo.kmdp.repository.asset.index.Index;
@@ -43,9 +43,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.UUID;
 import javax.sql.DataSource;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
@@ -102,8 +100,6 @@ class RemoteRepoTest {
 
   static SemanticKnowledgeAssetRepository semanticRepository;
 
-  static private JPAKnowledgeArtifactRepository artifactRepo;
-
   static Index index;
 
   static protected KnowledgeAssetRepositoryServerProperties cfg
@@ -116,7 +112,7 @@ class RemoteRepoTest {
 
     DataSource ds = getDataSource(dbType);
 
-    artifactRepo = jpaRepository(ds);
+    JPAKnowledgeArtifactRepository artifactRepo = jpaRepository(ds);
 
     KnowledgeGraphInfo kgi = newKnowledgeGraphInfo();
 
@@ -137,7 +133,7 @@ class RemoteRepoTest {
         new JenaQuery(knowledgeGraphHelper),
         index,
         knowledgeGraphHelper,
-        new HrefBuilder(cfg),
+        new KARSHrefBuilder(cfg),
         cfg);
   }
 

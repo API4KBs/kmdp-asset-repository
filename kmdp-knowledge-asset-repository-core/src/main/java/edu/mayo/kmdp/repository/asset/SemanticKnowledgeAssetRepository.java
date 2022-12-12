@@ -88,7 +88,8 @@ import edu.mayo.kmdp.language.parsers.rdf.JenaRdfParser;
 import edu.mayo.kmdp.repository.artifact.ClearableKnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.artifact.exceptions.ResourceNotFoundException;
-import edu.mayo.kmdp.repository.asset.HrefBuilder.HrefType;
+import org.omg.spec.api4kp._20200801.services.repository.asset.KARSHrefBuilder;
+import org.omg.spec.api4kp._20200801.services.repository.asset.KARSHrefBuilder.HrefType;
 import edu.mayo.kmdp.repository.asset.composite.CompositeHelper;
 import edu.mayo.kmdp.repository.asset.index.IdentityMapper;
 import edu.mayo.kmdp.repository.asset.index.Index;
@@ -246,7 +247,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   private final KnowledgeGraphHolder kGraphHolder;
 
-  private final HrefBuilder hrefBuilder;
+  private final KARSHrefBuilder hrefBuilder;
 
   private final IdentityMapper identityMapper;
 
@@ -286,7 +287,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       @Autowired @KPComponent _askQuery queryExecutor,
       @Autowired Index index,
       @Autowired KnowledgeGraphHolder kgraphHolder,
-      @Autowired(required = false) HrefBuilder hrefBuilder,
+      @Autowired(required = false) KARSHrefBuilder hrefBuilder,
       @Autowired KnowledgeAssetRepositoryServerProperties cfg) {
 
     super();
@@ -297,7 +298,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     this.index = index;
     this.hrefBuilder = hrefBuilder != null
-        ? hrefBuilder : new HrefBuilder(cfg);
+        ? hrefBuilder : new KARSHrefBuilder(cfg);
     this.negotiator = new ContentNegotiationHelper(this.hrefBuilder);
 
     this.parser = parser;

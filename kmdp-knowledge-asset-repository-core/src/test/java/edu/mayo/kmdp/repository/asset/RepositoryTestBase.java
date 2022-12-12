@@ -33,6 +33,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
+import org.omg.spec.api4kp._20200801.services.repository.asset.KARSHrefBuilder;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 
 abstract class RepositoryTestBase {
@@ -99,7 +100,7 @@ abstract class RepositoryTestBase {
         new JenaQuery(kgHolder),
         index,
         kgHolder,
-        new HrefBuilder(assetCfg),
+        new KARSHrefBuilder(assetCfg),
         assetCfg);
 
     ensureInitialized();
