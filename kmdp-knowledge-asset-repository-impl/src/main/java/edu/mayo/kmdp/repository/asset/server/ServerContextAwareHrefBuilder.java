@@ -40,7 +40,7 @@ public class ServerContextAwareHrefBuilder extends KARSHrefBuilder {
    * @return
    */
   @Override
-  protected String getHost() {
+  public String getHost() {
     if (hasEnvOverride) {
       return environmentHost;
     }
