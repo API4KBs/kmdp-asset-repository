@@ -88,8 +88,6 @@ import edu.mayo.kmdp.language.parsers.rdf.JenaRdfParser;
 import edu.mayo.kmdp.repository.artifact.ClearableKnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.artifact.exceptions.ResourceNotFoundException;
-import org.omg.spec.api4kp._20200801.services.repository.asset.KARSHrefBuilder;
-import org.omg.spec.api4kp._20200801.services.repository.asset.KARSHrefBuilder.HrefType;
 import edu.mayo.kmdp.repository.asset.composite.CompositeHelper;
 import edu.mayo.kmdp.repository.asset.index.IdentityMapper;
 import edu.mayo.kmdp.repository.asset.index.Index;
@@ -159,6 +157,8 @@ import org.omg.spec.api4kp._20200801.services.KPServer;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._20200801.services.SyntacticRepresentation;
 import org.omg.spec.api4kp._20200801.services.repository.KnowledgeAssetCatalog;
+import org.omg.spec.api4kp._20200801.services.repository.asset.KARSHrefBuilder;
+import org.omg.spec.api4kp._20200801.services.repository.asset.KARSHrefBuilder.HrefType;
 import org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder;
 import org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.WeightedRepresentation;
 import org.omg.spec.api4kp._20200801.surrogate.Component;
@@ -2030,7 +2030,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
                     txOp.getOperatorId().getUuid(),
                     sourceBinaryArtifact,
                     tgtMime,
-                    null)
+                    negotiator.getContextProperties(identityMapper.getAssetNamespace()))
             ));
   }
 

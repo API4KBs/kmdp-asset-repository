@@ -1,5 +1,6 @@
 package edu.mayo.kmdp.repository.asset.negotiation;
 
+import static edu.mayo.kmdp.util.PropertiesUtil.serializeProps;
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.NotAcceptable;
 import static java.util.Collections.singletonList;
 import static org.omg.spec.api4kp._20200801.contrastors.SyntacticRepresentationContrastor.theRepContrastor;
@@ -7,6 +8,7 @@ import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMI
 import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.decodeAll;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
 
+import java.util.Properties;
 import org.omg.spec.api4kp._20200801.services.repository.asset.KARSHrefBuilder;
 import edu.mayo.kmdp.util.StreamUtil;
 import edu.mayo.kmdp.util.Util;
@@ -278,5 +280,31 @@ public class ContentNegotiationHelper {
         .flatMap(ModelMIMECoder::decode)
         .map(SyntacticRepresentation::getFormat)
         .orElse(defaultFormat);
+  }
+
+
+  /**
+   * Constructs Properties that support the Translators used in dynamic content negotiation
+   *
+   * <ul>
+   *   <li>Maps the Asset's namespace URI to the KARS base URL, so that the HTML renderings of
+   *   surrogates can be navigated</li>
+   * </ul>
+   *
+   * @param asseNamespace
+   * @return
+   */
+  public String getContextProperties(URI asseNamespace) {
+    try {
+      Properties props = new Properties();
+      var host = URI.create(hrefBuilder.getHost());
+      var redirect = new URI(host.getScheme(), null, host.getHost(), host.getPort(),
+          host.getPath() + "/cat" + asseNamespace.getPath(), null, null);
+      props.put(asseNamespace.toString(), redirect.toString());
+      return serializeProps(props);
+    } catch (Exception e) {
+      // fall back to not rewriting the URIs/URLs
+      return null;
+    }
   }
 }
