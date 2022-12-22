@@ -38,10 +38,12 @@ import edu.mayo.kmdp.repository.asset.server.configuration.HTMLAdapter;
 import edu.mayo.kmdp.terms.TermsContextAwareHrefBuilder;
 import edu.mayo.kmdp.terms.TermsFHIRFacade;
 import edu.mayo.kmdp.util.ws.ContentNegotiationFilter;
+import edu.mayo.kmdp.util.ws.PointerHTMLAdapter;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.stream.StreamSupport;
 import javax.sql.DataSource;
 import org.omg.spec.api4kp._20200801.api.terminology.v4.server.TermsApiInternal;
@@ -49,6 +51,7 @@ import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.Deseriali
 import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.DetectApiInternal;
 import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.TransxionApiInternal;
 import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.ValidateApiInternal;
+import org.omg.spec.api4kp._20200801.id.Pointer;
 import org.omg.spec.api4kp._20200801.services.KPServer;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._20200801.services.repository.asset.KARSHrefBuilder;
@@ -165,6 +168,11 @@ public class KnowledgeAssetRepositoryComponentConfig {
   @Bean
   HttpMessageConverter<KnowledgeCarrier> knowledgeCarrierToHTMLAdapter() {
     return new HTMLAdapter();
+  }
+
+  @Bean
+  HttpMessageConverter<List<Pointer>> pointerToHTMLAdapter() {
+    return new PointerHTMLAdapter();
   }
 
   @Bean
