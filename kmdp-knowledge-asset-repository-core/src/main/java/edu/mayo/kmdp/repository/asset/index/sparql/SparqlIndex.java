@@ -5,11 +5,13 @@ import static edu.mayo.kmdp.util.JenaUtil.objA;
 import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
 import static org.apache.jena.rdf.model.ResourceFactory.createStatement;
+import static org.omg.spec.api4kp._20200801.id.IdentifierConstants.SNAPSHOT;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newVersionId;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Depends_On;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Imports;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Includes_By_Reference;
+import static org.omg.spec.api4kp._20200801.taxonomy.publicationstatus.PublicationStatusSeries.Draft;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -300,7 +302,7 @@ public class SparqlIndex implements Index {
     aliases.stream()
         .filter(alias -> alias.getVersionId() != null)
         .forEach(alias -> statements.add(
-        toStatement(assetVersionId, URI.create(OWL.SAMEAS.toString()), alias.getVersionId())));
+            toStatement(assetVersionId, URI.create(OWL.SAMEAS.toString()), alias.getVersionId())));
 
     return statements;
   }
@@ -483,9 +485,33 @@ public class SparqlIndex implements Index {
 
   private Long getEstablishedOn(Publication lifecycle, ResourceIdentifier resourceId) {
     return Optional.ofNullable(lifecycle)
-        .map(Publication::getCreatedOn)
+        .flatMap(pub -> getSurrogateEstablished(pub, resourceId.getVersionTag()))
         .orElseGet(resourceId::getEstablishedOn)
         .getTime();
+  }
+
+  /**
+   * Tries to determine when a certain version of a Resource was effectively 'created'.
+   * <p>
+   * This method is a placeholder, because the correlation between the supported metadata events
+   * (creation, last modification and issuance) is not explicitly defined in its relationship to
+   * series and versioning, assets and artifacts. As a consequence, its implementation in the source
+   * systems is not consistent.
+   *
+   * @param pub
+   * @param versionTag
+   * @return
+   */
+  @Deprecated
+  private Optional<Date> getSurrogateEstablished(Publication pub, String versionTag) {
+    if (Draft.sameAs(pub.getPublicationStatus()) || versionTag != null && versionTag.contains(
+        SNAPSHOT)) {
+      return Optional.ofNullable(pub.getLastReviewedOn())
+          .or(() -> Optional.ofNullable(pub.getCreatedOn()));
+    } else {
+      return Optional.ofNullable(pub.getCreatedOn())
+          .or(() -> Optional.ofNullable(pub.getLastReviewedOn()));
+    }
   }
 
   @Override
