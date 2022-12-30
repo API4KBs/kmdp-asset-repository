@@ -468,18 +468,22 @@ public class SparqlIndex implements Index {
       throw new IllegalArgumentException("Unable to register a Carrier for the Knowledge Graph");
     }
     ResourceIdentifier artifactId = artifact.getArtifactId();
-    List<Statement> statements = Arrays.asList(
-        toStatement(assetPointer.getVersionId(), HAS_CARRIER_URI, artifactId.getResourceId()),
-        toStatement(artifactId.getResourceId(), HAS_VERSION_URI, artifactId.getVersionId()),
-        toStringValueStatement(artifactId.getResourceId(), TAG_ID_URI,
-            artifactId.getUuid().toString()),
-        toStringValueStatement(artifactId.getVersionId(), HAS_VERSION_TAG_URI,
-            artifactId.getVersionTag()),
-        toStringValueStatement(artifactId.getResourceId(), FORMAT_URI,
-            Util.isNotEmpty(mimeType) ? mimeType : "/"),
-        toLongValueStatement(artifactId.getVersionId(),
-            ESTABLISHED_URI, getEstablishedOn(artifact.getLifecycle(), artifactId))
-    );
+    List<Statement> statements = Stream.concat(
+            Stream.of(
+                toStatement(assetPointer.getVersionId(), HAS_CARRIER_URI, artifactId.getResourceId()),
+                toStatement(artifactId.getResourceId(), HAS_VERSION_URI, artifactId.getVersionId()),
+                toStringValueStatement(artifactId.getResourceId(), TAG_ID_URI,
+                    artifactId.getUuid().toString()),
+                toStringValueStatement(artifactId.getVersionId(), HAS_VERSION_TAG_URI,
+                    artifactId.getVersionTag()),
+                toStringValueStatement(artifactId.getResourceId(), FORMAT_URI,
+                    Util.isNotEmpty(mimeType) ? mimeType : "/"),
+                toLongValueStatement(artifactId.getVersionId(),
+                    ESTABLISHED_URI, getEstablishedOn(artifact.getLifecycle(), artifactId))),
+            artifact.getLinks().stream()
+                .flatMap(StreamUtil.filterAs(Dependency.class))
+                .flatMap(dependency -> toDependencyStatements(artifactId.getVersionId(), dependency)))
+        .collect(Collectors.toList());
     this.jenaSparqlDao.store(statements);
   }
 
