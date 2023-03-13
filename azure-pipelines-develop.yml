@@ -176,17 +176,14 @@ steps:
   env:
     SYSTEM_ACCESSTOKEN: $(system.accesstoken)
     PROJECT_SLM_VERSION: $(projectSlmVersionFinal)
-
-- task: ArchiveFiles@2
-  displayName: 'Zip KARS WAR Files'
+# Copy War File to build
+- task: CopyFiles@2
+  displayName: 'Copy Files to: $(build.artifactstagingdirectory)'
   inputs:
-    rootFolderOrFile: '$(system.defaultworkingdirectory)'
-    includeRootFolder: false
-    archiveType: 'zip'
-    archiveFile: '$(Build.ArtifactStagingDirectory)/kars-asset-repository-service-$(projectSlmVersionFinal).zip'
-    replaceExistingArchive: true
-  env:
-    PROJECT_SLM_VERSION: $(projectSlmVersionFinal)
+      SourceFolder: '$(system.defaultworkingdirectory)'
+      Contents: |
+        **/*.war
+      TargetFolder: '$(build.artifactstagingdirectory)'
 
 # Export Variables
 - task: ImportExportVariables@1
@@ -194,15 +191,13 @@ steps:
   inputs:
     action: 'Export'
 
-- task: PublishPipelineArtifact@1
-  displayName: 'Publish KARS WAR ZIP'
+# Publish to Azure Pipelines
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: deploy'
   inputs:
-    targetPath: '$(Build.ArtifactStagingDirectory)/kars-asset-repository-service-$(projectSlmVersionFinal).zip'
-    artifact: 'karsAssetRepositorySevice'
-    publishLocation: 'pipeline'
-  env:
-    PROJECT_SLM_VERSION: $(projectSlmVersionFinal)
-
+    PathtoPublish: '$(build.artifactstagingdirectory)'
+    ArtifactName: deploy
+  condition: succeededOrFailed()
 # ------------------ END PIPELINE  ------------------
 - script: |
     echo Ending Develop Branch Pipeline!
