@@ -160,6 +160,17 @@ steps:
   env:
     PROJECT_SLM_VERSION: $(projectSlmVersionFinal)
 
+  # Runs Maven Goal: prepare deployable
+  # Maven Clean Install
+- task: Maven@3
+  displayName: 'Maven Clean Test'
+  inputs:
+    mavenPomFile: 'pom.xml'
+    goals: 'clean install -Pexclude -DskipTests'
+    javaHomeOption: 'JDKVersion'
+    jdkVersionOption: '1.11'
+    jdkArchitectureOption: 'x64'
+    options: '-ntp'
 
 # Runs Maven Goal: deploy
 # Deploys to Azure DevOps Artifacts
