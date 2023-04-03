@@ -4,7 +4,7 @@
 
 # !! Downstream Build: kmdp-glossary-library-service; develop !! #
 
-trigger: 
+trigger:
   branches:
     include:
       - develop
@@ -22,7 +22,7 @@ resources:
   pipelines:
     - pipeline: kmdpKnowledgeAssetRepositoryServiceDevelop
       source: kmdpKnowledgeInferenceBrokerDevelop
-      trigger: 
+      trigger:
         branches:
           - develop
 
@@ -31,7 +31,7 @@ pool:
   vmImage: 'ubuntu-latest'
 
 # Gets Variables from Azure DevOps Library
-variables: 
+variables:
   - group: kmdp-platform-variables
 
 # ------------------ PIPELINE STEPS  ------------------
@@ -83,7 +83,7 @@ steps:
       New-Item -Type Directory -Force "${HOME}/.m2"
       Copy-Item -Force "$(settingsxml.secureFilePath)" "${HOME}/.m2/settings.xml"
 
-# Authenticate to Maven Feed 
+# Authenticate to Maven Feed
 - task: MavenAuthenticate@0
   displayName: 'Maven Authenticate'
   inputs:
@@ -136,7 +136,7 @@ steps:
   env:
     ALM_VERSION: $(AlmVersioning.Project.Version)
 
-# Runs Maven Goal: versions:set 
+# Runs Maven Goal: versions:set
 # Set Version of Deployable War
 - task: PowerShell@2
   displayName: 'Maven Set Version Deployable War'
@@ -147,14 +147,15 @@ steps:
   env:
     PROJECT_SLM_VERSION: $(projectSlmVersionFinal)
 
-# Runs Maven Goal: deploy 
+# Runs Maven Goal: deploy
 # Deploys to Azure DevOps Artifacts
 - task: PowerShell@2
   displayName: 'Maven Deploy to Artifacts'
   inputs:
     targetType: 'inline'
-    script: |
-      mvn deploy "-DaltDeploymentRepository=$env:DEPLOY_REPO::default::$env:DEPLOY_REPO_PATH" -ntp
+    script:
+      mvn clean install -ntp
+      mvn deploy -Pexclude -DskipTests "-DaltDeploymentRepository=$env:DEPLOY_REPO::default::$env:DEPLOY_REPO_PATH" -ntp
   env:
     DEPLOY_REPO: $(deploymentRepo)
     DEPLOY_REPO_PATH: $(deploymentRepoPath)
@@ -201,4 +202,4 @@ steps:
 # ------------------ END PIPELINE  ------------------
 - script: |
     echo Ending Develop Branch Pipeline!
-  displayName: 'Pipeline Steps Ended' 
+  displayName: 'Pipeline Steps Ended'
