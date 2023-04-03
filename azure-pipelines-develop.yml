@@ -89,6 +89,19 @@ steps:
   inputs:
     artifactsFeeds: 'KMD'
 
+  # Runs Maven Goal: tests
+  # Maven Clean Test
+- task: Maven@3
+  displayName: 'Maven Clean Test'
+  inputs:
+    mavenPomFile: 'pom.xml'
+    goals: 'clean test'
+    javaHomeOption: 'JDKVersion'
+    jdkVersionOption: '1.11'
+    jdkArchitectureOption: 'x64'
+    options: '-ntp'
+
+
 # Sets JDK 11 for Pipeline
 # Runs Maven Goal: validate
 - task: Maven@3
@@ -147,6 +160,7 @@ steps:
   env:
     PROJECT_SLM_VERSION: $(projectSlmVersionFinal)
 
+
 # Runs Maven Goal: deploy
 # Deploys to Azure DevOps Artifacts
 - task: PowerShell@2
@@ -154,7 +168,6 @@ steps:
   inputs:
     targetType: 'inline'
     script:
-      mvn clean install -ntp
       mvn deploy -Pexclude -DskipTests "-DaltDeploymentRepository=$env:DEPLOY_REPO::default::$env:DEPLOY_REPO_PATH" -ntp
   env:
     DEPLOY_REPO: $(deploymentRepo)
