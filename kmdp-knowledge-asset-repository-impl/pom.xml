@@ -119,6 +119,15 @@
       <artifactId>splunk-library-javalogging</artifactId>
     </dependency>
 
+
+    <!-- Full Send -->
+    <dependency>
+      <groupId>javax.xml.bind</groupId>
+      <artifactId>jaxb-api</artifactId>
+      <version>2.3.0</version>
+    </dependency>
+
+
   </dependencies>
 
   <build>
