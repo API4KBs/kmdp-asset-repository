@@ -119,15 +119,6 @@
       <artifactId>splunk-library-javalogging</artifactId>
     </dependency>
 
-
-    <!-- Full Send -->
-    <dependency>
-      <groupId>javax.xml.bind</groupId>
-      <artifactId>jaxb-api</artifactId>
-      <version>2.3.0</version>
-    </dependency>
-
-
   </dependencies>
 
   <build>
@@ -146,51 +137,5 @@
     </plugins>
   </build>
 
-  <profiles>
-    <profile>
-      <id>in-memory</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-        <property>
-          <name>env</name>
-          <value>local</value>
-        </property>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>com.h2database</groupId>
-          <artifactId>h2</artifactId>
-          <scope>compile</scope>
-        </dependency>
-      </dependencies>
-    </profile>
-    <profile>
-      <id>exclude</id>
-      <dependencies>
-        <dependency>
-          <groupId>org.springframework.boot</groupId>
-          <artifactId>spring-boot-starter-tomcat</artifactId>
-          <exclusions>
-            <exclusion>
-              <groupId>org.apache.tomcat.embed</groupId>
-              <artifactId>tomcat-embed-core</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.apache.tomcat.embed</groupId>
-              <artifactId>tomcat-embed-el</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>jakarta.annotation</groupId>
-              <artifactId>jakarta.annotation-api</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.apache.tomcat.embed</groupId>
-              <artifactId>tomcat-embed-websocket</artifactId>
-            </exclusion>
-          </exclusions>
-        </dependency>
-      </dependencies>
-    </profile>
-  </profiles>
-
+  
 </project>
