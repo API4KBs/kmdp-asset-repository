@@ -120,35 +120,5 @@
     </plugins>
   </build>
 
-  <profiles>
-    <profile>
-      <id>exclude</id>
-      <dependencies>
-        <dependency>
-          <groupId>org.springframework.boot</groupId>
-          <artifactId>spring-boot-starter-tomcat</artifactId>
-          <exclusions>
-            <exclusion>
-              <groupId>org.apache.tomcat.embed</groupId>
-              <artifactId>tomcat-embed-core</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.apache.tomcat.embed</groupId>
-              <artifactId>tomcat-embed-el</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>jakarta.annotation</groupId>
-              <artifactId>jakarta.annotation-api</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.apache.tomcat.embed</groupId>
-              <artifactId>tomcat-embed-websocket</artifactId>
-            </exclusion>
-          </exclusions>
-        </dependency>
-      </dependencies>
-    </profile>
-  </profiles>
-
 
 </project>
