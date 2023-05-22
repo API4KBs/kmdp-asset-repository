@@ -102,7 +102,7 @@ public class CompositeHelper {
     return sparqlLifter.applyLift(
         of(srcQuery)
             .withRepresentation(rep(SPARQL_1_1, TXT, defaultCharset())),
-        Concrete_Knowledge_Expression, null, null)
+        Concrete_Knowledge_Expression.getTag(), null, null)
         .flatMap(q -> bind(q,
             toBinds(
                 ROOT_ID, rootId.getVersionId(),
@@ -159,7 +159,7 @@ public class CompositeHelper {
       List<Bindings> bindings) {
     return rdfLowerer.applyLower(
         toStructGraph(structId, bindings),
-        Encoded_Knowledge_Expression,
+        Encoded_Knowledge_Expression.getTag(),
         codedRep(OWL_2, Turtle, TXT, defaultCharset(), Encodings.DEFAULT),
         null);
   }

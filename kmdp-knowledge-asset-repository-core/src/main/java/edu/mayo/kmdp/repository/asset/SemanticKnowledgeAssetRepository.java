@@ -468,7 +468,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     return parser.applyNamedLower(
         JenaOwlParser.id,
         kGraphHolder.getKnowledgeBase().getManifestation(),
-        Serialized_Knowledge_Expression,
+        Serialized_Knowledge_Expression.getTag(),
         ModelMIMECoder.encode(rep),
         null);
   }
@@ -2678,7 +2678,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
             of(encodedCanonicalSurrogate)
                 .withRepresentation(rep(defaultSurrogateModel, defaultSurrogateFormat,
                     defaultCharset(), Encodings.DEFAULT)),
-            Abstract_Knowledge_Expression)
+            Abstract_Knowledge_Expression.getTag())
         .flatOpt(kc -> kc.as(KnowledgeAsset.class));
   }
 
@@ -2690,7 +2690,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
    */
   protected Answer<KnowledgeAsset> liftCanonicalSurrogate(KnowledgeCarrier surrogate) {
     return parser
-        .applyLift(surrogate, Abstract_Knowledge_Expression)
+        .applyLift(surrogate, Abstract_Knowledge_Expression.getTag())
         .flatOpt(kc -> kc.as(KnowledgeAsset.class));
   }
 
@@ -2704,7 +2704,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   protected Answer<KnowledgeCarrier> liftCompositeCanonicalSurrogate(KnowledgeCarrier surrogate) {
     return Answer.of(surrogate)
         .flatMap(ckc ->
-            parser.applyLift(ckc, Abstract_Knowledge_Expression));
+            parser.applyLift(ckc, Abstract_Knowledge_Expression.getTag()));
   }
 
   /**
@@ -2730,7 +2730,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     return parser.applyLower(
         SurrogateHelper.carry(assetSurrogate),
-        Encoded_Knowledge_Expression,
+        Encoded_Knowledge_Expression.getTag(),
         encode(targetRep),
         null
     );
