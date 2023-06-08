@@ -89,18 +89,6 @@ steps:
   inputs:
     artifactsFeeds: 'KMD'
 
-  # Runs Maven Goal: tests
-  # Maven Clean Test
-- task: Maven@3
-  displayName: 'Maven Clean Test'
-  inputs:
-    mavenPomFile: 'pom.xml'
-    goals: 'clean test'
-    javaHomeOption: 'JDKVersion'
-    jdkVersionOption: '1.11'
-    jdkArchitectureOption: 'x64'
-    options: '-ntp'
-
 
 # Sets JDK 11 for Pipeline
 # Runs Maven Goal: validate
@@ -166,7 +154,7 @@ steps:
   displayName: 'Maven Clean Test'
   inputs:
     mavenPomFile: 'pom.xml'
-    goals: 'clean install -Pexclude -DskipTests'
+    goals: 'clean test'
     javaHomeOption: 'JDKVersion'
     jdkVersionOption: '1.11'
     jdkArchitectureOption: 'x64'
