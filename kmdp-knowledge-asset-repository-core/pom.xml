@@ -25,7 +25,7 @@
 
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
-      <artifactId>kmdp-rest-ws-utils</artifactId>
+      <artifactId>kmdp-spring-ws-utils</artifactId>
     </dependency>
 
     <dependency>
