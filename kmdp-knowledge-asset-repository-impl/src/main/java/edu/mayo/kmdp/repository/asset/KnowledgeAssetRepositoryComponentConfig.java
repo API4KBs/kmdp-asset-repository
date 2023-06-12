@@ -46,7 +46,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.StreamSupport;
 import javax.sql.DataSource;
-import org.omg.spec.api4kp._20200801.api.terminology.v4.server.TermsApiInternal;
+import edu.mayo.kmdp.api.terminology.v4.server.TermsApiInternal;
 import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.DeserializeApiInternal;
 import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.DetectApiInternal;
 import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.TransxionApiInternal;
