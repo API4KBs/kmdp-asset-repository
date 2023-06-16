@@ -639,7 +639,16 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     persistCanonicalKnowledgeAssetVersion(
         assetSurrogate.getAssetId(), surrogateIdentifier, assetSurrogate);
 
-    return Answer.of(NoContent);
+    return assetSurrogate.getCarriers().stream()
+        .filter(ka -> Util.isNotEmpty(ka.getInlinedExpression()))
+        .map(ka -> knowledgeArtifactApi.setKnowledgeArtifactVersion(
+            artifactRepositoryId,
+            ka.getArtifactId().getUuid(),
+            ka.getArtifactId().getVersionTag(),
+            ka.getInlinedExpression().getBytes()
+        ))
+        .reduce(Answer::merge)
+        .orElse(Answer.of(NoContent));
   }
 
   /**

@@ -63,6 +63,7 @@ import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetR
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRoleSeries;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetType;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries;
+import org.omg.spec.api4kp._20200801.taxonomy.knowledgeprocessingtechnique.KnowledgeProcessingTechnique;
 import org.omg.spec.api4kp._20200801.terms.ConceptTerm;
 import org.omg.spec.api4kp._20200801.terms.model.ConceptDescriptor;
 import org.semanticweb.owlapi.vocab.DublinCoreVocabulary;
@@ -126,6 +127,14 @@ public class SparqlIndex implements Index {
 
   public static final String FORMAT = DublinCoreVocabulary.FORMAT.getShortForm();
   public static final URI FORMAT_URI = URI.create(DC + FORMAT);
+  public static final URI SEE_ALSO_URI = URI.create(RDFS.seeAlso.getURI());
+
+  public static final String MEMBER_OF = "isMemberOf";
+  public static final URI MEMBER_OF_URI = URI.create(LCC + MEMBER_OF);
+
+  public static final String USES_METHOD = "uses-method";
+  public static final URI USES_METHOD_URI = URI.create(API4KP + USES_METHOD);
+
 
   @Autowired
   protected JenaSparqlDAO jenaSparqlDao;
@@ -181,6 +190,8 @@ public class SparqlIndex implements Index {
    * @param roles
    * @param annotations
    * @param lifecycle
+   * @param processingMethod
+   * @param memberOf
    * @return
    */
   public List<Statement> toRdf(
@@ -188,7 +199,8 @@ public class SparqlIndex implements Index {
       String assetName,
       ResourceIdentifier surrogate, String surrogateMimeType,
       List<KnowledgeAssetType> types, List<KnowledgeAssetRole> roles, List<Annotation> annotations,
-      List<Link> related, Publication lifecycle) {
+      List<Link> related, Publication lifecycle,
+      List<KnowledgeProcessingTechnique> processingMethod, List<ResourceIdentifier> memberOf) {
     List<Statement> statements = Lists.newArrayList();
 
     URI assetId = asset.getResourceId();
@@ -291,6 +303,21 @@ public class SparqlIndex implements Index {
             assetVersionId,
             URI.create(RDF.type.getURI()),
             role.getReferentId())
+    ).collect(Collectors.toList()));
+
+    // Asset techniques
+    statements.addAll(processingMethod.stream().map(method ->
+        this.toStatement(
+            assetVersionId,
+            USES_METHOD_URI,
+            method.getConceptId())
+    ).collect(Collectors.toList()));
+
+    statements.addAll(memberOf.stream().map(coll ->
+        this.toStatement(
+            assetVersionId,
+            MEMBER_OF_URI,
+            coll.getResourceId())
     ).collect(Collectors.toList()));
 
     // Asset name
@@ -414,7 +441,8 @@ public class SparqlIndex implements Index {
         .store(this.toRdf(asset.getAssetId(), asset.getSecondaryId(),
             asset.getName(), surrogate, surrogateMimeType,
             asset.getFormalType(), asset.getRole(), asset.getAnnotation(),
-            asset.getLinks(), asset.getLifecycle()));
+            asset.getLinks(), asset.getLifecycle(), asset.getProcessingMethod(),
+            asset.getMemberOf()));
   }
 
 
@@ -478,6 +506,11 @@ public class SparqlIndex implements Index {
                     artifactId.getVersionTag()),
                 toStringValueStatement(artifactId.getResourceId(), FORMAT_URI,
                     Util.isNotEmpty(mimeType) ? mimeType : "/"),
+                toStatement(artifactId.getVersionId(), SEE_ALSO_URI,
+                    artifact.getLocator() != null ?
+                        artifact.getLocator() : URI.create(
+                        assetPointer.getVersionId() + "/carriers/" +
+                            artifactId.getUuid() + "/versions/" + artifactId.getVersionTag())),
                 toLongValueStatement(artifactId.getVersionId(),
                     ESTABLISHED_URI, getEstablishedOn(artifact.getLifecycle(), artifactId))),
             artifact.getLinks().stream()

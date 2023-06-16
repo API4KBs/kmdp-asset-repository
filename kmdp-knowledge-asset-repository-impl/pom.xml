@@ -47,6 +47,12 @@
 
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
+      <artifactId>kmdp-glossary-library-service-controllers</artifactId>
+      <version>${kmdp.impl.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-asset-repository-service-server</artifactId>
       <version>${kmdp.impl.version}</version>
     </dependency>
