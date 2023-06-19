@@ -29,6 +29,7 @@ import edu.mayo.kmdp.language.ValidateApiOperator;
 import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties.KnowledgeArtifactRepositoryOptions;
+import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions;
 import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDAO;
@@ -190,4 +191,11 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
               .orElseThrow(UnsupportedOperationException::new));
     }
   }
+
+  /**
+   * Expose the underlying {@link KnowledgeAssetRepositoryService}
+   * @return the Artifact Repository provider
+   */
+  KnowledgeArtifactRepositoryService getInnerArtifactRepository();
+
 }

@@ -11,6 +11,8 @@ import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newVersionId;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Depends_On;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Imports;
 import static org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries.Includes_By_Reference;
+import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.TXT;
+import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
 import static org.omg.spec.api4kp._20200801.taxonomy.publicationstatus.PublicationStatusSeries.Draft;
 
 import com.google.common.collect.Lists;
@@ -127,13 +129,16 @@ public class SparqlIndex implements Index {
 
   public static final String FORMAT = DublinCoreVocabulary.FORMAT.getShortForm();
   public static final URI FORMAT_URI = URI.create(DC + FORMAT);
-  public static final URI SEE_ALSO_URI = URI.create(RDFS.seeAlso.getURI());
+  public static final URI LOCATOR_URI = URI.create(API4KP + "accessURL");
 
   public static final String MEMBER_OF = "isMemberOf";
   public static final URI MEMBER_OF_URI = URI.create(LCC + MEMBER_OF);
 
   public static final String USES_METHOD = "uses-method";
   public static final URI USES_METHOD_URI = URI.create(API4KP + USES_METHOD);
+
+  public static final String HAS_EXPRESSION = "hasExpression";
+  public static final URI HAS_EXPRESSION_URI = URI.create(API4KP + HAS_EXPRESSION);
 
 
   @Autowired
@@ -496,7 +501,8 @@ public class SparqlIndex implements Index {
       throw new IllegalArgumentException("Unable to register a Carrier for the Knowledge Graph");
     }
     ResourceIdentifier artifactId = artifact.getArtifactId();
-    List<Statement> statements = Stream.concat(
+    List<Statement> statements = new ArrayList<>();
+    Stream.concat(
             Stream.of(
                 toStatement(assetPointer.getVersionId(), HAS_CARRIER_URI, artifactId.getResourceId()),
                 toStatement(artifactId.getResourceId(), HAS_VERSION_URI, artifactId.getVersionId()),
@@ -505,18 +511,29 @@ public class SparqlIndex implements Index {
                 toStringValueStatement(artifactId.getVersionId(), HAS_VERSION_TAG_URI,
                     artifactId.getVersionTag()),
                 toStringValueStatement(artifactId.getResourceId(), FORMAT_URI,
-                    Util.isNotEmpty(mimeType) ? mimeType : "/"),
-                toStatement(artifactId.getVersionId(), SEE_ALSO_URI,
-                    artifact.getLocator() != null ?
-                        artifact.getLocator() : URI.create(
-                        assetPointer.getVersionId() + "/carriers/" +
-                            artifactId.getUuid() + "/versions/" + artifactId.getVersionTag())),
+                    mimeType != null ? mimeType : "*/*"),
                 toLongValueStatement(artifactId.getVersionId(),
                     ESTABLISHED_URI, getEstablishedOn(artifact.getLifecycle(), artifactId))),
             artifact.getLinks().stream()
                 .flatMap(StreamUtil.filterAs(Dependency.class))
                 .flatMap(dependency -> toDependencyStatements(artifactId.getVersionId(), dependency)))
-        .collect(Collectors.toList());
+        .forEach(statements::add);
+
+    var accessURL = artifact.getLocator() != null
+        ? artifact.getLocator()
+        : URI.create(
+            assetPointer.getVersionId() + "/carriers/" +
+                artifactId.getUuid() + "/versions/" + artifactId.getVersionTag());
+    statements.add(toStatement(artifactId.getVersionId(), LOCATOR_URI, accessURL));
+
+    if (artifact.getInlinedExpression() != null
+        && TXT.sameAs(artifact.getRepresentation().getFormat())
+        && !HTML.sameAs(artifact.getRepresentation().getLanguage())) {
+      statements.add(toStringValueStatement(
+          artifact.getArtifactId().getVersionId(),
+          HAS_EXPRESSION_URI,
+          artifact.getInlinedExpression()));
+    }
     this.jenaSparqlDao.store(statements);
   }
 

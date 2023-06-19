@@ -133,9 +133,6 @@ import org.omg.spec.api4kp._20200801.Answer;
 import org.omg.spec.api4kp._20200801.ServerSideException;
 import org.omg.spec.api4kp._20200801.api.inference.v4.server.ReasoningApiInternal._askQuery;
 import org.omg.spec.api4kp._20200801.api.knowledgebase.v4.server.TranscreateApiInternal._applyNamedIntrospectDirect;
-import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactApiInternal;
-import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactRepositoryApiInternal;
-import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactSeriesApiInternal;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.server.KnowledgeAssetRepositoryApiInternal;
 import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.DeserializeApiInternal;
 import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.DetectApiInternal;
@@ -225,9 +222,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   private String artifactRepositoryId = "default";
 
   /* Knowledge Artifact Repository Service Client*/
-  private final KnowledgeArtifactApiInternal knowledgeArtifactApi;
-  private final KnowledgeArtifactSeriesApiInternal knowledgeArtifactSeriesApi;
-  private final KnowledgeArtifactRepositoryApiInternal knowledgeArtifactRepoApi;
+  private final KnowledgeArtifactRepositoryService knowledgeArtifactApi;
 
   /* Language Service Client */
   private final DeserializeApiInternal parser;
@@ -293,8 +288,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     super();
 
     this.knowledgeArtifactApi = artifactRepo;
-    this.knowledgeArtifactSeriesApi = artifactRepo;
-    this.knowledgeArtifactRepoApi = artifactRepo;
 
     this.index = index;
     this.hrefBuilder = hrefBuilder != null
@@ -341,8 +334,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
   @Loggable(level = LogLevel.INFO, beforeCode = "KARS-000.C")
   private void validateArtifactRepositoryId(String artifactRepositoryId) {
-    if (knowledgeArtifactRepoApi == null ||
-        !knowledgeArtifactRepoApi.getKnowledgeArtifactRepository(artifactRepositoryId)
+    if (knowledgeArtifactApi == null ||
+        !knowledgeArtifactApi.getKnowledgeArtifactRepository(artifactRepositoryId)
             .isSuccess()) {
       throw new IllegalStateException(
           "Unable to construct an Asset repository on an inconsistent Artifact repository");
@@ -641,6 +634,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     return assetSurrogate.getCarriers().stream()
         .filter(ka -> Util.isNotEmpty(ka.getInlinedExpression()))
+        .filter(ka -> ! TXT.sameAs(ka.getRepresentation().getFormat()))
         .map(ka -> knowledgeArtifactApi.setKnowledgeArtifactVersion(
             artifactRepositoryId,
             ka.getArtifactId().getUuid(),
@@ -857,9 +851,9 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         artifactRepositoryId,
         id.getUuid(), id.getVersionTag(),
         hardDelete);
-    if (knowledgeArtifactSeriesApi
+    if (knowledgeArtifactApi
         .isKnowledgeArtifactSeries(artifactRepositoryId, id.getUuid(), hardDelete).isSuccess()) {
-      Answer<Void> sans = knowledgeArtifactSeriesApi
+      Answer<Void> sans = knowledgeArtifactApi
           .deleteKnowledgeArtifact(artifactRepositoryId, id.getUuid(), hardDelete);
       ans = merge(ans, sans);
     }
@@ -2375,7 +2369,10 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
         artifact.getArtifactId().getUuid(), artifact.getArtifactId().getVersionTag(),
         exemplar);
 
-    this.index.registerArtifactToAsset(assetId, artifact, null);
+    this.index.registerArtifactToAsset(
+        assetId,
+        artifact,
+        artifact.getRepresentation() != null ? codedRep(artifact.getRepresentation()) : null);
     return ans;
   }
 
@@ -2769,6 +2766,11 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       throw new ServerSideException(PreconditionFailed,
           "Clear requested, but clearable Artifact Repository instance was not found.");
     }
+  }
+
+  @Override
+  public KnowledgeArtifactRepositoryService getInnerArtifactRepository() {
+    return this.knowledgeArtifactApi;
   }
 
 }

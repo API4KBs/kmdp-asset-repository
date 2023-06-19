@@ -1,26 +1,43 @@
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
 PREFIX dc: <http://purl.org/dc/elements/1.1/>
 PREFIX api4kp: <https://www.omg.org/spec/API4KP/api4kp/>
 PREFIX api4kp-kao: <https://www.omg.org/spec/API4KP/api4kp-kao/>
 PREFIX api4kp-rel: <https://www.omg.org/spec/API4KP/api4kp-rel/>
 PREFIX api4kp-series: <https://www.omg.org/spec/API4KP/api4kp-series/>
+PREFIX api4kp-kmdo: <https://www.omg.org/spec/API4KP/api4kp-kmdo/>
 
-SELECT DISTINCT ?asset ?assetType ?name ?concept ?method ?shape ?artifact #?applicabilityScope
+SELECT DISTINCT ?asset ?assetType ?name ?concept ?method ?shape ?artifact ?applicabilityScope ?valueSetId ?mime ?inlined
 WHERE {
   ?asset <https://www.omg.org/spec/LCC/Languages/LanguageRepresentation/isMemberOf> ?coll;
-    api4kp:defines ?concept;
-    api4kp:uses-method ?method;
-    rdf:type ?assetType;
-    rdfs:label ?name.
-
-  FILTER (?method != <https://www.omg.org/spec/API4KP/20200801/taxonomy/KnowledgeProcessingTechnique#c710da1c-bc8f-34d3-9e5b-3bb26cdf334e>).
+    rdf:type ?assetType.
   FILTER (?assetType != api4kp:KnowledgeAsset).
   FILTER (?assetType != api4kp-kao:InquirySpecification).
   FILTER (?assetType != api4kp-kao:OperationalConceptDefinition).
 
-  ?asset api4kp-rel:effectuates/api4kp:isCarriedBy/api4kp-series:hasVersion ?shape.
+  ?asset api4kp:defines ?concept;
+    api4kp:uses-method ?method;
+    rdfs:label ?name.
+
+  FILTER (?method != <https://www.omg.org/spec/API4KP/20200801/taxonomy/KnowledgeProcessingTechnique#c710da1c-bc8f-34d3-9e5b-3bb26cdf334e>).
+
+  OPTIONAL {
+    ?asset api4kp-kmdo:isApplicableTo ?applicabilityScope.
+  }
+
+  ?asset api4kp-rel:effectuates/api4kp:isCarriedBy/api4kp-series:hasVersion/api4kp:accessURL ?shape.
   ?asset api4kp:isCarriedBy ?carrier.
   ?carrier api4kp-series:hasVersion ?artifact;
     dc:format ?mime.
+
+  OPTIONAL {
+    ?artifact api4kp:hasExpression ?inlined.
+  }
+
+  OPTIONAL {
+    ?asset api4kp:dependsOn ?vs.
+    ?vs rdf:type api4kp-kao:ValueSet;
+      owl:sameAs ?valueSetId.
+  }
 } ORDER BY ?asset
