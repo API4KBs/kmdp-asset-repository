@@ -44,6 +44,7 @@ import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.Knowledge
 import org.omg.spec.api4kp._20200801.datatypes.Bindings;
 import org.omg.spec.api4kp._20200801.id.IdentifierConstants;
 import org.omg.spec.api4kp._20200801.id.KeyIdentifier;
+import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
 import org.omg.spec.api4kp._20200801.services.KPServer;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._20200801.services.repository.KnowledgeArtifactRepository;
@@ -180,7 +181,7 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
    * Graph. The result set is mapped to a set of partial Glossary Entries, which are further
    * filtered and combined into the final entries
    *
-   * @param glossaryId       the Glossary to construct, mapped to an Asset collection
+   * @param glossaries       the Glossary to construct, mapped to an Asset collection
    * @param definedConceptId if present, builds the single Glossary Entry that defines this concept
    *                         (note: the entry may still include multiple definitions)
    * @param scopingConceptId if present, filters the Glossary to entries whose applicability is
@@ -203,12 +204,8 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
       String qAccept) {
     Answer<List<PartialEntry>> partialEntries =
         glossaries.stream()
-            .map(glossaryId -> (Answer<List<PartialEntry>>)
-                bind(glossaryId, qAccept)
-                    .flatMap(kars::queryKnowledgeAssetGraph)
-                    .map(bl -> applyFilters(bl, definedConceptId, scopingConceptId,
-                        processingMethod))
-                    .flatList(Bindings.class, b -> this.toPartialEntry(glossaryId, b, qAccept)))
+            .map(glossaryId -> getPartialEntries(glossaryId, definedConceptId, scopingConceptId,
+                processingMethod, qAccept))
             .reduce((a1, a2) -> Answer.merge(a1, a2, (l1, l2) ->
                 Stream.concat(l1.stream(), l2.stream()).collect(Collectors.toList())))
             .orElse(Answer.of(Collections.emptyList()));
@@ -216,6 +213,17 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
     return partialEntries
         .map(pes ->
             consolidate(pes, publishedOnly, greatestOnly));
+  }
+
+  private Answer<List<PartialEntry>> getPartialEntries(String glossaryId,
+      UUID definedConceptId, UUID scopingConceptId, String processingMethod,
+      String qAccept) {
+    return (Answer<List<PartialEntry>>)
+        bind(glossaryId, qAccept)
+            .flatMap(kars::queryKnowledgeAssetGraph)
+            .map(bl -> applyFilters(bl, definedConceptId, scopingConceptId,
+                processingMethod))
+            .flatList(Bindings.class, b -> this.toPartialEntry(glossaryId, b, qAccept));
   }
 
   /**
@@ -301,28 +309,37 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
     var method = b.get("method");
     var shape = b.get("shape");
     var inlined = b.get("inlined");
-    var artifactId = newVersionId(URI.create(b.get("artifact")));
+    var artifactId = Optional.ofNullable(b.get("artifact"))
+        .map(a -> newVersionId(URI.create(a)));
     var mime = Optional.ofNullable(b.get("mime")).orElse(qAccept);
+
+    var od = new OperationalDefinition()
+        .id(assetId.getVersionId().toString())
+        .name(name)
+        .declaringGlossaries(List.of(glossary))
+        .defines(newTerm(URI.create(defined)).getUuid())
+        .processingMethod(getTechniques(method))
+        .effectuates(shape);
+
+    artifactId.ifPresent(aid ->
+        od.computableSpec(new KnowledgeResourceRef()
+            .assetId(assetId.getVersionId().toString())
+            .href(assetId.getVersionId().toString())
+            .artifactId(aid.toString())
+            .publicationStatus(inferPublicationStatus(assetId.getVersionTag()))
+            .assetType(getAssetType(type))
+            .mimeCode(mime)
+            .inlinedExpr(inlined)));
 
     var partial = new GlossaryEntry()
         .id(mintGlossaryEntryId(assetId, defined))
         .defines(defined)
-        .addDefItem(new OperationalDefinition()
-            .id(assetId.getVersionId().toString())
-            .name(name)
-            .declaringGlossaries(List.of(glossary))
-            .defines(newTerm(URI.create(defined)).getUuid())
-            .processingMethod(getTechniques(method))
-            .computableSpec(new KnowledgeResourceRef()
-                .assetId(assetId.getVersionId().toString())
-                .href(assetId.getVersionId().toString())
-                .artifactId(artifactId.getVersionId().toString())
-                .publicationStatus(inferPublicationStatus(assetId.getVersionTag()))
-                .assetType(getAssetType(type))
-                .mimeCode(mime)
-                .inlinedExpr(inlined))
-            .effectuates(shape));
-    var pe = new PartialEntry(assetId.asKey(), artifactId.asKey(), partial);
+        .addDefItem(od);
+
+    var pe = new PartialEntry(
+        assetId.asKey(),
+        artifactId.map(SemanticIdentifier::asKey)
+            .orElse(null), partial);
     return Answer.of(pe);
   }
 
@@ -372,10 +389,20 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
    * @return the partial GlossaryEntry, with an inlined expression if not already present
    */
   private PartialEntry ensureInlined(PartialEntry pe) {
-    if (!pe.partial.getDef().isEmpty() &&
-        pe.partial.getDef().get(0).getComputableSpec().getInlinedExpr() != null) {
+    if (pe.partial.getDef().isEmpty()) {
+      // no defs found
       return pe;
     }
+    if (pe.partial.getDef().get(0).getComputableSpec() == null) {
+      // no computable defs found
+      return pe;
+    }
+    if (!pe.partial.getDef().isEmpty() &&
+        pe.partial.getDef().get(0).getComputableSpec().getInlinedExpr() != null) {
+      // already inlined
+      return pe;
+    }
+
     if (pe.partial.getDef().get(0).getComputableSpec().getInlinedExpr() == null) {
       artifactRepo.getKnowledgeArtifactVersion(
               artifactRepoId, pe.artifactId.getUuid(), pe.artifactId.getVersionTag())

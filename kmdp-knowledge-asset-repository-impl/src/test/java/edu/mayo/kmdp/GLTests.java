@@ -5,7 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
+import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Non_Formal_Assessment_Model;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Service_Profile;
+import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeprocessingtechnique.KnowledgeProcessingTechniqueSeries.Natural_Technique;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeprocessingtechnique.KnowledgeProcessingTechniqueSeries.Query_Technique;
 import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.TXT;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.CQL_Essentials;
@@ -72,11 +74,25 @@ class GLTests {
             .withRel(DependencyTypeSeries.Effectuates)
             .withHref(struct.getAssetId()));
 
+    var assetId2 = newId(Util.uuid("zzzz"), "1.0.0");
+    var asset2 = new KnowledgeAsset()
+        .withName("Test 2")
+        .withAssetId(assetId2)
+        .withProcessingMethod(Natural_Technique)
+        .withAnnotation(new Annotation()
+            .withRel(Defines.asConceptIdentifier())
+            .withRef(Term.newTerm(URI.create("http://mock.term/foo")).asConceptIdentifier()))
+        .withMemberOf(newId("NOP"))
+        .withFormalType(Non_Formal_Assessment_Model);
+
+
+    var ans0 = repo.setKnowledgeAssetVersion
+        (struct.getAssetId().getUuid(), struct.getAssetId().getVersionTag(), struct);
+    assertTrue(ans0.isSuccess());
+
     var ans1 = repo.setKnowledgeAssetVersion(assetId.getUuid(), assetId.getVersionTag(), asset);
     assertTrue(ans1.isSuccess());
-
-    var ans2 = repo.setKnowledgeAssetVersion
-        (struct.getAssetId().getUuid(), struct.getAssetId().getVersionTag(), struct);
+    var ans2 = repo.setKnowledgeAssetVersion(assetId2.getUuid(), assetId2.getVersionTag(), asset2);
     assertTrue(ans2.isSuccess());
   }
 
@@ -90,8 +106,9 @@ class GLTests {
 
     var glossaries = glossary.listGlossaries()
         .orElseGet(Assertions::fail);
-    assertEquals(1, glossaries.size());
+    assertEquals(2, glossaries.size());
     assertTrue(glossaries.stream().anyMatch(gl -> "MOCK-COLL".equals(gl.getGlossaryId())));
+    assertTrue(glossaries.stream().anyMatch(gl -> "NOP".equals(gl.getGlossaryId())));
   }
 
   @Test
@@ -105,11 +122,40 @@ class GLTests {
         .orElseGet(Assertions::fail);
     assertEquals(1, entries.size());
     var entry = entries.get(0);
-
     assertEquals("This is a test",
         entry.getDef().get(0).getComputableSpec().getInlinedExpr());
-
   }
+
+
+  @Test
+  void testEntries2() {
+    var glossary = new KARSGraphCCGL(
+        repo,
+        repo.getInnerArtifactRepository(),
+        new TermsFHIRFacade(KnowledgeAssetCatalogApi.newInstance(repo),
+            KnowledgeAssetRepositoryApi.newInstance(repo)));
+    var entries = glossary.listGlossaryEntries(List.of("NOP"))
+        .orElseGet(Assertions::fail);
+    assertEquals(1, entries.size());
+    var entry = entries.get(0);
+    assertEquals(1, entry.getDef().size());
+    assertTrue(entry.getDef().stream()
+        .anyMatch(od -> od.getProcessingMethod().contains(Natural_Technique.getTag())));
+  }
+
+  @Test
+  void testEntriesAcrossGlossaries() {
+    var glossary = new KARSGraphCCGL(
+        repo,
+        repo.getInnerArtifactRepository(),
+        new TermsFHIRFacade(KnowledgeAssetCatalogApi.newInstance(repo),
+            KnowledgeAssetRepositoryApi.newInstance(repo)));
+    var entries = glossary.listGlossaryEntries(List.of("MOCK-COLL","NOP"))
+        .orElseGet(Assertions::fail);
+    assertEquals(1, entries.size());
+    assertEquals(2, entries.get(0).getDef().size());
+  }
+
 
   @Test
   void testGraphInlined() {

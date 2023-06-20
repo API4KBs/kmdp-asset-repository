@@ -33,10 +33,7 @@ WHERE {
   OPTIONAL {
     ?asset api4kp:isCarriedBy ?carrier.
     ?carrier api4kp-series:hasVersion ?artifact;
-    dc:format ?mime.
-  }
-
-  OPTIONAL {
+      dc:format ?mime.
     ?artifact api4kp:hasExpression ?inlined.
   }
 
