@@ -19,6 +19,7 @@ import edu.mayo.kmdp.terms.TermsFHIRFacade;
 import edu.mayo.kmdp.util.Util;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -100,7 +101,7 @@ class GLTests {
         repo.getInnerArtifactRepository(),
         new TermsFHIRFacade(KnowledgeAssetCatalogApi.newInstance(repo),
             KnowledgeAssetRepositoryApi.newInstance(repo)));
-    var entries = glossary.listGlossaryEntries("MOCK-COLL")
+    var entries = glossary.listGlossaryEntries(List.of("MOCK-COLL"))
         .orElseGet(Assertions::fail);
     assertEquals(1, entries.size());
     var entry = entries.get(0);

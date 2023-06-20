@@ -37,6 +37,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.inject.Named;
 import org.omg.spec.api4kp._20200801.Answer;
 import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactApiInternal;
@@ -111,11 +112,11 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
 
 
   @Override
-  public Answer<Glossary> getGlossary(String glossaryId) {
-    return listGlossaries().flatOpt(
+  public Answer<List<Glossary>> getGlossary(List<String> glossaryIds) {
+    return listGlossaries().map(
         gls -> gls.stream()
-            .filter(g -> g.getGlossaryId().equals(glossaryId))
-            .findFirst());
+            .filter(g -> glossaryIds.contains(g.getGlossaryId()))
+            .collect(Collectors.toList()));
   }
 
   @Override
@@ -134,7 +135,7 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
 
   @Override
   public Answer<List<GlossaryEntry>> listGlossaryEntries(
-      String glossaryId,
+      List<String> glossaryId,
       UUID scopingConceptId,
       String processingMethod,
       Boolean publishedOnly,
@@ -150,7 +151,7 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
 
   @Override
   public Answer<GlossaryEntry> getGlossaryEntry(
-      String glossaryId,
+      List<String> glossaryId,
       UUID definedConceptId,
       UUID scopingConceptId,
       String processingMethod,
@@ -196,15 +197,21 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
    * @return the {@link GlossaryEntry} for the Glossary with the given glossaryId
    */
   private Answer<List<GlossaryEntry>> buildEntries(
-      String glossaryId,
+      List<String> glossaries,
       UUID definedConceptId, UUID scopingConceptId, String processingMethod,
       Boolean publishedOnly, Boolean greatestOnly,
       String qAccept) {
     Answer<List<PartialEntry>> partialEntries =
-        bind(glossaryId, qAccept)
-            .flatMap(q -> kars.queryKnowledgeAssetGraph(q))
-            .map(bl -> applyFilters(bl, definedConceptId, scopingConceptId, processingMethod))
-            .flatList(Bindings.class, b -> this.toPartialEntry(b, qAccept));
+        glossaries.stream()
+            .map(glossaryId -> (Answer<List<PartialEntry>>)
+                bind(glossaryId, qAccept)
+                    .flatMap(kars::queryKnowledgeAssetGraph)
+                    .map(bl -> applyFilters(bl, definedConceptId, scopingConceptId,
+                        processingMethod))
+                    .flatList(Bindings.class, b -> this.toPartialEntry(glossaryId, b, qAccept)))
+            .reduce((a1, a2) -> Answer.merge(a1, a2, (l1, l2) ->
+                Stream.concat(l1.stream(), l2.stream()).collect(Collectors.toList())))
+            .orElse(Answer.of(Collections.emptyList()));
 
     return partialEntries
         .map(pes ->
@@ -283,9 +290,11 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
    * @return the mapped {@link PartialEntry}
    */
   protected Answer<PartialEntry> toPartialEntry(
+      String glossaryId,
       Bindings<String, String> b,
       String qAccept) {
     var assetId = newVersionId(URI.create(b.get("asset")));
+    var glossary = Optional.ofNullable(b.get("coll")).orElse(glossaryId);
     var type = b.get("assetType");
     var name = b.get("name");
     var defined = b.get("concept");
@@ -301,6 +310,7 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
         .addDefItem(new OperationalDefinition()
             .id(assetId.getVersionId().toString())
             .name(name)
+            .declaringGlossaries(List.of(glossary))
             .defines(newTerm(URI.create(defined)).getUuid())
             .processingMethod(getTechniques(method))
             .computableSpec(new KnowledgeResourceRef()

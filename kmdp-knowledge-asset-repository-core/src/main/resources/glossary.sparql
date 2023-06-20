@@ -8,7 +8,7 @@ PREFIX api4kp-rel: <https://www.omg.org/spec/API4KP/api4kp-rel/>
 PREFIX api4kp-series: <https://www.omg.org/spec/API4KP/api4kp-series/>
 PREFIX api4kp-kmdo: <https://www.omg.org/spec/API4KP/api4kp-kmdo/>
 
-SELECT DISTINCT ?asset ?assetType ?name ?concept ?method ?shape ?artifact ?applicabilityScope ?valueSetId ?mime ?inlined
+SELECT DISTINCT ?coll ?asset ?assetType ?name ?concept ?method ?shape ?artifact ?applicabilityScope ?valueSetId ?mime ?inlined
 WHERE {
   ?asset <https://www.omg.org/spec/LCC/Languages/LanguageRepresentation/isMemberOf> ?coll;
     rdf:type ?assetType.
@@ -26,10 +26,15 @@ WHERE {
     ?asset api4kp-kmdo:isApplicableTo ?applicabilityScope.
   }
 
-  ?asset api4kp-rel:effectuates/api4kp:isCarriedBy/api4kp-series:hasVersion/api4kp:accessURL ?shape.
-  ?asset api4kp:isCarriedBy ?carrier.
-  ?carrier api4kp-series:hasVersion ?artifact;
+  OPTIONAL {
+    ?asset api4kp-rel:effectuates/api4kp:isCarriedBy/api4kp-series:hasVersion/api4kp:accessURL ?shape.
+  }
+
+  OPTIONAL {
+    ?asset api4kp:isCarriedBy ?carrier.
+    ?carrier api4kp-series:hasVersion ?artifact;
     dc:format ?mime.
+  }
 
   OPTIONAL {
     ?artifact api4kp:hasExpression ?inlined.
