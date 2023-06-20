@@ -15,6 +15,7 @@ import edu.mayo.kmdp.kbase.query.sparql.v1_1.JenaQuery;
 import edu.mayo.kmdp.knowledgebase.introspectors.fhir.stu3.StructureDefinitionMetadataIntrospector;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryService;
 import edu.mayo.kmdp.repository.asset.glossary.KARSGraphCCGL;
+import edu.mayo.kmdp.terms.TermsFHIRFacade;
 import edu.mayo.kmdp.util.Util;
 import java.net.URI;
 import java.nio.charset.Charset;
@@ -22,6 +23,8 @@ import java.util.Objects;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetCatalogApi;
+import org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetRepositoryApi;
 import org.omg.spec.api4kp._20200801.id.Term;
 import org.omg.spec.api4kp._20200801.surrogate.Annotation;
 import org.omg.spec.api4kp._20200801.surrogate.Dependency;
@@ -78,7 +81,11 @@ class GLTests {
 
   @Test
   void testLibrary() {
-    var glossary = new KARSGraphCCGL(repo, repo.getInnerArtifactRepository());
+    var glossary = new KARSGraphCCGL(
+        repo,
+        repo.getInnerArtifactRepository(),
+        new TermsFHIRFacade(KnowledgeAssetCatalogApi.newInstance(repo),
+            KnowledgeAssetRepositoryApi.newInstance(repo)));
 
     var glossaries = glossary.listGlossaries()
         .orElseGet(Assertions::fail);
@@ -88,8 +95,11 @@ class GLTests {
 
   @Test
   void testEntries() {
-    var glossary = new KARSGraphCCGL(repo, repo.getInnerArtifactRepository());
-
+    var glossary = new KARSGraphCCGL(
+        repo,
+        repo.getInnerArtifactRepository(),
+        new TermsFHIRFacade(KnowledgeAssetCatalogApi.newInstance(repo),
+            KnowledgeAssetRepositoryApi.newInstance(repo)));
     var entries = glossary.listGlossaryEntries("MOCK-COLL")
         .orElseGet(Assertions::fail);
     assertEquals(1, entries.size());

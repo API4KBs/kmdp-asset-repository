@@ -102,6 +102,7 @@ import edu.mayo.ontology.taxonomies.kmdo.semanticannotationreltype.SemanticAnnot
 import edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -109,6 +110,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Flow;
+import java.util.concurrent.Flow.Subscriber;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.PostConstruct;
@@ -185,7 +188,8 @@ import org.springframework.beans.factory.annotation.Value;
  */
 @Named
 @KPServer
-public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositoryService {
+public class SemanticKnowledgeAssetRepository
+    implements KnowledgeAssetRepositoryService, Flow.Publisher<ResourceIdentifier> {
 
   private static final Logger logger = LoggerFactory
       .getLogger(SemanticKnowledgeAssetRepository.class);
@@ -259,6 +263,12 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
   @Value("${allowClearAll:false}")
   private boolean allowClearAll = false;
 
+
+  /**
+   * PLACEHOLDER solution for a CloudEvents based notification system
+   */
+  private final List<Subscriber<? super ResourceIdentifier>> subscribers = new ArrayList<>();
+
   /**
    * Initializes a new Knowledge Asset Repository Server
    *
@@ -284,7 +294,6 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       @Autowired KnowledgeGraphHolder kgraphHolder,
       @Autowired(required = false) KARSHrefBuilder hrefBuilder,
       @Autowired KnowledgeAssetRepositoryServerProperties cfg) {
-
     super();
 
     this.knowledgeArtifactApi = artifactRepo;
@@ -634,7 +643,7 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
 
     return assetSurrogate.getCarriers().stream()
         .filter(ka -> Util.isNotEmpty(ka.getInlinedExpression()))
-        .filter(ka -> ! TXT.sameAs(ka.getRepresentation().getFormat()))
+        .filter(ka -> !TXT.sameAs(ka.getRepresentation().getFormat()))
         .map(ka -> knowledgeArtifactApi.setKnowledgeArtifactVersion(
             artifactRepositoryId,
             ka.getArtifactId().getUuid(),
@@ -1166,6 +1175,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
             .orElseThrow(() -> new IllegalStateException("Artifact metadata is inconsistent")),
         exemplar);
 
+    subscribers.forEach(s -> s.onNext(asset.getAssetId()));
+
     return merge(a1, a2);
   }
 
@@ -1435,7 +1446,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
       Answer<Void> answer,
       KnowledgeCarrier comp, CompositeKnowledgeCarrier ckc) {
     if (Conflict.isSameEntity(answer.getOutcomeType())) {
-      Answer<Model> om = new JenaRdfParser().applyLift(ckc.getStruct(), Abstract_Knowledge_Expression, codedRep(OWL_2), null)
+      Answer<Model> om = new JenaRdfParser().applyLift(ckc.getStruct(),
+              Abstract_Knowledge_Expression, codedRep(OWL_2), null)
           .flatOpt(kc -> kc.as(Model.class));
       if (om.isSuccess() &&
           om.get().contains(
@@ -2347,6 +2359,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
           surrogateBinary.map(KnowledgeCarrier::getRepresentation)
               .map(ModelMIMECoder::encode)
               .orElseThrow(IllegalStateException::new));
+
+      subscribers.forEach(s -> s.onNext(assetId));
       return ans;
     } else {
       return Answer.failed(surrogateBinary);
@@ -2773,4 +2787,8 @@ public class SemanticKnowledgeAssetRepository implements KnowledgeAssetRepositor
     return this.knowledgeArtifactApi;
   }
 
+  @Override
+  public void subscribe(Subscriber<? super ResourceIdentifier> subscriber) {
+    this.subscribers.add(subscriber);
+  }
 }

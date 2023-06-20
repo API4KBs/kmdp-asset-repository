@@ -15,6 +15,7 @@ package edu.mayo.kmdp.repository.asset;
 
 import static org.springframework.jdbc.support.JdbcUtils.extractDatabaseMetaData;
 
+import edu.mayo.kmdp.api.terminology.v4.server.TermsApiInternal;
 import edu.mayo.kmdp.language.LanguageDeSerializer;
 import edu.mayo.kmdp.language.LanguageDetector;
 import edu.mayo.kmdp.language.LanguageValidator;
@@ -46,7 +47,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.StreamSupport;
 import javax.sql.DataSource;
-import edu.mayo.kmdp.api.terminology.v4.server.TermsApiInternal;
 import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.DeserializeApiInternal;
 import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.DetectApiInternal;
 import org.omg.spec.api4kp._20200801.api.transrepresentation.v4.server.TransxionApiInternal;
@@ -197,9 +197,7 @@ public class KnowledgeAssetRepositoryComponentConfig {
   @Bean
   @KPServer
   public TermsApiInternal terminology(@Autowired SemanticKnowledgeAssetRepository kars) {
-    return new TermsFHIRFacade(
-        org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetCatalogApi.newInstance(kars),
-        org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetRepositoryApi.newInstance(kars))
+    return new TermsFHIRFacade(kars, kars, false)
         .withHrefBuilder(new TermsContextAwareHrefBuilder());
   }
 
