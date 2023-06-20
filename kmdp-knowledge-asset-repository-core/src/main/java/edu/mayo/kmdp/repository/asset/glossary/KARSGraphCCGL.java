@@ -14,6 +14,7 @@ import static org.omg.spec.api4kp._20200801.taxonomy.publicationstatus.Publicati
 
 import com.github.zafarkhaja.semver.Version;
 import edu.mayo.kmdp.api.ccgl.v3.server.GlossaryLibraryApiInternal;
+import edu.mayo.kmdp.api.terminology.v4.server.TermsApiInternal;
 import edu.mayo.kmdp.ccg.model.Glossary;
 import edu.mayo.kmdp.ccg.model.GlossaryEntry;
 import edu.mayo.kmdp.ccg.model.KnowledgeResourceRef;
@@ -45,7 +46,10 @@ import org.omg.spec.api4kp._20200801.id.KeyIdentifier;
 import org.omg.spec.api4kp._20200801.services.KPServer;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._20200801.services.repository.KnowledgeArtifactRepository;
+import org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.ClinicalKnowledgeAssetTypeSeries;
+import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeprocessingtechnique.KnowledgeProcessingTechnique;
+import org.omg.spec.api4kp._20200801.taxonomy.knowledgeprocessingtechnique.KnowledgeProcessingTechniqueSeries;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -69,6 +73,8 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
    */
   protected final KnowledgeArtifactApiInternal artifactRepo;
 
+  protected final TermsApiInternal terms;
+
   /**
    * The (default) Artifact repository Id where Operational Definitions are looked up
    */
@@ -88,10 +94,12 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
   @Autowired
   public KARSGraphCCGL(
       KnowledgeAssetRepositoryService kars,
-      KnowledgeArtifactRepositoryService artifactRepo) {
+      KnowledgeArtifactRepositoryService artifactRepo,
+      TermsApiInternal terms) {
     this.kars = kars;
     this.glossaryQuery = readQuery();
     this.artifactRepo = artifactRepo;
+    this.terms = terms;
 
     this.artifactRepoId = artifactRepo.listKnowledgeArtifactRepositories()
         .flatOpt(repos -> repos.stream()
@@ -293,14 +301,14 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
         .addDefItem(new OperationalDefinition()
             .id(assetId.getVersionId().toString())
             .name(name)
-            .defines(defined)
+            .defines(newTerm(URI.create(defined)).getUuid())
             .processingMethod(getTechniques(method))
             .computableSpec(new KnowledgeResourceRef()
                 .assetId(assetId.getVersionId().toString())
                 .href(assetId.getVersionId().toString())
                 .artifactId(artifactId.getVersionId().toString())
                 .publicationStatus(inferPublicationStatus(assetId.getVersionTag()))
-                .addAssetTypeItem(type)
+                .assetType(getAssetType(type))
                 .mimeCode(mime)
                 .inlinedExpr(inlined))
             .effectuates(shape));
@@ -455,12 +463,24 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
     if (Util.isEmpty(method)) {
       return List.of();
     }
-    if (Natural_Technique.getConceptId().toString().equals(method)
-        || Computational_Technique.getConceptId().toString().equals(method)) {
-      return List.of(method);
+    var methodType = KnowledgeProcessingTechniqueSeries.resolveId(method)
+        .orElse(Natural_Technique);
+    if (Computational_Technique.sameAs(methodType) || Natural_Technique.sameAs(methodType)) {
+      return List.of(methodType.getTag());
     } else {
-      return List.of(method, Computational_Technique.getConceptId().toString());
+      return List.of(methodType.getTag(), Computational_Technique.getTag());
     }
+  }
+
+  protected List<String> getAssetType(String type) {
+    if (Util.isEmpty(type)) {
+      return List.of();
+    }
+    var assetType = KnowledgeAssetTypeSeries.resolveRef(type)
+        .or(() -> ClinicalKnowledgeAssetTypeSeries.resolveRef(type));
+    return assetType
+        .map(knowledgeAssetType -> List.of(knowledgeAssetType.getTag()))
+        .orElseGet(List::of);
   }
 
   /* ------------------------------------------------------------------------------------------ */
