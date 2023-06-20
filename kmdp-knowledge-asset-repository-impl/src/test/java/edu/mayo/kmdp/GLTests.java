@@ -40,7 +40,7 @@ class GLTests {
   static KnowledgeAssetRepositoryService repo =
       KnowledgeAssetRepositoryService.mockTestRepository();
 
-  static final String MOCK_EXPR = "This is a test";
+  static final String MOCK_EXPR = "http://_This is a test_";
   static final String MOCK_EXPR2 = "<p>This is another quasi-HTML test</p>";
 
   @BeforeAll
@@ -122,7 +122,7 @@ class GLTests {
         .orElseGet(Assertions::fail);
     assertEquals(1, entries.size());
     var entry = entries.get(0);
-    assertEquals("This is a test",
+    assertEquals(MOCK_EXPR,
         entry.getDef().get(0).getComputableSpec().getInlinedExpr());
   }
 
@@ -154,6 +154,20 @@ class GLTests {
         .orElseGet(Assertions::fail);
     assertEquals(1, entries.size());
     assertEquals(2, entries.get(0).getDef().size());
+  }
+
+  @Test
+  void testOneEntry() {
+    var glossary = new KARSGraphCCGL(
+        repo,
+        repo.getInnerArtifactRepository(),
+        new TermsFHIRFacade(KnowledgeAssetCatalogApi.newInstance(repo),
+            KnowledgeAssetRepositoryApi.newInstance(repo)));
+    var entry = glossary.getGlossaryEntry(
+        List.of("MOCK-COLL","NOP"),
+        Term.newTerm(URI.create("http://mock.term/foo")).getUuid())
+        .orElseGet(Assertions::fail);
+    assertEquals(2, entry.getDef().size());
   }
 
 

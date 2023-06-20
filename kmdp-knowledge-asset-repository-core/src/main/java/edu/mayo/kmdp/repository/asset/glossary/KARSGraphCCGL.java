@@ -45,6 +45,7 @@ import org.omg.spec.api4kp._20200801.datatypes.Bindings;
 import org.omg.spec.api4kp._20200801.id.IdentifierConstants;
 import org.omg.spec.api4kp._20200801.id.KeyIdentifier;
 import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
+import org.omg.spec.api4kp._20200801.id.Term;
 import org.omg.spec.api4kp._20200801.services.KPServer;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._20200801.services.repository.KnowledgeArtifactRepository;
@@ -218,12 +219,22 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
   private Answer<List<PartialEntry>> getPartialEntries(String glossaryId,
       UUID definedConceptId, UUID scopingConceptId, String processingMethod,
       String qAccept) {
+
+    Term def = Answer.ofNullable(definedConceptId)
+        .flatMap(c -> terms.lookupTerm(c.toString()))
+        .orElse(null);
+    Term app = Answer.ofNullable(scopingConceptId)
+        .flatMap(c -> terms.lookupTerm(c.toString()))
+        .orElse(null);
+    Term met = Optional.ofNullable(processingMethod)
+        .flatMap(KnowledgeProcessingTechniqueSeries::resolveTag)
+        .orElse(null);
+
     return (Answer<List<PartialEntry>>)
-        bind(glossaryId, qAccept)
+        bind(glossaryId, def, app, met, qAccept)
             .flatMap(kars::queryKnowledgeAssetGraph)
-            .map(bl -> applyFilters(bl, definedConceptId, scopingConceptId,
-                processingMethod))
-            .flatList(Bindings.class, b -> this.toPartialEntry(glossaryId, b, qAccept));
+            .flatList(Bindings.class, b ->
+                this.toPartialEntry(glossaryId, b, def, app, met, qAccept));
   }
 
   /**
@@ -291,31 +302,42 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
 
 
   /**
-   * Constructs a Partial Glossary Entry from a set of SPARQL variable bindings
+   * Constructs a Partial Glossary Entry from a set of SPARQL variable bindings.
+   * <p/>
+   * Ensures that client-provided filter values are reasserted into the result
    *
    * @param b       the bindings
+   * @param def     the defined Concept, as a filter
+   * @param app     the appplicability scope, as a filter
+   * @param met     the processing method, as a filter
    * @param qAccept the form of the operational definition
    * @return the mapped {@link PartialEntry}
    */
   protected Answer<PartialEntry> toPartialEntry(
       String glossaryId,
       Bindings<String, String> b,
+      Term def, Term app, Term met,
       String qAccept) {
     var assetId = newVersionId(URI.create(b.get("asset")));
-    var glossary = Optional.ofNullable(b.get("coll")).orElse(glossaryId);
+    var glossary = b.getOrDefault("coll", glossaryId);
     var type = b.get("assetType");
     var name = b.get("name");
-    var defined = b.get("concept");
-    var method = b.get("method");
+    var defined = b.getOrDefault("concept",
+        def != null ? def.getConceptId().toString() : null);
+    var scope = b.getOrDefault("applicabilityScope",
+        app != null ? app.getConceptId().toString() : null);
+    var method = b.getOrDefault("method",
+        met != null ? met.getConceptId().toString() : null);
     var shape = b.get("shape");
     var inlined = b.get("inlined");
     var artifactId = Optional.ofNullable(b.get("artifact"))
         .map(a -> newVersionId(URI.create(a)));
-    var mime = Optional.ofNullable(b.get("mime")).orElse(qAccept);
+    var mime = b.getOrDefault("mime", qAccept);
 
     var od = new OperationalDefinition()
         .id(assetId.getVersionId().toString())
         .name(name)
+        .applicabilityScope(scope != null ? List.of(scope) : null)
         .declaringGlossaries(List.of(glossary))
         .defines(newTerm(URI.create(defined)).getUuid())
         .processingMethod(getTechniques(method))
@@ -531,16 +553,28 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
    */
   protected Answer<KnowledgeCarrier> bind(
       String glossaryId,
+      Term definedConcept, Term scopingConcept, Term processingMethod,
       String qAccept) {
     if (glossaryQuery == null) {
       return Answer.unsupported();
     }
+    var params = new Bindings<String, String>();
+    params.put("coll", newTerm(glossaryId).getResourceId().toString());
+
     if (qAccept == null) {
       qAccept = codedRep(CQL_Essentials, TXT, Charset.defaultCharset());
     }
-    var params = new Bindings<String, String>();
     params.put("mime", qAccept);
-    params.put("coll", newTerm(glossaryId).getResourceId().toString());
+
+    if (definedConcept != null) {
+      params.put("concept", definedConcept.getConceptId().toString());
+    }
+    if (scopingConcept != null) {
+      params.put("applicabilityScope", scopingConcept.getConceptId().toString());
+    }
+    if (processingMethod != null) {
+      params.put("method", processingMethod.getConceptId().toString());
+    }
     return new SparqlQueryBinder().bind(JenaQuery.ofSparqlQuery(glossaryQuery), params);
   }
 
