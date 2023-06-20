@@ -46,7 +46,6 @@ import org.omg.spec.api4kp._20200801.id.IdentifierConstants;
 import org.omg.spec.api4kp._20200801.id.KeyIdentifier;
 import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
 import org.omg.spec.api4kp._20200801.id.Term;
-import org.omg.spec.api4kp._20200801.services.KPServer;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._20200801.services.repository.KnowledgeArtifactRepository;
 import org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.ClinicalKnowledgeAssetTypeSeries;
@@ -63,7 +62,6 @@ import org.springframework.beans.factory.annotation.Autowired;
  * Concepts, and relationships thereof.
  */
 @Named
-@KPServer
 public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
 
   /**
@@ -93,6 +91,7 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
    *
    * @param kars         the Asset Repository
    * @param artifactRepo the ArtifactRepository
+   * @param terms        the Terminology Provider
    */
   @Autowired
   public KARSGraphCCGL(

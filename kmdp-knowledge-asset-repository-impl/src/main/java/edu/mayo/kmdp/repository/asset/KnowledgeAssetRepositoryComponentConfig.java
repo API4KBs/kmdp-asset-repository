@@ -15,6 +15,7 @@ package edu.mayo.kmdp.repository.asset;
 
 import static org.springframework.jdbc.support.JdbcUtils.extractDatabaseMetaData;
 
+import edu.mayo.kmdp.api.ccgl.v3.server.GlossaryLibraryApiInternal;
 import edu.mayo.kmdp.api.terminology.v4.server.TermsApiInternal;
 import edu.mayo.kmdp.language.LanguageDeSerializer;
 import edu.mayo.kmdp.language.LanguageDetector;
@@ -34,6 +35,7 @@ import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepository;
 import edu.mayo.kmdp.repository.artifact.jpa.entities.ArtifactVersionEntity;
 import edu.mayo.kmdp.repository.artifact.jpa.stores.ArtifactVersionRepository;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions;
+import edu.mayo.kmdp.repository.asset.glossary.KARSGraphCCGL;
 import edu.mayo.kmdp.repository.asset.server.ServerContextAwareHrefBuilder;
 import edu.mayo.kmdp.repository.asset.server.configuration.HTMLAdapter;
 import edu.mayo.kmdp.terms.TermsContextAwareHrefBuilder;
@@ -192,6 +194,14 @@ public class KnowledgeAssetRepositoryComponentConfig {
         new Surrogate2Parser(),
         new JenaOwlParser()
     ));
+  }
+
+  @Bean
+  @KPServer
+  public GlossaryLibraryApiInternal ccgl(
+      @Autowired @KPServer KnowledgeAssetRepositoryService kars,
+      @Autowired TermsApiInternal terms) {
+    return new KARSGraphCCGL(kars, kars.getInnerArtifactRepository(), terms);
   }
 
   @Bean
