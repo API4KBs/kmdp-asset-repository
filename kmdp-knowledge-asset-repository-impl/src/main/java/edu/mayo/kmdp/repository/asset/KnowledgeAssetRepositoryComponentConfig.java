@@ -35,7 +35,7 @@ import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepository;
 import edu.mayo.kmdp.repository.artifact.jpa.entities.ArtifactVersionEntity;
 import edu.mayo.kmdp.repository.artifact.jpa.stores.ArtifactVersionRepository;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions;
-import edu.mayo.kmdp.repository.asset.glossary.KARSGraphCCGL;
+import edu.mayo.kmdp.repository.asset.glossary.KGraphConceptGlossaryLibrary;
 import edu.mayo.kmdp.repository.asset.server.ServerContextAwareHrefBuilder;
 import edu.mayo.kmdp.repository.asset.server.configuration.HTMLAdapter;
 import edu.mayo.kmdp.terms.TermsContextAwareHrefBuilder;
@@ -201,7 +201,7 @@ public class KnowledgeAssetRepositoryComponentConfig {
   public GlossaryLibraryApiInternal ccgl(
       @Autowired @KPServer KnowledgeAssetRepositoryService kars,
       @Autowired TermsApiInternal terms) {
-    return new KARSGraphCCGL(kars, kars.getInnerArtifactRepository(), terms);
+    return new KGraphConceptGlossaryLibrary(kars, kars.getInnerArtifactRepository(), terms);
   }
 
   @Bean

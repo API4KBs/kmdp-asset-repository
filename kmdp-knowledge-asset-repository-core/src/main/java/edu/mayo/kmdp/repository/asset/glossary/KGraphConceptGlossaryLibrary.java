@@ -38,9 +38,9 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.inject.Named;
 import org.omg.spec.api4kp._20200801.Answer;
 import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactApiInternal;
+import org.omg.spec.api4kp._20200801.api.repository.asset.v4.server.KnowledgeAssetCatalogApiInternal;
 import org.omg.spec.api4kp._20200801.datatypes.Bindings;
 import org.omg.spec.api4kp._20200801.id.IdentifierConstants;
 import org.omg.spec.api4kp._20200801.id.KeyIdentifier;
@@ -52,7 +52,6 @@ import org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.Clinica
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeprocessingtechnique.KnowledgeProcessingTechnique;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeprocessingtechnique.KnowledgeProcessingTechniqueSeries;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Implementation of {@link GlossaryLibraryApiInternal} backed by an Asset Repository's RDF
@@ -61,13 +60,12 @@ import org.springframework.beans.factory.annotation.Autowired;
  * Uses 'memberOf (Collection)' to identify Glossaries, and builds entries from Assets that define
  * Concepts, and relationships thereof.
  */
-@Named
-public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
+public class KGraphConceptGlossaryLibrary implements GlossaryLibraryApiInternal {
 
   /**
    * The backing Asset Repository, holding the Knowledge Graph
    */
-  protected final KnowledgeAssetRepositoryService kars;
+  protected final KnowledgeAssetCatalogApiInternal cat;
 
   /**
    * The backing Artifact Repository, which may store some of the Operational Definitions
@@ -93,12 +91,11 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
    * @param artifactRepo the ArtifactRepository
    * @param terms        the Terminology Provider
    */
-  @Autowired
-  public KARSGraphCCGL(
+  public KGraphConceptGlossaryLibrary(
       KnowledgeAssetRepositoryService kars,
       KnowledgeArtifactRepositoryService artifactRepo,
       TermsApiInternal terms) {
-    this.kars = kars;
+    this.cat = kars;
     this.glossaryQuery = readQuery();
     this.artifactRepo = artifactRepo;
     this.terms = terms;
@@ -109,6 +106,17 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
             .map(KnowledgeArtifactRepository::getName)
             .findFirst())
         .orElse("default");
+  }
+
+  public KGraphConceptGlossaryLibrary(
+      KnowledgeAssetCatalogApiInternal cat,
+      TermsApiInternal terms) {
+    this.cat = cat;
+    this.artifactRepo = null;
+    this.artifactRepoId = null;
+
+    this.glossaryQuery = readQuery();
+    this.terms = terms;
   }
 
 
@@ -126,7 +134,7 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
         "SELECT DISTINCT ?coll WHERE { "
             + "  _:a <https://www.omg.org/spec/LCC/Languages/LanguageRepresentation/isMemberOf> ?coll. }"
     );
-    return kars.queryKnowledgeAssetGraph(query)
+    return cat.queryKnowledgeAssetGraph(query)
         .map(l -> l.stream()
             .map(b -> (String) b.get("coll"))
             .map(n -> n.replace(Registry.BASE_UUID_URN, ""))
@@ -231,7 +239,7 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
 
     return (Answer<List<PartialEntry>>)
         bind(glossaryId, def, app, met, qAccept)
-            .flatMap(kars::queryKnowledgeAssetGraph)
+            .flatMap(cat::queryKnowledgeAssetGraph)
             .flatList(Bindings.class, b ->
                 this.toPartialEntry(glossaryId, b, def, app, met, qAccept));
   }
@@ -424,7 +432,8 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
       return pe;
     }
 
-    if (pe.partial.getDef().get(0).getComputableSpec().getInlinedExpr() == null) {
+    if (artifactRepo != null &&
+        pe.partial.getDef().get(0).getComputableSpec().getInlinedExpr() == null) {
       artifactRepo.getKnowledgeArtifactVersion(
               artifactRepoId, pe.artifactId.getUuid(), pe.artifactId.getVersionTag())
           .map(String::new)
@@ -584,7 +593,7 @@ public class KARSGraphCCGL implements GlossaryLibraryApiInternal {
    */
   protected String readQuery() {
     return FileUtil
-        .read(KARSGraphCCGL.class.getResourceAsStream("/glossary.sparql"))
+        .read(KGraphConceptGlossaryLibrary.class.getResourceAsStream("/glossary.sparql"))
         .orElseThrow(() -> new IllegalStateException("Unable to load resource /glossary.sparql"));
   }
 

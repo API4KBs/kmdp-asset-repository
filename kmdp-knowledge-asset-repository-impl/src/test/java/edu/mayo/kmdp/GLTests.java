@@ -16,7 +16,7 @@ import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeReprese
 import edu.mayo.kmdp.kbase.query.sparql.v1_1.JenaQuery;
 import edu.mayo.kmdp.knowledgebase.introspectors.fhir.stu3.StructureDefinitionMetadataIntrospector;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryService;
-import edu.mayo.kmdp.repository.asset.glossary.KARSGraphCCGL;
+import edu.mayo.kmdp.repository.asset.glossary.KGraphConceptGlossaryLibrary;
 import edu.mayo.kmdp.terms.TermsFHIRFacade;
 import edu.mayo.kmdp.util.Util;
 import java.net.URI;
@@ -98,7 +98,7 @@ class GLTests {
 
   @Test
   void testLibrary() {
-    var glossary = new KARSGraphCCGL(
+    var glossary = new KGraphConceptGlossaryLibrary(
         repo,
         repo.getInnerArtifactRepository(),
         new TermsFHIRFacade(KnowledgeAssetCatalogApi.newInstance(repo),
@@ -113,7 +113,7 @@ class GLTests {
 
   @Test
   void testEntries() {
-    var glossary = new KARSGraphCCGL(
+    var glossary = new KGraphConceptGlossaryLibrary(
         repo,
         repo.getInnerArtifactRepository(),
         new TermsFHIRFacade(KnowledgeAssetCatalogApi.newInstance(repo),
@@ -129,7 +129,7 @@ class GLTests {
 
   @Test
   void testEntries2() {
-    var glossary = new KARSGraphCCGL(
+    var glossary = new KGraphConceptGlossaryLibrary(
         repo,
         repo.getInnerArtifactRepository(),
         new TermsFHIRFacade(KnowledgeAssetCatalogApi.newInstance(repo),
@@ -145,7 +145,7 @@ class GLTests {
 
   @Test
   void testEntriesAcrossGlossaries() {
-    var glossary = new KARSGraphCCGL(
+    var glossary = new KGraphConceptGlossaryLibrary(
         repo,
         repo.getInnerArtifactRepository(),
         new TermsFHIRFacade(KnowledgeAssetCatalogApi.newInstance(repo),
@@ -158,7 +158,7 @@ class GLTests {
 
   @Test
   void testOneEntry() {
-    var glossary = new KARSGraphCCGL(
+    var glossary = new KGraphConceptGlossaryLibrary(
         repo,
         repo.getInnerArtifactRepository(),
         new TermsFHIRFacade(KnowledgeAssetCatalogApi.newInstance(repo),
