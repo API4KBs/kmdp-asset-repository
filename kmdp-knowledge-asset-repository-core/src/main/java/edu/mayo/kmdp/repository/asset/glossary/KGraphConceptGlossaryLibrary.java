@@ -2,6 +2,7 @@ package edu.mayo.kmdp.repository.asset.glossary;
 
 import static edu.mayo.kmdp.language.translators.surrogate.v2.SurrogateV2ToCcgEntry.mintGlossaryEntryId;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
+import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newName;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newVersionId;
 import static org.omg.spec.api4kp._20200801.id.Term.newTerm;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeprocessingtechnique.KnowledgeProcessingTechniqueSeries.Computational_Technique;
@@ -137,7 +138,7 @@ public class KGraphConceptGlossaryLibrary implements GlossaryLibraryApiInternal 
     return cat.queryKnowledgeAssetGraph(query)
         .map(l -> l.stream()
             .map(b -> (String) b.get("coll"))
-            .map(n -> n.replace(Registry.BASE_UUID_URN, ""))
+            .map(n -> n.replace(Registry.URN, ""))
             .map(n -> new Glossary().glossaryId(n))
             .collect(Collectors.toList()));
   }
@@ -567,7 +568,7 @@ public class KGraphConceptGlossaryLibrary implements GlossaryLibraryApiInternal 
       return Answer.unsupported();
     }
     var params = new Bindings<String, String>();
-    params.put("coll", newTerm(glossaryId).getResourceId().toString());
+    params.put("coll", newName(glossaryId).getResourceId().toString());
 
     if (qAccept == null) {
       qAccept = codedRep(CQL_Essentials, TXT, Charset.defaultCharset());

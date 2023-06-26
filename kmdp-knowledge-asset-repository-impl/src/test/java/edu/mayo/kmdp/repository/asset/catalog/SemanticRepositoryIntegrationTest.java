@@ -13,12 +13,14 @@
  */
 package edu.mayo.kmdp.repository.asset.catalog;
 
-import static edu.mayo.kmdp.registry.Registry.BASE_UUID_URN_URI;
+import static edu.mayo.kmdp.registry.Registry.DID_URN_URI;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.assetId;
+import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.defaultSurrogateId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.defaultSurrogateUUID;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomArtifactId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.randomAssetId;
@@ -29,6 +31,7 @@ import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.Knowledg
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeprocessingtechnique.KnowledgeProcessingTechniqueSeries.Qualitative_Technique;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate_2_0;
 
+import edu.mayo.kmdp.registry.Registry;
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
 import java.util.Arrays;
@@ -219,8 +222,8 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
         asset);
     assertTrue(ans2.isSuccess());
 
-    ResourceIdentifier surrId = SurrogateBuilder.defaultSurrogateId(
-        BASE_UUID_URN_URI,
+    ResourceIdentifier surrId = defaultSurrogateId(
+        DID_URN_URI,
         asset.getAssetId(),
         Knowledge_Asset_Surrogate_2_0);
 
@@ -293,10 +296,10 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
     assertTrue(binary2.isSuccess());
     assertTrue(binary3.isSuccess());
 
-    assertTrue(Arrays.equals(binary1.get(), binary2.get()));
-    assertTrue(Arrays.equals(binary1.get(), binary3.get()));
+    assertArrayEquals(binary1.get(), binary2.get());
+    assertArrayEquals(binary1.get(), binary3.get());
 
-    assertTrue(Arrays.equals("Foo".getBytes(), binary1.get()));
+    assertArrayEquals("Foo".getBytes(), binary1.get());
 
     assertEquals("Foo", new String(binary1.get()));
   }

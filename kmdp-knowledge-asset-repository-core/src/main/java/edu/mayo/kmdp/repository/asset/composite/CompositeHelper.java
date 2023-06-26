@@ -2,7 +2,7 @@ package edu.mayo.kmdp.repository.asset.composite;
 
 import static edu.mayo.kmdp.id.adapter.CopyableHashMap.toBinds;
 import static edu.mayo.kmdp.kbase.query.sparql.v1_1.JenaQuery.bind;
-import static edu.mayo.kmdp.registry.Registry.BASE_UUID_URN_URI;
+import static edu.mayo.kmdp.registry.Registry.DID_URN_URI;
 import static edu.mayo.kmdp.util.JenaUtil.objA;
 import static java.nio.charset.Charset.defaultCharset;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
@@ -23,6 +23,7 @@ import static org.omg.spec.api4kp._20200801.taxonomy.structuralreltype.Structura
 
 import edu.mayo.kmdp.language.parsers.rdf.JenaRdfParser;
 import edu.mayo.kmdp.language.parsers.sparql.SparqlLifter;
+import edu.mayo.kmdp.registry.Registry;
 import edu.mayo.kmdp.repository.asset.SemanticKnowledgeAssetRepository;
 import edu.mayo.kmdp.util.FileUtil;
 import edu.mayo.kmdp.util.StreamUtil;
@@ -141,7 +142,7 @@ public class CompositeHelper {
         objA(b.get("s").toString(), b.get("p").toString(), b.get("o").toString())));
     return ofAst(model)
         .withAssetId(structId)
-        .withArtifactId(defaultArtifactId(BASE_UUID_URN_URI, structId, OWL_2))
+        .withArtifactId(defaultArtifactId(DID_URN_URI, structId, OWL_2))
         .withRepresentation(rep(OWL_2));
   }
 

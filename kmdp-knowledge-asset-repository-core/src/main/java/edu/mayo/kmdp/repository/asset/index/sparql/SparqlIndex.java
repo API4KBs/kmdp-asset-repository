@@ -442,6 +442,10 @@ public class SparqlIndex implements Index {
 
   private void registerAsset(KnowledgeAsset asset,
       ResourceIdentifier surrogate, String surrogateMimeType) {
+    if (asset.getAssetId().getVersionId().toString().startsWith("urn:uuid")) {
+      throw new IllegalStateException("KR URIs should be DID now");
+    }
+
     this.jenaSparqlDao
         .store(this.toRdf(asset.getAssetId(), asset.getSecondaryId(),
             asset.getName(), surrogate, surrogateMimeType,
@@ -500,7 +504,11 @@ public class SparqlIndex implements Index {
     if (kgi.isKnowledgeGraphAsset(assetPointer.getUuid())) {
       throw new IllegalArgumentException("Unable to register a Carrier for the Knowledge Graph");
     }
+
     ResourceIdentifier artifactId = artifact.getArtifactId();
+    if (artifactId.getVersionId().toString().startsWith("urn:uuid")) {
+      throw new IllegalStateException("KR URIs should be DID now");
+    }
     List<Statement> statements = new ArrayList<>();
     Stream.concat(
             Stream.of(
@@ -575,6 +583,10 @@ public class SparqlIndex implements Index {
       throw new IllegalArgumentException("Unable to register a Surrogate for the Knowledge Graph");
     }
     ResourceIdentifier surrogateId = surrogate.getArtifactId();
+    if (surrogateId.getVersionId().toString().startsWith("urn:uuid")) {
+      throw new IllegalStateException("KR URIs should be DID now");
+    }
+
     List<Statement> statements = Arrays.asList(
         toStatement(assetPointer.getVersionId(), HAS_SURROGATE_URI, surrogateId.getResourceId()),
         toStatement(surrogateId.getResourceId(), HAS_VERSION_URI, surrogateId.getVersionId()),

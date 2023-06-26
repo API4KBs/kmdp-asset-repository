@@ -27,6 +27,7 @@ import edu.mayo.kmdp.language.TransionApiOperator;
 import edu.mayo.kmdp.language.TransrepresentationExecutor;
 import edu.mayo.kmdp.language.ValidateApiOperator;
 import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
+import edu.mayo.kmdp.registry.Registry;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties.KnowledgeArtifactRepositoryOptions;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
@@ -77,8 +78,8 @@ public interface KnowledgeAssetRepositoryService extends KnowledgeAssetCatalogAp
     KnowledgeAssetRepositoryServerProperties cfg =
         KnowledgeAssetRepositoryServerProperties.emptyProperties()
             .with(KnowledgeAssetRepositoryOptions.CLEARABLE, true)
-            .with(KnowledgeAssetRepositoryOptions.ASSET_NAMESPACE, "urn:uuid:")
-            .with(KnowledgeAssetRepositoryOptions.ARTIFACT_NAMESPACE, "urn:uuid:");
+            .with(KnowledgeAssetRepositoryOptions.ASSET_NAMESPACE, Registry.DID_URN_URI)
+            .with(KnowledgeAssetRepositoryOptions.ARTIFACT_NAMESPACE, Registry.DID_URN_URI);
     cfg.putAll(subCfg);
     cfg.put("spring.profiles.active", "jpa");
     cfg.put("spring.jpa.hibernate.ddl-auto", "create");

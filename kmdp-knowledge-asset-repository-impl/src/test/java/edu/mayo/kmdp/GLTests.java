@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
+import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newName;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Non_Formal_Assessment_Model;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Service_Profile;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeprocessingtechnique.KnowledgeProcessingTechniqueSeries.Natural_Technique;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetCatalogApi;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetRepositoryApi;
@@ -60,7 +62,7 @@ class GLTests {
         .withAnnotation(new Annotation()
             .withRel(Defines.asConceptIdentifier())
             .withRef(Term.newTerm(URI.create("http://mock.term/foo")).asConceptIdentifier()))
-        .withMemberOf(newId("MOCK-COLL"))
+        .withMemberOf(newName("MOCK-COLL"))
         .withFormalType(Service_Profile)
         .withCarriers(new KnowledgeArtifact()
             .withArtifactId(artifactIda)
@@ -82,7 +84,7 @@ class GLTests {
         .withAnnotation(new Annotation()
             .withRel(Defines.asConceptIdentifier())
             .withRef(Term.newTerm(URI.create("http://mock.term/foo")).asConceptIdentifier()))
-        .withMemberOf(newId("NOP"))
+        .withMemberOf(newName("NOP"))
         .withFormalType(Non_Formal_Assessment_Model);
 
 
