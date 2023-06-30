@@ -13,9 +13,9 @@
  */
 package edu.mayo.kmdp.repository.asset;
 
-import static edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphHolder.newKnowledgeGraphHolder;
+import static edu.mayo.kmdp.repository.asset.index.sparql.DefaultKnowledgeGraphHolder.newKnowledgeGraphHolder;
 import static edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphInfo.newKnowledgeGraphInfo;
-import static edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex.newSparqlIndex;
+import static edu.mayo.kmdp.repository.asset.index.sparql.impl.SparqlIndex.newSparqlIndex;
 
 import edu.mayo.kmdp.kbase.query.sparql.v1_1.JenaQuery;
 import edu.mayo.kmdp.language.DeserializeApiOperator;
@@ -33,7 +33,7 @@ import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProper
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions;
-import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDAO;
+import edu.mayo.kmdp.repository.asset.index.sparql.impl.JenaSparqlDAO;
 import java.util.Collections;
 import java.util.List;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.server.KnowledgeAssetCatalogApiInternal;

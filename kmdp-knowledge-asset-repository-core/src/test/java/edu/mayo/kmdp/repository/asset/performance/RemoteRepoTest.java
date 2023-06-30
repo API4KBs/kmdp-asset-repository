@@ -13,9 +13,9 @@
  */
 package edu.mayo.kmdp.repository.asset.performance;
 
-import static edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphHolder.newKnowledgeGraphHolder;
+import static edu.mayo.kmdp.repository.asset.index.sparql.DefaultKnowledgeGraphHolder.newKnowledgeGraphHolder;
 import static edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphInfo.newKnowledgeGraphInfo;
-import static edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex.newSparqlIndex;
+import static edu.mayo.kmdp.repository.asset.index.sparql.impl.SparqlIndex.newSparqlIndex;
 import static edu.mayo.kmdp.util.Util.uuid;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
@@ -32,12 +32,12 @@ import edu.mayo.kmdp.language.translators.surrogate.v2.SurrogateV2Transcriptor;
 import edu.mayo.kmdp.language.translators.surrogate.v2.SurrogateV2toHTMLTranslator;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties;
 import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepository;
+import edu.mayo.kmdp.repository.asset.index.sparql.DefaultKnowledgeGraphHolder;
 import org.omg.spec.api4kp._20200801.services.repository.asset.KARSHrefBuilder;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties;
 import edu.mayo.kmdp.repository.asset.SemanticKnowledgeAssetRepository;
 import edu.mayo.kmdp.repository.asset.index.Index;
-import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDAO;
-import edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphHolder;
+import edu.mayo.kmdp.repository.asset.index.sparql.impl.JenaSparqlDAO;
 import edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphInfo;
 import java.util.Arrays;
 import java.util.Collections;
@@ -116,7 +116,7 @@ class RemoteRepoTest {
 
     KnowledgeGraphInfo kgi = newKnowledgeGraphInfo();
 
-    KnowledgeGraphHolder knowledgeGraphHelper = newKnowledgeGraphHolder(artifactRepo, kgi);
+    DefaultKnowledgeGraphHolder knowledgeGraphHelper = newKnowledgeGraphHolder(artifactRepo, kgi);
 
     JenaSparqlDAO jenaSparqlDao = new JenaSparqlDAO(knowledgeGraphHelper);
 

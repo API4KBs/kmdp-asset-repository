@@ -469,10 +469,23 @@ public class SemanticKnowledgeAssetRepository
 
     return parser.applyNamedLower(
         JenaOwlParser.id,
-        kGraphHolder.getKnowledgeBase().getManifestation(),
+        kGraphHolder.getKnowledgeGraph(),
         Serialized_Knowledge_Expression.getTag(),
         ModelMIMECoder.encode(rep),
         null);
+  }
+
+  /**
+   * Returns a copy of the repository Knowledge graph, unwrapped
+   *
+   * @param xAccept A formal MIME type to drive the serialization of the graph
+   * @return the Knowledge graph
+   */
+  @Override
+  @Loggable(beforeCode = "KARS-022.A")
+  public Answer<byte[]> getKnowledgeGraphContent(String xAccept) {
+    return getKnowledgeGraph(xAccept)
+          .flatOpt(AbstractCarrier::asBinary);
   }
 
   //*****************************************************************************************/

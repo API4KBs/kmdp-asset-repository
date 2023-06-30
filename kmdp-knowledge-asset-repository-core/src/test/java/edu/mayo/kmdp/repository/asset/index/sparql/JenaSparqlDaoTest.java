@@ -1,6 +1,7 @@
 package edu.mayo.kmdp.repository.asset.index.sparql;
 
-import static edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphHolder.newKnowledgeGraphHolder;
+
+import static edu.mayo.kmdp.repository.asset.index.sparql.DefaultKnowledgeGraphHolder.newKnowledgeGraphHolder;
 import static edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphInfo.newKnowledgeGraphInfo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -8,6 +9,7 @@ import com.google.common.collect.Lists;
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties;
 import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepository;
 import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepositoryService;
+import edu.mayo.kmdp.repository.asset.index.sparql.impl.JenaSparqlDAO;
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
@@ -26,7 +28,7 @@ class JenaSparqlDaoTest {
       new JPAKnowledgeArtifactRepository(JPAKnowledgeArtifactRepositoryService.inMemoryDataSource(),
           cfg);
 
-  KnowledgeGraphHolder kgHolder = newKnowledgeGraphHolder(mockRepo, newKnowledgeGraphInfo());
+  DefaultKnowledgeGraphHolder kgHolder = newKnowledgeGraphHolder(mockRepo, newKnowledgeGraphInfo());
 
   JenaSparqlDAO dao = new JenaSparqlDAO(kgHolder);
 
@@ -38,11 +40,12 @@ class JenaSparqlDaoTest {
   @Test
   void store() {
     JenaSparqlDAO dao = this.dao;
-    int tBoxSize = dao.knowledgeGraphHolder.getTBoxTriples().size();
+    int tBoxSize = dao.getKnowledgeGraphHolder().getTBoxTriples().size();
 
     assertEquals(tBoxSize, kgHolder.testGetModel().size());
 
-    dao.store(URI.create("http://a.tst/test1"), URI.create("http://a.tst/test2"), URI.create("http://a.tst/test3"));
+    dao.store(URI.create("http://a.tst/test1"), URI.create("http://a.tst/test2"),
+        URI.create("http://a.tst/test3"));
 
     assertEquals(1 + tBoxSize, kgHolder.testGetModel().size());
   }
@@ -51,7 +54,8 @@ class JenaSparqlDaoTest {
   void runSparql() {
     JenaSparqlDAO dao = this.dao;
 
-    dao.store(URI.create("http://a.tst/test1"), URI.create("http://a.tst/test2"), URI.create("http://a.tst/test3"));
+    dao.store(URI.create("http://a.tst/test1"), URI.create("http://a.tst/test2"),
+        URI.create("http://a.tst/test3"));
 
     String query = "" +
         "select ?s where { ?s <http://a.tst/test2> ?o . }" +
@@ -71,10 +75,12 @@ class JenaSparqlDaoTest {
   void readBySubjectPredicateAndObject() {
     JenaSparqlDAO dao = this.dao;
 
-    dao.store(URI.create("http://a.tst/test1"), URI.create("http://a.tst/test2"), URI.create("http://a.tst/test3"));
+    dao.store(URI.create("http://a.tst/test1"), URI.create("http://a.tst/test2"),
+        URI.create("http://a.tst/test3"));
 
     List<Resource> results = dao
-        .readSubjectByPredicateAndObject(URI.create("http://a.tst/test2"), URI.create("http://a.tst/test3"));
+        .readSubjectByPredicateAndObject(URI.create("http://a.tst/test2"),
+            URI.create("http://a.tst/test3"));
 
     assertEquals(1, results.size());
     assertEquals("http://a.tst/test1", results.get(0).getURI());
@@ -84,10 +90,12 @@ class JenaSparqlDaoTest {
   void readObjectBySubjectAndPredicate() {
     JenaSparqlDAO dao = this.dao;
 
-    dao.store(URI.create("http://a.tst/test1"), URI.create("http://a.tst/test2"), URI.create("http://a.tst/test3"));
+    dao.store(URI.create("http://a.tst/test1"), URI.create("http://a.tst/test2"),
+        URI.create("http://a.tst/test3"));
 
     List<Resource> results = dao
-        .readObjectBySubjectAndPredicate(URI.create("http://a.tst/test1"), URI.create("http://a.tst/test2"));
+        .readObjectBySubjectAndPredicate(URI.create("http://a.tst/test1"),
+            URI.create("http://a.tst/test2"));
 
     assertEquals(1, results.size());
     assertEquals("http://a.tst/test3", results.get(0).getURI());
@@ -97,7 +105,8 @@ class JenaSparqlDaoTest {
   void readSubjectByPredicate() {
     JenaSparqlDAO dao = this.dao;
 
-    dao.store(URI.create("http://a.tst/test1"), URI.create("http://a.tst/test2"), URI.create("http://a.tst/test3"));
+    dao.store(URI.create("http://a.tst/test1"), URI.create("http://a.tst/test2"),
+        URI.create("http://a.tst/test3"));
 
     List<Resource> results = dao.readSubjectByPredicate(URI.create("http://a.tst/test2"));
 
@@ -109,7 +118,8 @@ class JenaSparqlDaoTest {
   void readSubjectByObject() {
     JenaSparqlDAO dao = this.dao;
 
-    dao.store(URI.create("http://a.tst/test1"), URI.create("http://a.tst/test2"), URI.create("http://a.tst/test3"));
+    dao.store(URI.create("http://a.tst/test1"), URI.create("http://a.tst/test2"),
+        URI.create("http://a.tst/test3"));
 
     List<Resource> results = dao.readSubjectByObject(URI.create("http://a.tst/test3"));
 
@@ -120,11 +130,12 @@ class JenaSparqlDaoTest {
   @Test
   void testTruncate() {
     JenaSparqlDAO dao = this.dao;
-    int tBoxSize = dao.knowledgeGraphHolder.getTBoxTriples().size();
+    int tBoxSize = dao.getKnowledgeGraphHolder().getTBoxTriples().size();
 
     assertEquals(tBoxSize, kgHolder.testGetModel().size());
 
-    dao.store(URI.create("http://a.tst/test1"), URI.create("http://a.tst/test2"), URI.create("http://a.tst/test3"));
+    dao.store(URI.create("http://a.tst/test1"), URI.create("http://a.tst/test2"),
+        URI.create("http://a.tst/test3"));
 
     assertEquals(1 + tBoxSize, kgHolder.testGetModel().size());
 

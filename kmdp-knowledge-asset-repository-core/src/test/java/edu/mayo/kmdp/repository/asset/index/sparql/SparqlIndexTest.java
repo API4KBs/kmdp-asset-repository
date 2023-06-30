@@ -1,13 +1,15 @@
 package edu.mayo.kmdp.repository.asset.index.sparql;
 
-import static edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphHolder.newKnowledgeGraphHolder;
+import static edu.mayo.kmdp.repository.asset.index.sparql.DefaultKnowledgeGraphHolder.newKnowledgeGraphHolder;
 import static edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphInfo.newKnowledgeGraphInfo;
-import static edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex.newSparqlIndex;
+import static edu.mayo.kmdp.repository.asset.index.sparql.impl.SparqlIndex.newSparqlIndex;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties;
 import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepository;
 import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepositoryService;
+import edu.mayo.kmdp.repository.asset.index.sparql.impl.JenaSparqlDAO;
+import edu.mayo.kmdp.repository.asset.index.sparql.impl.SparqlIndex;
 import java.net.URI;
 import java.util.Set;
 import org.h2.jdbcx.JdbcDataSource;
@@ -31,8 +33,10 @@ class SparqlIndexTest {
             SparqlIndexTest.class.getResourceAsStream("/application.test.properties"));
 
     JPAKnowledgeArtifactRepository mockRepo =
-        new JPAKnowledgeArtifactRepository(JPAKnowledgeArtifactRepositoryService.inMemoryDataSource(), cfg);
-    KnowledgeGraphHolder kgHelper = newKnowledgeGraphHolder(mockRepo, newKnowledgeGraphInfo());
+        new JPAKnowledgeArtifactRepository(
+            JPAKnowledgeArtifactRepositoryService.inMemoryDataSource(), cfg);
+    DefaultKnowledgeGraphHolder kgHelper = newKnowledgeGraphHolder(mockRepo,
+        newKnowledgeGraphInfo());
     JenaSparqlDAO dao = new JenaSparqlDAO(kgHelper);
 
     this.dao = dao;
@@ -75,7 +79,8 @@ class SparqlIndexTest {
 
     ResourceIdentifier pointer = SemanticIdentifier.newVersionId(uri1);
 
-    Set<ResourceIdentifier> related = index.getRelatedAssets(pointer, DependencyTypeSeries.Depends_On.getReferentId());
+    Set<ResourceIdentifier> related = index.getRelatedAssets(pointer,
+        DependencyTypeSeries.Depends_On.getReferentId());
 
     assertEquals(4, related.size());
   }

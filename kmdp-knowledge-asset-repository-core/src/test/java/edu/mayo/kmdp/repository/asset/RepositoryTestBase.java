@@ -1,8 +1,8 @@
 package edu.mayo.kmdp.repository.asset;
 
-import static edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphHolder.newKnowledgeGraphHolder;
+import static edu.mayo.kmdp.repository.asset.index.sparql.DefaultKnowledgeGraphHolder.newKnowledgeGraphHolder;
 import static edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphInfo.newKnowledgeGraphInfo;
-import static edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex.newSparqlIndex;
+import static edu.mayo.kmdp.repository.asset.index.sparql.impl.SparqlIndex.newSparqlIndex;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import edu.mayo.kmdp.kbase.query.sparql.v1_1.JenaQuery;
@@ -18,10 +18,10 @@ import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProper
 import edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryService;
 import edu.mayo.kmdp.repository.artifact.jpa.JPAKnowledgeArtifactRepository;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions;
-import edu.mayo.kmdp.repository.asset.index.sparql.JenaSparqlDAO;
-import edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphHolder;
+import edu.mayo.kmdp.repository.asset.index.sparql.DefaultKnowledgeGraphHolder;
+import edu.mayo.kmdp.repository.asset.index.sparql.impl.JenaSparqlDAO;
 import edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphInfo;
-import edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex;
+import edu.mayo.kmdp.repository.asset.index.sparql.impl.SparqlIndex;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
@@ -48,7 +48,7 @@ abstract class RepositoryTestBase {
 
   protected static JenaSparqlDAO jenaSparqlDao;
 
-  protected static KnowledgeGraphHolder kgHolder;
+  protected static DefaultKnowledgeGraphHolder kgHolder;
 
   protected static DataSource ds;
 

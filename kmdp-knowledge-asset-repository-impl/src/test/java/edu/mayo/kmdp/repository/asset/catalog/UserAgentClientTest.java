@@ -24,7 +24,7 @@ import static org.omg.spec.api4kp._20200801.taxonomy.parsinglevel.ParsingLevelSe
 import edu.mayo.kmdp.language.parsers.surrogate.v2.Surrogate2Parser;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties;
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
-import edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex;
+import edu.mayo.kmdp.repository.asset.index.sparql.impl.SparqlIndex;
 import edu.mayo.kmdp.util.JSonUtil;
 import edu.mayo.kmdp.util.JenaUtil;
 import edu.mayo.kmdp.util.Util;

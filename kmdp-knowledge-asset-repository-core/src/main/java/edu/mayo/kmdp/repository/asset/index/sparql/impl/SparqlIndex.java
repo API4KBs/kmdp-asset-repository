@@ -1,6 +1,6 @@
-package edu.mayo.kmdp.repository.asset.index.sparql;
+package edu.mayo.kmdp.repository.asset.index.sparql.impl;
 
-import static edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex.InternalQueryManager.TRANSITIVE_CLOSURE_SELECT;
+import static edu.mayo.kmdp.repository.asset.index.sparql.impl.SparqlIndex.InternalQueryManager.TRANSITIVE_CLOSURE_SELECT;
 import static edu.mayo.kmdp.util.JenaUtil.objA;
 import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
@@ -19,6 +19,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import edu.mayo.kmdp.repository.asset.index.Index;
+import edu.mayo.kmdp.repository.asset.index.sparql.KnowledgeGraphInfo;
 import edu.mayo.kmdp.util.DateTimeUtil;
 import edu.mayo.kmdp.util.StreamUtil;
 import edu.mayo.kmdp.util.Util;
@@ -761,7 +762,7 @@ public class SparqlIndex implements Index {
   }
 
   @Override
-  public Optional<ResourceIdentifier> resolveAsset(UUID assetId, String versionTag) {
+  public Optional<ResourceIdentifier>  resolveAsset(UUID assetId, String versionTag) {
     if (kgi.isKnowledgeGraphAsset(assetId)) {
       return Optional.of(kgi.knowledgeGraphAssetId());
     }

@@ -1,9 +1,10 @@
-package edu.mayo.kmdp.repository.asset.index.sparql;
+package edu.mayo.kmdp.repository.asset.index.sparql.impl;
 
-import static edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex.InternalQueryManager.TRIPLE_OBJECT_SELECT;
-import static edu.mayo.kmdp.repository.asset.index.sparql.SparqlIndex.InternalQueryManager.TRIPLE_SUBJECT_SELECT;
+import static edu.mayo.kmdp.repository.asset.index.sparql.impl.SparqlIndex.InternalQueryManager.TRIPLE_OBJECT_SELECT;
+import static edu.mayo.kmdp.repository.asset.index.sparql.impl.SparqlIndex.InternalQueryManager.TRIPLE_SUBJECT_SELECT;
 import static org.apache.jena.rdf.model.ResourceFactory.createResource;
 
+import edu.mayo.kmdp.repository.asset.index.sparql.DefaultKnowledgeGraphHolder;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,7 +38,7 @@ public class JenaSparqlDAO {
   private static final Logger logger = LoggerFactory.getLogger(JenaSparqlDAO.class);
 
   @Autowired
-  KnowledgeGraphHolder knowledgeGraphHolder;
+  DefaultKnowledgeGraphHolder knowledgeGraphHolder;
 
   /**
    * Default constructor
@@ -50,14 +51,14 @@ public class JenaSparqlDAO {
    * Testing constructor
    */
   public JenaSparqlDAO(
-      KnowledgeGraphHolder graphHolder) {
+      DefaultKnowledgeGraphHolder graphHolder) {
     this.knowledgeGraphHolder = graphHolder;
   }
 
   /**
    * Resets the underlying Graph
    */
-  protected void reinitialize() {
+  public void reinitialize() {
     knowledgeGraphHolder.resetGraph();
   }
 
@@ -314,4 +315,7 @@ public class JenaSparqlDAO {
     return resourceList;
   }
 
+  public DefaultKnowledgeGraphHolder getKnowledgeGraphHolder() {
+    return knowledgeGraphHolder;
+  }
 }
