@@ -2,7 +2,6 @@ package edu.mayo.kmdp.repository.asset.glossary;
 
 import static edu.mayo.kmdp.language.translators.surrogate.v2.SurrogateV2ToCcgEntry.mintGlossaryEntryId;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
-import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.logger;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newIdAsUUID;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newName;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newVersionId;
@@ -56,6 +55,8 @@ import org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.Clinica
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeprocessingtechnique.KnowledgeProcessingTechnique;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeprocessingtechnique.KnowledgeProcessingTechniqueSeries;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of {@link GlossaryLibraryApiInternal} backed by an Asset Repository's RDF
@@ -65,6 +66,8 @@ import org.omg.spec.api4kp._20200801.taxonomy.knowledgeprocessingtechnique.Knowl
  * Concepts, and relationships thereof.
  */
 public class KGraphConceptGlossaryLibrary implements GlossaryLibraryApiInternal {
+
+  Logger logger = LoggerFactory.getLogger(KGraphConceptGlossaryLibrary.class);
 
   /**
    * The backing Asset Repository, holding the Knowledge Graph
@@ -549,8 +552,11 @@ public class KGraphConceptGlossaryLibrary implements GlossaryLibraryApiInternal 
     }
     var query = new SparqlQueryBinder()
         .bind(JenaQuery.ofSparqlQuery(glossaryQuery), params);
-    logger.debug("Running GL query \n {}",
-        query.flatOpt(AbstractCarrier::asString).orElse("ERROR"));
+
+    if (logger.isDebugEnabled()) {
+      logger.debug("Running GL query \n {}",
+          query.flatOpt(AbstractCarrier::asString).orElse("ERROR"));
+    }
     return query;
   }
 
