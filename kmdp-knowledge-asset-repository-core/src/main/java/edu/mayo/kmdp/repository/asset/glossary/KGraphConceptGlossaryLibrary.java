@@ -2,6 +2,7 @@ package edu.mayo.kmdp.repository.asset.glossary;
 
 import static edu.mayo.kmdp.language.translators.surrogate.v2.SurrogateV2ToCcgEntry.mintGlossaryEntryId;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
+import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.logger;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newIdAsUUID;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newName;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newVersionId;
@@ -40,6 +41,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.omg.spec.api4kp._20200801.AbstractCarrier;
 import org.omg.spec.api4kp._20200801.Answer;
 import org.omg.spec.api4kp._20200801.api.repository.artifact.v4.server.KnowledgeArtifactApiInternal;
 import org.omg.spec.api4kp._20200801.api.repository.asset.v4.server.KnowledgeAssetCatalogApiInternal;
@@ -545,7 +547,11 @@ public class KGraphConceptGlossaryLibrary implements GlossaryLibraryApiInternal 
     if (processingMethod != null) {
       params.put("method", processingMethod.getConceptId().toString());
     }
-    return new SparqlQueryBinder().bind(JenaQuery.ofSparqlQuery(glossaryQuery), params);
+    var query = new SparqlQueryBinder()
+        .bind(JenaQuery.ofSparqlQuery(glossaryQuery), params);
+    logger.debug("Running GL query \n {}",
+        query.flatOpt(AbstractCarrier::asString).orElse("ERROR"));
+    return query;
   }
 
   /**
