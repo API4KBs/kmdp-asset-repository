@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newName;
+import static org.omg.spec.api4kp._20200801.id.Term.newTerm;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Non_Formal_Assessment_Model;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Service_Profile;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeprocessingtechnique.KnowledgeProcessingTechniqueSeries.Natural_Technique;
@@ -14,28 +15,30 @@ import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationForma
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.CQL_Essentials;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
 
+import edu.mayo.kmdp.api.terminology.v4.server.TermsApiInternal;
 import edu.mayo.kmdp.kbase.query.sparql.v1_1.JenaQuery;
 import edu.mayo.kmdp.knowledgebase.introspectors.fhir.stu3.StructureDefinitionMetadataIntrospector;
 import edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryService;
 import edu.mayo.kmdp.repository.asset.glossary.KGraphConceptGlossaryLibrary;
-import edu.mayo.kmdp.terms.TermsFHIRFacade;
 import edu.mayo.kmdp.util.Util;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
+import net.sf.saxon.trans.SymbolicName.F;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetCatalogApi;
-import org.omg.spec.api4kp._20200801.api.repository.asset.v4.KnowledgeAssetRepositoryApi;
+import org.omg.spec.api4kp._20200801.Answer;
+import org.omg.spec.api4kp._20200801.id.ConceptIdentifier;
 import org.omg.spec.api4kp._20200801.id.Term;
 import org.omg.spec.api4kp._20200801.surrogate.Annotation;
 import org.omg.spec.api4kp._20200801.surrogate.Dependency;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 import org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries;
+import org.omg.spec.api4kp._20200801.terms.model.ConceptDescriptor;
 
 class GLTests {
 
@@ -44,6 +47,9 @@ class GLTests {
 
   static final String MOCK_EXPR = "http://_This is a test_";
   static final String MOCK_EXPR2 = "<p>This is another quasi-HTML test</p>";
+
+  static ConceptIdentifier FOO = Term.newTerm(URI.create("http://mock.term/foo"))
+      .asConceptIdentifier();
 
   @BeforeAll
   static void init() {
@@ -61,7 +67,7 @@ class GLTests {
         .withProcessingMethod(Query_Technique)
         .withAnnotation(new Annotation()
             .withRel(Defines.asConceptIdentifier())
-            .withRef(Term.newTerm(URI.create("http://mock.term/foo")).asConceptIdentifier()))
+            .withRef(FOO))
         .withMemberOf(newName("MOCK-COLL"))
         .withFormalType(Service_Profile)
         .withCarriers(new KnowledgeArtifact()
@@ -83,10 +89,9 @@ class GLTests {
         .withProcessingMethod(Natural_Technique)
         .withAnnotation(new Annotation()
             .withRel(Defines.asConceptIdentifier())
-            .withRef(Term.newTerm(URI.create("http://mock.term/foo")).asConceptIdentifier()))
+            .withRef(FOO))
         .withMemberOf(newName("NOP"))
         .withFormalType(Non_Formal_Assessment_Model);
-
 
     var ans0 = repo.setKnowledgeAssetVersion
         (struct.getAssetId().getUuid(), struct.getAssetId().getVersionTag(), struct);
@@ -103,8 +108,7 @@ class GLTests {
     var glossary = new KGraphConceptGlossaryLibrary(
         repo,
         repo.getInnerArtifactRepository(),
-        new TermsFHIRFacade(KnowledgeAssetCatalogApi.newInstance(repo),
-            KnowledgeAssetRepositoryApi.newInstance(repo)));
+        new MockTerms());
 
     var glossaries = glossary.listGlossaries()
         .orElseGet(Assertions::fail);
@@ -118,8 +122,7 @@ class GLTests {
     var glossary = new KGraphConceptGlossaryLibrary(
         repo,
         repo.getInnerArtifactRepository(),
-        new TermsFHIRFacade(KnowledgeAssetCatalogApi.newInstance(repo),
-            KnowledgeAssetRepositoryApi.newInstance(repo)));
+        new MockTerms());
     var entries = glossary.listGlossaryEntries(List.of("MOCK-COLL"))
         .orElseGet(Assertions::fail);
     assertEquals(1, entries.size());
@@ -134,8 +137,7 @@ class GLTests {
     var glossary = new KGraphConceptGlossaryLibrary(
         repo,
         repo.getInnerArtifactRepository(),
-        new TermsFHIRFacade(KnowledgeAssetCatalogApi.newInstance(repo),
-            KnowledgeAssetRepositoryApi.newInstance(repo)));
+        new MockTerms());
     var entries = glossary.listGlossaryEntries(List.of("NOP"))
         .orElseGet(Assertions::fail);
     assertEquals(1, entries.size());
@@ -150,9 +152,8 @@ class GLTests {
     var glossary = new KGraphConceptGlossaryLibrary(
         repo,
         repo.getInnerArtifactRepository(),
-        new TermsFHIRFacade(KnowledgeAssetCatalogApi.newInstance(repo),
-            KnowledgeAssetRepositoryApi.newInstance(repo)));
-    var entries = glossary.listGlossaryEntries(List.of("MOCK-COLL","NOP"))
+        new MockTerms());
+    var entries = glossary.listGlossaryEntries(List.of("MOCK-COLL", "NOP"))
         .orElseGet(Assertions::fail);
     assertEquals(1, entries.size());
     assertEquals(2, entries.get(0).getDef().size());
@@ -163,13 +164,24 @@ class GLTests {
     var glossary = new KGraphConceptGlossaryLibrary(
         repo,
         repo.getInnerArtifactRepository(),
-        new TermsFHIRFacade(KnowledgeAssetCatalogApi.newInstance(repo),
-            KnowledgeAssetRepositoryApi.newInstance(repo)));
+        new MockTerms());
     var entry = glossary.getGlossaryEntry(
-        List.of("MOCK-COLL","NOP"),
-        Term.newTerm(URI.create("http://mock.term/foo")).getUuid())
+            List.of("MOCK-COLL", "NOP"),
+            FOO.getUuid())
         .orElseGet(Assertions::fail);
     assertEquals(2, entry.getDef().size());
+  }
+
+  @Test
+  void testEntryForNonExistingConcept() {
+    var glossary = new KGraphConceptGlossaryLibrary(
+        repo,
+        repo.getInnerArtifactRepository(),
+        new MockTerms());
+    var entry = glossary.getGlossaryEntry(
+        List.of("MOCK-COLL", "NOP"),
+        UUID.randomUUID());
+    assertTrue(entry.isNotFound());
   }
 
 
@@ -189,5 +201,16 @@ class GLTests {
   }
 
 
+  private static class MockTerms implements TermsApiInternal {
+
+    @Override
+    public Answer<ConceptDescriptor> lookupTerm(String conceptId) {
+      if (conceptId.equals(FOO.getUuid().toString())) {
+        return Answer.of(ConceptDescriptor.toConceptDescriptor(FOO));
+      } else {
+        return Answer.notFound();
+      }
+    }
+  }
 
 }

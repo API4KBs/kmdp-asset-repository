@@ -2,6 +2,7 @@ package edu.mayo.kmdp.repository.asset.glossary;
 
 import static edu.mayo.kmdp.language.translators.surrogate.v2.SurrogateV2ToCcgEntry.mintGlossaryEntryId;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
+import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newIdAsUUID;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newName;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newVersionId;
 import static org.omg.spec.api4kp._20200801.id.Term.newTerm;
@@ -158,6 +159,25 @@ public class KGraphConceptGlossaryLibrary implements GlossaryLibraryApiInternal 
         qAccept);
   }
 
+  @Override
+  public Answer<List<GlossaryEntry>> pickGlossaryEntries(
+      List<String> glossaryId,
+      List<UUID> definedConceptIds,
+      UUID scopingConceptId,
+      String processingMethod,
+      Boolean publishedOnly,
+      Boolean greatestOnly,
+      String qAccept) {
+    return listGlossaryEntries(
+        glossaryId,
+        scopingConceptId, processingMethod,
+        publishedOnly, greatestOnly,
+        qAccept)
+        .map(l -> l.stream()
+            .filter(ge -> definedConceptIds.contains(newIdAsUUID(ge.getDefines())))
+            .collect(Collectors.toList()));
+  }
+
 
   @Override
   public Answer<GlossaryEntry> getGlossaryEntry(
@@ -215,6 +235,7 @@ public class KGraphConceptGlossaryLibrary implements GlossaryLibraryApiInternal 
         glossaries.stream()
             .map(glossaryId -> getPartialEntries(glossaryId, definedConceptId, scopingConceptId,
                 processingMethod, qAccept))
+            .filter(Answer::isSuccess)
             .reduce((a1, a2) -> Answer.merge(a1, a2, (l1, l2) ->
                 Stream.concat(l1.stream(), l2.stream()).collect(Collectors.toList())))
             .orElse(Answer.of(Collections.emptyList()));
@@ -231,6 +252,10 @@ public class KGraphConceptGlossaryLibrary implements GlossaryLibraryApiInternal 
     Term def = Answer.ofNullable(definedConceptId)
         .flatMap(c -> terms.lookupTerm(c.toString()))
         .orElse(null);
+    if (definedConceptId != null && def == null) {
+      return Answer.notFound();
+    }
+
     Term app = Answer.ofNullable(scopingConceptId)
         .flatMap(c -> terms.lookupTerm(c.toString()))
         .orElse(null);
@@ -244,70 +269,6 @@ public class KGraphConceptGlossaryLibrary implements GlossaryLibraryApiInternal 
             .flatList(Bindings.class, b ->
                 this.toPartialEntry(glossaryId, b, def, app, met, qAccept));
   }
-
-  /**
-   * Post-processes the Graph Query result set, applying the optional semantic filters
-   * <p>
-   * TODO: Consider using a query template instead
-   *
-   * @param bindingsList     the Graph Query Results
-   * @param definedConceptId if present, builds the single Glossary Entry that defines this concept
-   *                         (note: the entry may still include multiple definitions)
-   * @param scopingConceptId if present, filters the Glossary to entries whose applicability is
-   *                         delimited by this concept
-   * @param processingMethod if present, filters the Operational Definitions in the Glossary to the
-   *                         ones that use the given method
-   * @return the result set, filtered
-   */
-  private List<Bindings> applyFilters(
-      List<Bindings> bindingsList,
-      UUID definedConceptId,
-      UUID scopingConceptId,
-      String processingMethod) {
-    if (definedConceptId == null && scopingConceptId == null && processingMethod == null) {
-      return bindingsList;
-    }
-
-    return bindingsList.stream()
-        .filter(b -> keep(b, definedConceptId, scopingConceptId, processingMethod))
-        .collect(Collectors.toList());
-  }
-
-  /**
-   * Post-processes a single Result set entry, as a prototype of a partial Glossary entry, applying
-   * the optional semantic filters
-   * <p>
-   * TODO: Consider using a query template instead
-   *
-   * @param bindings         the Graph Query Results
-   * @param definedConceptId if present, builds the single Glossary Entry that defines this concept
-   *                         (note: the entry may still include multiple definitions)
-   * @param scopingConceptId if present, filters the Glossary to entries whose applicability is
-   *                         delimited by this concept
-   * @param processingMethod if present, filters the Operational Definitions in the Glossary to the
-   *                         ones that use the given method
-   * @return the result set, filtered
-   */
-  private boolean keep(
-      Bindings<String, String> bindings,
-      UUID definedConceptId,
-      UUID scopingConceptId,
-      String processingMethod) {
-    if (definedConceptId != null &&
-        !bindings.getOrDefault("concept", "")
-            .contains(definedConceptId.toString())) {
-      return false;
-    }
-    if (scopingConceptId != null &&
-        !bindings.getOrDefault("applicabilityScope", "")
-            .contains(scopingConceptId.toString())) {
-      return false;
-    }
-    return processingMethod == null ||
-        bindings.getOrDefault("method", "")
-            .contains(processingMethod);
-  }
-
 
   /**
    * Constructs a Partial Glossary Entry from a set of SPARQL variable bindings.
