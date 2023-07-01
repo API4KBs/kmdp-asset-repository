@@ -292,7 +292,6 @@ public class KGraphConceptGlossaryLibrary implements GlossaryLibraryApiInternal 
       Bindings<String, String> b,
       Term def, Term app, Term met,
       String qAccept) {
-    logger.debug("Building partial entry {}", b);
     var assetId = newVersionId(URI.create(b.get("asset")));
     var glossary = b.getOrDefault("coll", glossaryId);
     var type = b.get("assetType");
