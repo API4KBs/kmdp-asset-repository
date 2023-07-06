@@ -35,20 +35,24 @@ public class ContentNegotiationHelper {
   }
 
   /**
-   * Selects the best Surrogate, given the client preferences and the canonical Surrogate
-   * Inspects the canonical Surrogate to determine if a different, better form exists,
-   * otherwise returns the canonical Surrogate itself
-   *
+   * Selects the best Surrogate, given the client preferences and the canonical Surrogate Inspects
+   * the canonical Surrogate to determine if a different, better form exists, otherwise returns the
+   * canonical Surrogate itself
+   * <p>
    * Currently only supports HTML as an alternative representation
    *
-   * @param surrogate The canonical Surrogate
-   * @param xAccept   A format MIME type expressing the client's preferences
+   * @param surrogate                      The canonical Surrogate
+   * @param xAccept                        A format MIME type expressing the client's preferences
    * @param defaultSurrogateRepresentation The representation of KnowledgeAsset surrogates
    * @return The best Surrogate
    */
   public Answer<KnowledgeAsset> negotiateCanonicalSurrogate(
       KnowledgeAsset surrogate, String xAccept,
       SyntacticRepresentation defaultSurrogateRepresentation) {
+    // bypass negotiation if not requested
+    if (Util.isEmpty(xAccept)) {
+      return Answer.of(surrogate);
+    }
     // only support HTML (by redirection), or the default surrogate
     List<WeightedRepresentation> acceptable =
         decodePreferences(xAccept, defaultSurrogateRepresentation).stream()
