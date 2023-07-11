@@ -307,6 +307,7 @@ public class KGraphConceptGlossaryLibrary implements GlossaryLibraryApiInternal 
     var artifactId = Optional.ofNullable(b.get("artifact"))
         .map(a -> newVersionId(URI.create(a)));
     var mime = b.getOrDefault("mime", qAccept);
+    var valueSet = b.get("valueSetId");
 
     var od = new OperationalDefinition()
         .id(assetId.getVersionId().toString())
@@ -316,6 +317,13 @@ public class KGraphConceptGlossaryLibrary implements GlossaryLibraryApiInternal 
         .defines(newTerm(URI.create(defined)).getUuid())
         .processingMethod(getTechniques(method))
         .effectuates(shape);
+
+    if (valueSet != null) {
+      od.addIncludesItem(new OperationalDefinition()
+          .computableSpec(new KnowledgeResourceRef()
+              .addAssetTypeItem(KnowledgeAssetTypeSeries.Value_Set.getTag())
+              .assetId(valueSet)));
+    }
 
     artifactId.ifPresent(aid ->
         od.computableSpec(new KnowledgeResourceRef()
