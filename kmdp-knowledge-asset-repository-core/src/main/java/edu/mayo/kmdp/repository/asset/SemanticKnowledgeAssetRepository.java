@@ -17,11 +17,13 @@ import static edu.mayo.kmdp.id.helper.DatatypeHelper.getDefaultVersionId;
 import static edu.mayo.kmdp.repository.artifact.KnowledgeArtifactRepositoryServerProperties.KnowledgeArtifactRepositoryOptions.DEFAULT_REPOSITORY_ID;
 import static edu.mayo.kmdp.repository.asset.KnowledgeAssetRepositoryServerProperties.KnowledgeAssetRepositoryOptions.CLEARABLE;
 import static edu.mayo.kmdp.repository.asset.negotiation.ContentNegotiationHelper.decodePreferences;
+import static edu.mayo.kmdp.repository.asset.negotiation.LocatorHelper.rewriteSelfLinks;
 import static edu.mayo.kmdp.util.JenaUtil.objA;
 import static edu.mayo.kmdp.util.StreamUtil.filterAs;
 import static edu.mayo.kmdp.util.Util.as;
 import static edu.mayo.kmdp.util.Util.coalesce;
 import static edu.mayo.kmdp.util.Util.isEmpty;
+import static edu.mayo.kmdp.util.Util.isNotEmpty;
 import static edu.mayo.kmdp.util.Util.paginate;
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.BadRequest;
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.Conflict;
@@ -114,6 +116,8 @@ import java.util.concurrent.Flow;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.inject.Named;
@@ -485,7 +489,7 @@ public class SemanticKnowledgeAssetRepository
   @Loggable(beforeCode = "KARS-022.A")
   public Answer<byte[]> getKnowledgeGraphContent(String xAccept) {
     return getKnowledgeGraph(xAccept)
-          .flatOpt(AbstractCarrier::asBinary);
+        .flatOpt(AbstractCarrier::asBinary);
   }
 
   //*****************************************************************************************/
@@ -650,6 +654,8 @@ public class SemanticKnowledgeAssetRepository
 
     ensureSemanticVersionedIdentifiers(assetSurrogate);
     detectCanonicalSurrogateConflict(assetIdentifier, surrogateIdentifier, assetSurrogate);
+
+    rewriteSelfLinks(assetSurrogate, hrefBuilder);
 
     persistCanonicalKnowledgeAssetVersion(
         assetSurrogate.getAssetId(), surrogateIdentifier, assetSurrogate);
@@ -1221,6 +1227,24 @@ public class SemanticKnowledgeAssetRepository
   }
 
   /**
+   * Retrieves the canonical Surrogate for the greatest version of an Asset, raw
+   * <p>
+   * Supports minimal content negotiation between the default format, and its basic HTML
+   * counterpart
+   *
+   * @param assetId the Asset ID
+   * @param xAccept the generalized mime type
+   * @return the {@link KnowledgeAsset} Surrogate, as a byte array
+   */
+  @Override
+  public Answer<byte[]> getKnowledgeAssetCanonicalSurrogateContent(
+      @Nonnull final UUID assetId,
+      @Nullable String xAccept) {
+    return getKnowledgeAssetCanonicalSurrogate(assetId, xAccept)
+        .flatOpt(AbstractCarrier::asBinary);
+  }
+
+  /**
    * Returns the Canonical Surrogate for the given Knowledge Asset, serialized using the server's
    * default format, and encoded in binary form. To get the Surrogate as an object, use
    * {@link SemanticKnowledgeAssetRepository#}getVersionedKnowledgeAsset} and related operations
@@ -1265,6 +1289,27 @@ public class SemanticKnowledgeAssetRepository
             }
         );
   }
+
+  /**
+   * Retrieves the canonical Surrogate for the greatest version of an Asset, raw
+   * <p>
+   * Supports minimal content negotiation between the default format, and its basic HTML
+   * counterpart
+   *
+   * @param assetId    the Asset ID
+   * @param versionTag the Asset version
+   * @param xAccept    the generalized mime type
+   * @return the {@link KnowledgeAsset} Surrogate, as a byte array
+   */
+  @Override
+  public Answer<byte[]> getKnowledgeAssetVersionCanonicalSurrogateContent(
+      @Nonnull final UUID assetId,
+      @Nonnull final String versionTag,
+      @Nullable String xAccept) {
+    return getKnowledgeAssetVersionCanonicalSurrogate(assetId, versionTag, xAccept)
+        .flatOpt(AbstractCarrier::asBinary);
+  }
+
 
   /**
    * Returns a list of pointers to the Surrogates registered for a given Knowledge Asset Version
@@ -2420,6 +2465,7 @@ public class SemanticKnowledgeAssetRepository
       if (meta.getRepresentation().getFormat() == null) {
         meta.getRepresentation().setFormat(defaultSurrogateFormat);
       }
+      meta.setLocator(null);
       return meta.getArtifactId();
     } else {
       var surrogateDescr =
