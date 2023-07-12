@@ -8,18 +8,20 @@ import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMI
 import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.decodeAll;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
 
-import java.util.Properties;
-import org.omg.spec.api4kp._20200801.services.repository.asset.KARSHrefBuilder;
 import edu.mayo.kmdp.util.StreamUtil;
 import edu.mayo.kmdp.util.Util;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
 import org.omg.spec.api4kp._20200801.Answer;
 import org.omg.spec.api4kp._20200801.services.SyntacticRepresentation;
+import org.omg.spec.api4kp._20200801.services.repository.asset.KARSHrefBuilder;
 import org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder;
 import org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.WeightedRepresentation;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
@@ -133,9 +135,10 @@ public class ContentNegotiationHelper {
   }
 
   /**
-   * the Default tolerance for a set of weighted representations, below which a
-   * requested representation is not considered acceptable
-   * Defaults to 0.0, except for HTML to support implicit requests by browsers and other user agents
+   * the Default tolerance for a set of weighted representations, below which a requested
+   * representation is not considered acceptable Defaults to 0.0, except for HTML to support
+   * implicit requests by browsers and other user agents
+   *
    * @param reps the list of weighted representations
    * @return WEIGHT_UNSPECIFIED for HTML, 0.0 otherwise
    */
@@ -274,7 +277,7 @@ public class ContentNegotiationHelper {
    * Decodes a formal MIME type and returns the Format component Uses a default value in case the
    * decoding fails
    *
-   * @param xAccept the formal MIME type to be decoded
+   * @param xAccept       the formal MIME type to be decoded
    * @param defaultFormat the fallback format
    * @return the format specified in the MIME type if present, the default format otherwise
    */
@@ -298,17 +301,62 @@ public class ContentNegotiationHelper {
    * @param asseNamespace
    * @return
    */
-  public String getContextProperties(URI asseNamespace) {
+  public String getContextProperties(
+      URI asseNamespace, URI artifactNamespace, String defaultArtfRepo) {
     try {
-      Properties props = new Properties();
-      var host = URI.create(hrefBuilder.getHost());
-      var redirect = new URI(host.getScheme(), null, host.getHost(), host.getPort(),
-          host.getPath() + "/cat" + asseNamespace.getPath(), null, null);
-      props.put(asseNamespace.toString(), redirect.toString());
-      return serializeProps(props);
+      if (hrefBuilder != null) {
+        Properties props = new Properties();
+        setAssetRedirect(hrefBuilder.getHost(), asseNamespace, props);
+        setArtifactRedirect(hrefBuilder.getHost(), artifactNamespace, defaultArtfRepo, props);
+        return serializeProps(props);
+      }
     } catch (Exception e) {
       // fall back to not rewriting the URIs/URLs
-      return null;
     }
+    return null;
+  }
+
+  /**
+   * Configures the HTML renderer of a {@link KnowledgeAsset} Surrogate, to map URIs linking to the
+   * Asset Repository APIs with URLs to the same APIs, but grounded on this server's deployment,
+   * assuming that the URIs are not natively dereferenceable
+   * <p>
+   * Assumes that the APIs are extended out of an enterprise base URI, which acts as a namespace
+   *
+   * @param host      the baseUrl where this server is deployed
+   * @param namespace the enterprise Asset namespace
+   * @param props     the configuration to update
+   */
+  public static void setAssetRedirect(
+      @Nonnull final String host,
+      @Nonnull final URI namespace,
+      @Nonnull final Properties props) throws URISyntaxException {
+    var hostUri = URI.create(host);
+    var redirect = new URI(hostUri.getScheme(), null, hostUri.getHost(), hostUri.getPort(),
+        hostUri.getPath() + "/cat" + namespace.getPath(), null, null);
+    props.put(namespace.toString(), redirect.toString());
+  }
+
+
+  /**
+   * Configures the HTML renderer of a {@link KnowledgeAsset} Surrogate, to map URIs linking to the
+   * Artifact Repository APIs with URLs to the same APIs, but grounded on this server's deployment,
+   * assuming that the URIs are not natively dereferenceable
+   * <p>
+   * Assumes that the APIs are extended out of an enterprise base URI, which acts as a namespace
+   *
+   * @param host      the baseUrl where this server is deployed
+   * @param namespace the enterprise Artifact namespace
+   * @param props     the configuration to update
+   */
+  public static void setArtifactRedirect(
+      @Nonnull final String host,
+      @Nonnull final URI namespace,
+      @Nonnull final String artifactRepo,
+      @Nonnull final Properties props) throws URISyntaxException {
+    var hostUri = URI.create(host);
+    var redirect = new URI(hostUri.getScheme(), null, hostUri.getHost(), hostUri.getPort(),
+        hostUri.getPath() + "/repos/" + artifactRepo + namespace.getPath(), null, null);
+    props.put(namespace.toString(), redirect.toString());
   }
 }

@@ -52,7 +52,7 @@
     </dependency>
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
-      <artifactId>kmdp-terminology-service-controllers</artifactId>
+      <artifactId>kmdp-artifact-repository-service-controllers</artifactId>
       <version>${kmdp.impl.version}</version>
     </dependency>
     <dependency>

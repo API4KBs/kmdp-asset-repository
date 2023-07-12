@@ -2103,7 +2103,10 @@ public class SemanticKnowledgeAssetRepository
                     txOp.getOperatorId().getUuid(),
                     sourceBinaryArtifact,
                     tgtMime,
-                    negotiator.getContextProperties(identityMapper.getAssetNamespace()))
+                    negotiator.getContextProperties(
+                        identityMapper.getAssetNamespace(),
+                        identityMapper.getArtifactNamespace(),
+                        artifactRepositoryId))
             ));
   }
 
