@@ -2162,6 +2162,7 @@ public class SemanticKnowledgeAssetRepository
                     negotiator.getContextProperties(
                         identityMapper.getAssetNamespace(),
                         identityMapper.getArtifactNamespace(),
+                        identityMapper.getOntologyNamespace(),
                         artifactRepositoryId))
             ));
   }

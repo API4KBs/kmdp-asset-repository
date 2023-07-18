@@ -88,6 +88,13 @@ public class KnowledgeAssetRepositoryServerProperties extends
             Registry.MAYO_ARTIFACTS_BASE_URI,
             "Base namespace used for Assets",
             String.class,
+            false)),
+
+    ONTOLOGY_NAMESPACE(
+        Opt.of("edu.mayo.kmdp.repository.ontology.namespace",
+            "https://ontology.mayo.edu",
+            "Base namespace used for Ontologies and Taxonomies",
+            String.class,
             false));
 
     private Opt<KnowledgeAssetRepositoryOptions> opt;

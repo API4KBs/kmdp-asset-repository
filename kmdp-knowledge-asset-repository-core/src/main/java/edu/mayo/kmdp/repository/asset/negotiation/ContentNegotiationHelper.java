@@ -303,11 +303,12 @@ public class ContentNegotiationHelper {
    * @return
    */
   public String getContextProperties(
-      URI asseNamespace, URI artifactNamespace, String defaultArtfRepo) {
+      URI asseNamespace, URI artifactNamespace, URI ontologyNamespace, String defaultArtfRepo) {
     try {
       if (hrefBuilder != null) {
         Properties props = new Properties();
         setAssetRedirect(hrefBuilder.getHost(), asseNamespace, props);
+        setConceptRedirect(hrefBuilder.getHost(), ontologyNamespace, props);
         setArtifactRedirect(hrefBuilder.getHost(), artifactNamespace, defaultArtfRepo, props);
         return serializeProps(props);
       }
@@ -336,6 +337,25 @@ public class ContentNegotiationHelper {
     var redirect = new URI(hostUri.getScheme(), null, hostUri.getHost(), hostUri.getPort(),
         hostUri.getPath() + "/cat" + namespace.getPath(), null, null);
     props.put(namespace.toString(), redirect.toString());
+  }
+
+  /**
+   * Configures the HTML renderer of a {@link KnowledgeAsset} Surrogate, to map URIs linking to
+   * Concepts from internally managed Lexica (Taxonomies), redirecting to the Terms server
+   * associated to this Asset Repository
+   *
+   * @param host      the baseUrl where this server is deployed
+   * @param namespace the enterprise Taxonomy namespace
+   * @param props     the configuration to update
+   */
+  public static void setConceptRedirect(
+      @Nonnull final String host,
+      @Nonnull final URI namespace,
+      @Nonnull final Properties props) throws URISyntaxException {
+    var hostUri = URI.create(host);
+    var redirect = new URI(hostUri.getScheme(), null, hostUri.getHost(), hostUri.getPort(),
+        hostUri.getPath() + "/terminologies/terms/", null, null);
+    props.put(namespace + "/taxonomies/", redirect.toString());
   }
 
 

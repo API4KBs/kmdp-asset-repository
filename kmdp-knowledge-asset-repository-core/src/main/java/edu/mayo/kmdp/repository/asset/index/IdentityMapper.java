@@ -24,6 +24,8 @@ public class IdentityMapper {
 
   private final URI artifactNamespace;
 
+  private final URI ontologyNamespace;
+
   public IdentityMapper() {
     this(KnowledgeAssetRepositoryServerProperties.emptyProperties());
   }
@@ -33,6 +35,8 @@ public class IdentityMapper {
         URI.create(cfg.getTyped(KnowledgeAssetRepositoryOptions.ASSET_NAMESPACE));
     this.artifactNamespace =
         URI.create(cfg.getTyped(KnowledgeAssetRepositoryOptions.ARTIFACT_NAMESPACE));
+    this.ontologyNamespace =
+        URI.create(cfg.getTyped(KnowledgeAssetRepositoryOptions.ONTOLOGY_NAMESPACE));
   }
 
   public ResourceIdentifier toAssetId(UUID assetId) {
@@ -57,5 +61,9 @@ public class IdentityMapper {
 
   public URI getArtifactNamespace() {
     return artifactNamespace;
+  }
+
+  public URI getOntologyNamespace() {
+    return ontologyNamespace;
   }
 }
