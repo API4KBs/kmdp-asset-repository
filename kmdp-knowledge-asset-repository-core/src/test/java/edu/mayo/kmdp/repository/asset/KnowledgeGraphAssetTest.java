@@ -2,6 +2,7 @@ package edu.mayo.kmdp.repository.asset;
 
 import static edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries.Forbidden;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.omg.spec.api4kp._20200801.AbstractCarrier.codedRep;
 import static org.omg.spec.api4kp._20200801.id.IdentifierConstants.VERSION_ZERO;
@@ -37,12 +38,12 @@ class KnowledgeGraphAssetTest extends RepositoryTestBase {
 
   private static final UUID GRAPH_UUID = kgHolder.getInfo().knowledgeGraphAssetId().getUuid();
 
-  private JenaRdfParser parser = new JenaRdfParser();
-  private Surrogate2Parser metaParser = new Surrogate2Parser();
+  private final JenaRdfParser parser = new JenaRdfParser();
+  private final Surrogate2Parser metaParser = new Surrogate2Parser();
 
-  private static ResourceIdentifier graphArtifactId = kgHolder.getInfo()
+  private static final ResourceIdentifier graphArtifactId = kgHolder.getInfo()
       .knowledgeGraphArtifactId();
-  private static ResourceIdentifier graphSurrogateId = kgHolder.getInfo()
+  private static final ResourceIdentifier graphSurrogateId = kgHolder.getInfo()
       .knowledgeGraphSurrogateId();
 
   @Test
@@ -136,7 +137,17 @@ class KnowledgeGraphAssetTest extends RepositoryTestBase {
     byte[] binary = semanticRepository.getKnowledgeAssetCanonicalCarrierContent(GRAPH_UUID)
         .orElseGet(Assertions::fail);
     String str = new String(binary);
+    str = str.substring(str.indexOf('\n') + 1);
     assertTrue(str.startsWith("<rdf:RDF"));
+  }
+
+  @Test
+  void testGraphDefaultCarrierContentVariant() {
+    byte[] binary = semanticRepository.getKnowledgeGraphContent("text/turtle")
+        .orElseGet(Assertions::fail);
+    String str = new String(binary);
+    System.out.println(str);
+    assertFalse(str.contains("<rdf:RDF"));
   }
 
   @Test
@@ -172,6 +183,7 @@ class KnowledgeGraphAssetTest extends RepositoryTestBase {
         .getKnowledgeAssetVersionCanonicalCarrierContent(GRAPH_UUID, VERSION_ZERO)
         .orElseGet(Assertions::fail);
     String str = new String(binary);
+    str = str.substring(str.indexOf('\n') + 1);
     assertTrue(str.startsWith("<rdf:RDF"));
   }
 
@@ -228,12 +240,14 @@ class KnowledgeGraphAssetTest extends RepositoryTestBase {
         GRAPH_UUID, "na", graphArtifactId.getUuid(), graphArtifactId.getVersionTag())
         .orElseGet(Assertions::fail);
     String str = new String(binary);
+    str = str.substring(str.indexOf('\n') + 1);
     assertTrue(str.startsWith("<rdf:RDF"));
 
     byte[] binary2 = semanticRepository.getKnowledgeAssetCarrierVersionContent(
         GRAPH_UUID, "na", graphArtifactId.getUuid(), VERSION_ZERO)
         .orElseGet(Assertions::fail);
     String str2 = new String(binary2);
+    str2 = str2.substring(str2.indexOf('\n') + 1);
     assertTrue(str2.startsWith("<rdf:RDF"));
   }
 

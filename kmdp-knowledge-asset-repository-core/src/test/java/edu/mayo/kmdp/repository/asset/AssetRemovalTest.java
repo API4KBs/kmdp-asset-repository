@@ -191,7 +191,7 @@ class AssetRemovalTest extends RepositoryTestBase {
 
     List<Pointer> metas = semanticRepository.listKnowledgeAssetSurrogates(assetId, assetV)
         .orElseGet(Assertions::fail);
-    assertEquals(1, metas.size());
+    assertEquals(2, metas.size());
 
     List<Pointer> history = semanticRepository
         .listKnowledgeAssetSurrogateVersions(assetId, assetV, metas.get(0).getUuid())

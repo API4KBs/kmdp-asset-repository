@@ -37,6 +37,7 @@ import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Assertions;
@@ -229,11 +230,12 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
 
     KnowledgeAsset surrogate = ckac.getKnowledgeAssetVersion(uuid, vTag)
         .orElseGet(Assertions::fail);
-    assertEquals(1, surrogate.getSurrogate().size());
-    surrogate.getSurrogate()
-        .forEach(
-            surr -> assertTrue(surr.getArtifactId().sameAs(surrId))
+    assertEquals(3, surrogate.getSurrogate().size());
+    boolean match = surrogate.getSurrogate().stream()
+        .anyMatch(surr ->
+            Objects.equals(surrId.getUuid(), surr.getArtifactId().getUuid())
         );
+    assertTrue(match);
   }
 
   @Test
@@ -260,11 +262,12 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
 
     KnowledgeAsset surrogate = ckac.getKnowledgeAssetVersion(uuid, vTag)
         .orElseGet(Assertions::fail);
-    assertEquals(1, surrogate.getSurrogate().size());
-    surrogate.getSurrogate()
-        .forEach(
-            surr -> assertEquals(suid, surr.getArtifactId().getUuid())
+    assertEquals(3, surrogate.getSurrogate().size());
+    boolean match = surrogate.getSurrogate().stream()
+        .anyMatch(surr ->
+            Objects.equals(suid, surr.getArtifactId().getUuid())
         );
+    assertTrue(match);
   }
 
 

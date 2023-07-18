@@ -28,17 +28,21 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.jena.query.ParameterizedSparqlString;
+import org.apache.jena.query.QuerySolution;
 import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
@@ -49,11 +53,14 @@ import org.eclipse.rdf4j.model.vocabulary.OWL;
 import org.omg.spec.api4kp._20200801.aspects.LogLevel;
 import org.omg.spec.api4kp._20200801.aspects.Loggable;
 import org.omg.spec.api4kp._20200801.id.ConceptIdentifier;
+import org.omg.spec.api4kp._20200801.id.KeyIdentifier;
 import org.omg.spec.api4kp._20200801.id.Pointer;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.id.SemanticIdentifier;
+import org.omg.spec.api4kp._20200801.id.Term;
 import org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder;
 import org.omg.spec.api4kp._20200801.surrogate.Annotation;
+import org.omg.spec.api4kp._20200801.surrogate.Component;
 import org.omg.spec.api4kp._20200801.surrogate.Dependency;
 import org.omg.spec.api4kp._20200801.surrogate.Derivative;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
@@ -62,21 +69,22 @@ import org.omg.spec.api4kp._20200801.surrogate.Link;
 import org.omg.spec.api4kp._20200801.surrogate.Publication;
 import org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.ClinicalKnowledgeAssetTypeSeries;
 import org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries;
+import org.omg.spec.api4kp._20200801.taxonomy.derivationreltype.DerivationTypeSeries;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRole;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassetrole.KnowledgeAssetRoleSeries;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetType;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeprocessingtechnique.KnowledgeProcessingTechnique;
+import org.omg.spec.api4kp._20200801.taxonomy.structuralreltype.StructuralPartTypeSeries;
 import org.omg.spec.api4kp._20200801.terms.ConceptTerm;
 import org.omg.spec.api4kp._20200801.terms.model.ConceptDescriptor;
 import org.semanticweb.owlapi.vocab.DublinCoreVocabulary;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 /**
  * An implementation of the Asset {@link Index} interface that uses an RDF/SPARQL backend.
  */
-@Component
+@org.springframework.stereotype.Component
 public class SparqlIndex implements Index {
 
   private static final Set<DependencyTypeSeries> TRAVERSE_DEPS =
@@ -97,6 +105,7 @@ public class SparqlIndex implements Index {
   public static final String LCC = "https://www.omg.org/spec/LCC/Languages/LanguageRepresentation/";
   public static final String API4KP = "https://www.omg.org/spec/API4KP/api4kp/";
   public static final String API4KP_SERIES = "https://www.omg.org/spec/API4KP/api4kp-series/";
+  public static final String COMMONS_CLASSIF = "https://www.omg.org/spec/Commons/Classifiers/";
   public static final String KMD = "http://ontology.mayo.edu/ontologies/kmdp/";
   public static final String DC = DublinCoreVocabulary.NAME_SPACE;
 
@@ -140,6 +149,10 @@ public class SparqlIndex implements Index {
 
   public static final String HAS_EXPRESSION = "hasExpression";
   public static final URI HAS_EXPRESSION_URI = URI.create(API4KP + HAS_EXPRESSION);
+  public static final String PLAYS_ROLE = "hasExpression";
+  public static final URI PLAYS_ROLE_URI = URI.create(COMMONS_CLASSIF + PLAYS_ROLE);
+  public static final String CLASSIFIED_AS = "hasExpression";
+  public static final URI CLASSIFIED_AS_URI = URI.create(COMMONS_CLASSIF + CLASSIFIED_AS);
 
 
   @Autowired
@@ -307,8 +320,8 @@ public class SparqlIndex implements Index {
     statements.addAll(roles.stream().map(role ->
         this.toStatement(
             assetVersionId,
-            URI.create(RDF.type.getURI()),
-            role.getReferentId())
+            PLAYS_ROLE_URI,
+            role.getConceptId())
     ).collect(Collectors.toList()));
 
     // Asset techniques
@@ -430,6 +443,69 @@ public class SparqlIndex implements Index {
             .collect(Collectors.toSet()));
 
     return Sets.union(Sets.newHashSet(assetPointer), downstream);
+  }
+
+  @Override
+  public List<Link> getNeighbourAssets(ResourceIdentifier assetPointer) {
+    Map<String, URI> params = Maps.newHashMap();
+    params.put("?s", assetPointer.getVersionId());
+
+    Set<Link> related = new TreeSet<>(
+        // de-duplicate by rel uuid + asset key
+        Comparator.<Link, KeyIdentifier>comparing(l -> l.getHref().asKey())
+            .thenComparing(l -> l.getRel().getUuid()));
+
+    this.jenaSparqlDao.runSparql(
+        new ParameterizedSparqlString(InternalQueryManager.NEIGHBOURHOOD_SELECT),
+        params, Collections.emptyMap(),
+        qS -> toRelationLink(qS).ifPresent(related::add));
+
+    return related.stream()
+        // remove implied/derived super-relationships
+        .filter(lnk -> related.stream().noneMatch(rel ->
+            rel != lnk && Objects.equals(rel.getHref().asKey(), lnk.getHref().asKey())
+                && isNarrower(rel.getRel(), lnk.getRel())))
+        // sort by rel, then type
+        .sorted(Comparator.<Link, UUID>comparing(l -> l.getRel().getUuid())
+            .thenComparing(l -> ((Pointer) l.getHref()).getType(),
+                Comparator.nullsLast(Comparator.naturalOrder())))
+        .collect(Collectors.toList());
+  }
+
+  private boolean isNarrower(Term frs, Term sec) {
+    return frs instanceof ConceptTerm
+        && Arrays.stream(((ConceptTerm) frs).getAncestors())
+        .anyMatch(anc -> anc.sameTermAs(sec));
+  }
+
+
+  private Optional<Link> toRelationLink(QuerySolution sol) {
+    var p = sol.get("p").asResource().getURI();
+    var l = Optional.ofNullable(sol.get("l")).map(v -> v.asLiteral().getString()).orElse(null);
+    var type = Optional.ofNullable(sol.get("t")).map(v -> v.asResource().getURI());
+    var o = sol.get("o").asResource().getURI();
+
+    var ptr = newVersionId(URI.create(o)).toInnerPointer()
+        .withName(l);
+    type.flatMap(t -> KnowledgeAssetTypeSeries.resolveRef(t)
+            .or(() -> ClinicalKnowledgeAssetTypeSeries.resolveRef(t)))
+        .ifPresent(x -> ptr.withType(x.getReferentId()));
+
+    var tryDeriv = DerivationTypeSeries.resolveRef(p);
+    if (tryDeriv.isPresent()) {
+      return tryDeriv.map(rel -> new Derivative().withRel(rel).withHref(ptr));
+    }
+    var tryDep = DependencyTypeSeries.resolveRef(p);
+    if (tryDep.isPresent()) {
+      return tryDep.map(rel -> new Dependency().withRel(rel).withHref(ptr));
+    }
+    var tryPart = StructuralPartTypeSeries.resolveRef(p);
+    if (tryPart.isPresent()) {
+      return tryPart.map(rel -> new Component().withRel(rel).withHref(ptr));
+    }
+    return Optional.of(new Dependency()
+        .withHref(ptr)
+        .withRel(DependencyTypeSeries.References));
   }
 
   @Override
@@ -644,11 +720,14 @@ public class SparqlIndex implements Index {
 
   @Override
   public Set<ResourceIdentifier> getAssetIdsByType(URI assetType) {
-    List<Resource> resources =
+    List<Resource> typedResources =
         this.jenaSparqlDao
             .readSubjectByPredicateAndObject(URI.create(RDF.type.getURI()), assetType);
+    List<Resource> roledResources =
+        this.jenaSparqlDao
+            .readSubjectByPredicateAndObject(PLAYS_ROLE_URI, assetType);
 
-    return resources.stream()
+    return Stream.concat(typedResources.stream(), roledResources.stream())
         .map(this::resourceToResourceIdentifier)
         .collect(Collectors.toSet());
   }
@@ -762,7 +841,7 @@ public class SparqlIndex implements Index {
   }
 
   @Override
-  public Optional<ResourceIdentifier>  resolveAsset(UUID assetId, String versionTag) {
+  public Optional<ResourceIdentifier> resolveAsset(UUID assetId, String versionTag) {
     if (kgi.isKnowledgeGraphAsset(assetId)) {
       return Optional.of(kgi.knowledgeGraphAssetId());
     }
@@ -978,8 +1057,10 @@ public class SparqlIndex implements Index {
 
     private static final String PREAMBLE = ""
         + " PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n"
+        + " PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n"
         + " PREFIX lcc: <https://www.omg.org/spec/LCC/Languages/LanguageRepresentation/> \n"
         + " PREFIX api4kp: <https://www.omg.org/spec/API4KP/api4kp/> \n"
+        + " PREFIX api4kp-kao: <https://www.omg.org/spec/API4KP/api4kp-kao/> \n"
         + " PREFIX dc: <" + DublinCoreVocabulary.NAME_SPACE + "> \n"
         + " PREFIX api4kp-series: <https://www.omg.org/spec/API4KP/api4kp-series/> \n"
         + " PREFIX kmd: <http://ontology.mayo.edu/ontologies/kmdp/> \n";
@@ -1046,6 +1127,40 @@ public class SparqlIndex implements Index {
             "WHERE { \n" +
             "    ?s ?p* ?o \n" +
             "}";
+
+    static final String NEIGHBOURHOOD_SELECT =
+        PREAMBLE +
+            "SELECT DISTINCT ?o ?p " +
+            "?t ?l \n" +
+            "WHERE { \n" +
+            "{ \n" +
+            "    ?s ?p ?o . \n" +
+            " FILTER (isURI(?o)). \n" +
+            " { SELECT ?p WHERE { { ?p rdfs:subPropertyOf* api4kp:dependsOn. } UNION { ?p rdfs:subPropertyOf* api4kp:isDerivedFrom. } UNION { ?p rdfs:subPropertyOf* api4kp:hasProperPart. } } } \n"
+            +
+            "    OPTIONAL { ?o rdfs:label ?l . } \n" +
+            "    OPTIONAL { ?o rdf:type ?t .  \n" +
+            "     FILTER (?t != api4kp:KnowledgeAsset). \n" +
+            "     FILTER (?t != api4kp-kao:InquirySpecification). } \n" +
+            "} UNION { \n" +
+            "    ?o ?q ?s . \n" +
+            " FILTER (isURI(?o)). \n" +
+            " { SELECT ?q WHERE { { ?q rdfs:subPropertyOf* api4kp:dependsOn. } UNION { ?q rdfs:subPropertyOf* api4kp:isDerivedFrom. } UNION { ?q rdfs:subPropertyOf* api4kp:hasProperPart. } } } \n"
+            +
+            "    OPTIONAL { ?o rdfs:label ?l . } \n" +
+            "    OPTIONAL { ?o rdf:type ?t . \n" +
+            "     FILTER (?t != api4kp:KnowledgeAsset). \n" +
+            "     FILTER (?t != api4kp-kao:InquirySpecification). } \n" +
+            "    BIND(api4kp:isAssociatedWith AS ?p) . \n" +
+            "} UNION { \n" +
+            "    ?o api4kp:defined-in-terms-of ?c . \n" +
+            "    ?s api4kp:defines ?c . \n" +
+            " FILTER (isURI(?o)). \n" +
+            "    OPTIONAL { ?o rdfs:label ?l . } \n" +
+            "    OPTIONAL { ?o rdf:type ?t . \n" +
+            "     FILTER (?t != api4kp:KnowledgeAsset). } \n" +
+            "    BIND(api4kp:isAssociatedWith AS ?p) . " +
+            "} }";
 
     static final String DEPENDENCY_CLOSURE_SELECT =
         "SELECT ?o \n" +

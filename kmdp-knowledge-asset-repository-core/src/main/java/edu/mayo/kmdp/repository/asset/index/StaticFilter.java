@@ -1,5 +1,6 @@
 package edu.mayo.kmdp.repository.asset.index;
 
+import static edu.mayo.kmdp.util.Util.isEmpty;
 import static edu.mayo.kmdp.util.Util.isNotEmpty;
 
 import com.google.common.collect.Sets;
@@ -8,9 +9,11 @@ import edu.mayo.kmdp.util.Util;
 import edu.mayo.ontology.taxonomies.kmdo.semanticannotationreltype.SemanticAnnotationRelTypeSeries;
 import java.net.URI;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 import org.omg.spec.api4kp._20200801.id.ConceptIdentifier;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.ClinicalKnowledgeAssetTypeSeries;
@@ -131,7 +134,7 @@ public class StaticFilter {
     return isNotEmpty(assetTypeTag)
         ? Optional.of(
             // type filter -> restricted set
-            resolveTypeTag(assetTypeTag)
+            resolveTypeOrRoleTag(assetTypeTag)
                 .map(index::getAssetIdsByType)
                 // unknown type filter -> empty set
                 .orElse(Collections.emptySet()))
@@ -144,18 +147,17 @@ public class StaticFilter {
    * @param assetTypeTag the Tag to be resolved
    * @return the URI of the concept's referent, as defined in an Asset Type ontology
    */
-  private static Optional<URI> resolveTypeTag(String assetTypeTag) {
+  private static Optional<URI> resolveTypeOrRoleTag(String assetTypeTag) {
     if (Util.isEmpty(assetTypeTag)) {
       return Optional.empty();
     }
-    Optional<KnowledgeAssetType> type = KnowledgeAssetTypeSeries.resolve(assetTypeTag)
-        .or(() -> ClinicalKnowledgeAssetTypeSeries.resolve(assetTypeTag));
+    Optional<KnowledgeAssetType> type = resolveAssetTypeTag(assetTypeTag);
     if (type.isPresent()) {
       return type.map(ConceptTerm::getReferentId);
     }
     Optional<KnowledgeAssetRole> role = KnowledgeAssetRoleSeries.resolve(assetTypeTag);
     if (role.isPresent()) {
-      return role.map(ConceptTerm::getReferentId);
+      return role.map(ConceptTerm::getConceptId);
     }
     logger.warn("Unable to resolve {} to a known type or role", assetTypeTag);
     return Optional.empty();
@@ -174,13 +176,10 @@ public class StaticFilter {
   /**
    * Determines the 'primary' asset type for an Asset with multiple types/roles,
    * to match a client's request.
-   *
+   * </p>
    * If the client's provided type (tag) matches one of the asset types, that type is
    * returned.
    * Asset types are preferred over Asset Roles
-   *
-   * Future TO-DO: leverage the hierarchy of Asset Types to return more specific types
-   * over more generic ones.
    *
    * @param assetTypes the types/roles of an Asset
    * @param assetTypeTag a client-provided type
@@ -188,16 +187,23 @@ public class StaticFilter {
    */
   public static Optional<ConceptIdentifier> choosePrimaryType(
       List<ConceptIdentifier> assetTypes, String assetTypeTag) {
-    if (isNotEmpty(assetTypeTag)) {
-      return assetTypes.stream()
-          .filter(cid -> assetTypeTag.equals(cid.getTag()))
-          .findFirst();
-    } else {
-      return assetTypes.stream()
-          // prefer NOT roles over types
-          .filter(cid -> KnowledgeAssetRoleSeries.resolve(cid.getTag()).isEmpty())
-          .findFirst()
-          .or(() -> assetTypes.stream().findFirst());
-    }
+    return resolveAssetTypes(assetTypes, assetTypeTag)
+          .max(Comparator.comparing(c -> c.getAncestors().length))
+          .map(ConceptTerm::asConceptIdentifier)
+        .or(() -> assetTypes.stream().findFirst());
+  }
+
+  private static Stream<KnowledgeAssetType> resolveAssetTypes(List<ConceptIdentifier> assetTypes,
+      String assetTypeTag) {
+    return assetTypes.stream()
+        .flatMap(cid -> resolveAssetTypeTag(cid.getTag()).stream())
+        .filter(c -> isEmpty(assetTypeTag) || assetTypeTag.equals(c.getTag()));
+  }
+
+  private static Optional<KnowledgeAssetType> resolveAssetTypeTag(String assetTypeTag) {
+    return KnowledgeAssetTypeSeries.resolve(assetTypeTag)
+        // the taxonomy is bugged - OCD should not be in KAT. This will be fixed in API4KP1.0
+        .filter(k -> !KnowledgeAssetTypeSeries.Operational_Concept_Definition.sameAs(k))
+        .or(() -> ClinicalKnowledgeAssetTypeSeries.resolve(assetTypeTag));
   }
 }

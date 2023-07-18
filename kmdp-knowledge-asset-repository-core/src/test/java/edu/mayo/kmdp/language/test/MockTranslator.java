@@ -47,6 +47,10 @@ public class MockTranslator extends AbstractSimpleTranslator<String,String> {
       .withFrom(getFrom())
       .withInto(getInto());
 
+  public MockTranslator() {
+    setId(op.getOperatorId());
+  }
+
   @Override
   public Answer<KnowledgeCarrier> applyTransrepresent(KnowledgeCarrier sourceArtifact,
       String xAccept, String xParams) {

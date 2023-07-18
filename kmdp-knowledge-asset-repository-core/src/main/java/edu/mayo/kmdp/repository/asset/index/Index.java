@@ -1,17 +1,15 @@
 /**
  * Copyright © 2018 Mayo Clinic (RSTKNOWLEDGEMGMT@mayo.edu)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package edu.mayo.kmdp.repository.asset.index;
 
@@ -27,6 +25,7 @@ import org.omg.spec.api4kp._20200801.id.Pointer;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
+import org.omg.spec.api4kp._20200801.surrogate.Link;
 
 /**
  * An interface to index Assets and their relationships.
@@ -65,7 +64,8 @@ public interface Index {
    * @param mimeType
    * @parm
    */
-  void registerArtifactToAsset(ResourceIdentifier assetPointer, KnowledgeArtifact artifact, String mimeType);
+  void registerArtifactToAsset(ResourceIdentifier assetPointer, KnowledgeArtifact artifact,
+      String mimeType);
 
 
   /**
@@ -93,6 +93,15 @@ public interface Index {
    * @return
    */
   Set<ResourceIdentifier> getRelatedAssets(ResourceIdentifier assetPointer, URI relation);
+
+  /**
+   * Get Assets that the given asset is related to, and inverses, with additional details such
+   * as type and label. Does not recurse.
+   *
+   * @param assetPointer
+   * @return
+   */
+  List<Link> getNeighbourAssets(ResourceIdentifier assetPointer);
 
   /**
    * Linke a Surrogate to an Asset.

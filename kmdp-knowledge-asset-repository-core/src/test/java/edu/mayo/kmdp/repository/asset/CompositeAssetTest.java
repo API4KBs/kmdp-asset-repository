@@ -463,6 +463,10 @@ class CompositeAssetTest extends RepositoryTestBase {
         axId2.getUuid(), axId2.getVersionTag(), artId2.getUuid(), artId2.getVersionTag(),
         ka2.getName().getBytes());
 
+    var allGraph = semanticRepository.getKnowledgeGraph("text/turtle")
+        .orElseGet(Assertions::fail).getExpression();
+    assertNotNull(allGraph);
+
     JenaRdfParser parser = new JenaRdfParser();
 
     Answer<CompositeKnowledgeCarrier> ckcAns =

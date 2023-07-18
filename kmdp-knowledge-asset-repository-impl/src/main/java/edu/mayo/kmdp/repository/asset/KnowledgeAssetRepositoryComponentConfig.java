@@ -190,8 +190,8 @@ public class KnowledgeAssetRepositoryComponentConfig {
   @KPServer
   public DeserializeApiInternal parser() {
     return new LanguageDeSerializer(Arrays.asList(
-        new HtmlDeserializer(),
         new Surrogate2Parser(),
+        new HtmlDeserializer(),
         new JenaOwlParser()
     ));
   }

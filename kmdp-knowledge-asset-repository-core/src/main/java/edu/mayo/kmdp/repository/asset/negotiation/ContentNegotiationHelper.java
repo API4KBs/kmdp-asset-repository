@@ -6,6 +6,7 @@ import static java.util.Collections.singletonList;
 import static org.omg.spec.api4kp._20200801.contrastors.SyntacticRepresentationContrastor.theRepContrastor;
 import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.WEIGHT_UNSPECIFIED;
 import static org.omg.spec.api4kp._20200801.services.transrepresentation.ModelMIMECoder.decodeAll;
+import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.XML_1_1;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
 
 import edu.mayo.kmdp.util.StreamUtil;
@@ -164,7 +165,7 @@ public class ContentNegotiationHelper {
    * @return One of the carriers
    */
   public Answer<KnowledgeArtifact> anyCarrier(List<KnowledgeArtifact> artifacts) {
-    return Answer.of(artifacts.stream()
+    return Answer.ofTry(artifacts.stream()
         .flatMap(StreamUtil.filterAs(KnowledgeArtifact.class))
         .findFirst());
   }
@@ -358,5 +359,26 @@ public class ContentNegotiationHelper {
     var redirect = new URI(hostUri.getScheme(), null, hostUri.getHost(), hostUri.getPort(),
         hostUri.getPath() + "/repos/" + artifactRepo + namespace.getPath(), null, null);
     props.put(namespace.toString(), redirect.toString());
+  }
+
+  /**
+   * Predicate.
+   * <p>
+   * Determines if a client's Accept preference includes 'any model representation' among others.
+   * Note that a 'null' xAccept will not be sufficient.
+   * <p>
+   * Generalizes on 'application/xml' (accept any XML), assuming that clients/agents asking for any
+   * XML can also take any JSON-based representations, or other formats. Clients with specific needs
+   * should use model/ based MIME codes.
+   *
+   * @param xAccept the encoded preferences
+   * @return true if any of the client's preferences indicate 'any model'
+   */
+  public boolean acceptsAny(String xAccept) {
+    return decodePreferences(xAccept).stream()
+        .map(WeightedRepresentation::getRep)
+        .filter(rep -> rep.getLanguage() == null)
+        // look for *+xml, as a proxy for *+any other format
+        .anyMatch(rep -> XML_1_1.sameAs(rep.getFormat()));
   }
 }

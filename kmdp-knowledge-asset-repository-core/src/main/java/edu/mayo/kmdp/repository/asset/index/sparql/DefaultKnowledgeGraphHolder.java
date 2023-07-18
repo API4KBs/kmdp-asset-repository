@@ -50,7 +50,9 @@ import org.omg.spec.api4kp._20200801.services.KnowledgeBase;
 import org.omg.spec.api4kp._20200801.services.KnowledgeCarrier;
 import org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.ClinicalKnowledgeAssetTypeSeries;
 import org.omg.spec.api4kp._20200801.taxonomy.dependencyreltype.DependencyTypeSeries;
+import org.omg.spec.api4kp._20200801.taxonomy.derivationreltype.DerivationTypeSeries;
 import org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries;
+import org.omg.spec.api4kp._20200801.taxonomy.structuralreltype.StructuralPartTypeSeries;
 import org.omg.spec.api4kp._20200801.terms.ConceptTerm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -568,6 +570,8 @@ public class DefaultKnowledgeGraphHolder implements KnowledgeBaseApiInternal._ge
     addKnowledgeAssetTriples(KnowledgeAssetTypeSeries.values(), statements);
     addKnowledgeAssetTriples(ClinicalKnowledgeAssetTypeSeries.values(), statements);
     addRelationshipTriples(DependencyTypeSeries.values(), statements);
+    addRelationshipTriples(DerivationTypeSeries.values(), statements);
+    addRelationshipTriples(StructuralPartTypeSeries.values(), statements);
     return statements;
   }
 

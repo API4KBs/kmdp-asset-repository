@@ -1545,7 +1545,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         semanticRepository.getKnowledgeAsset(axId.getUuid(), axId.getVersionTag())
             .orElseGet(Assertions::fail);
     assertTrue(surr1.getCarriers().isEmpty());
-    assertEquals(1, surr1.getSurrogate().size());
+    assertEquals(2, surr1.getSurrogate().size());
 
     // Add a first carrier
     Answer<Void> ans2 =
@@ -1556,7 +1556,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         semanticRepository.getKnowledgeAsset(axId.getUuid(), axId.getVersionTag())
             .orElseGet(Assertions::fail);
     assertEquals(1, surr2.getCarriers().size());
-    assertEquals(1, surr2.getSurrogate().size());
+    assertEquals(2, surr2.getSurrogate().size());
     ResourceIdentifier surrogateId2 = getCanonicalSurrogateId(surr2).orElseGet(Assertions::fail);
     assertEquals(surrogateId2.getSemanticVersionTag(),
         surrogateId.getSemanticVersionTag().incrementMinorVersion());
@@ -1570,7 +1570,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         semanticRepository.getKnowledgeAsset(axId.getUuid(), axId.getVersionTag())
             .orElseGet(Assertions::fail);
     assertEquals(1, surr3.getCarriers().size());
-    assertEquals(1, surr3.getSurrogate().size());
+    assertEquals(2, surr3.getSurrogate().size());
     ResourceIdentifier surrogateId3 = getCanonicalSurrogateId(surr3).orElseGet(Assertions::fail);
     assertEquals(surrogateId3.getSemanticVersionTag(),
         surrogateId.getSemanticVersionTag().incrementMinorVersion());
@@ -1584,7 +1584,7 @@ class SemanticRepositoryTest extends RepositoryTestBase {
         semanticRepository.getKnowledgeAsset(axId.getUuid(), axId.getVersionTag())
             .orElseGet(Assertions::fail);
     assertEquals(2, surr4.getCarriers().size());
-    assertEquals(1, surr4.getSurrogate().size());
+    assertEquals(2, surr4.getSurrogate().size());
     ResourceIdentifier surrogateId4 = getCanonicalSurrogateId(surr4).orElseGet(Assertions::fail);
     assertEquals(
         surrogateId.getSemanticVersionTag().incrementMinorVersion().incrementMinorVersion(),
@@ -1673,16 +1673,13 @@ class SemanticRepositoryTest extends RepositoryTestBase {
             Service_Profile.getReferentId().equals(p.getType())));
     assertTrue(ptrs.stream()
         .filter(p -> "E".equals(p.getName()))
-        .anyMatch(p -> Operational_Concept_Definition.getReferentId().equals(p.getType())));
+        .anyMatch(p -> p.getType() == null));
 
     List<Pointer> ptrs2 =
         semanticRepository
             .listKnowledgeAssets(Operational_Concept_Definition.getTag(), null, null, 0, -1)
             .orElseGet(Assertions::fail);
     assertEquals(2, ptrs2.size());
-    ptrs2.forEach(ptr -> {
-      assertEquals(Operational_Concept_Definition.getReferentId(), ptr.getType());
-    });
   }
 
   @Test
