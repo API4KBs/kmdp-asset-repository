@@ -1061,6 +1061,7 @@ public class SparqlIndex implements Index {
         + " PREFIX lcc: <https://www.omg.org/spec/LCC/Languages/LanguageRepresentation/> \n"
         + " PREFIX api4kp: <https://www.omg.org/spec/API4KP/api4kp/> \n"
         + " PREFIX api4kp-kao: <https://www.omg.org/spec/API4KP/api4kp-kao/> \n"
+        + " PREFIX api4kp-rel: <https://www.omg.org/spec/API4KP/api4kp-rel/> \n"
         + " PREFIX dc: <" + DublinCoreVocabulary.NAME_SPACE + "> \n"
         + " PREFIX api4kp-series: <https://www.omg.org/spec/API4KP/api4kp-series/> \n"
         + " PREFIX kmd: <http://ontology.mayo.edu/ontologies/kmdp/> \n";
@@ -1150,6 +1151,7 @@ public class SparqlIndex implements Index {
             "    OPTIONAL { ?o rdfs:label ?l . } \n" +
             "    OPTIONAL { ?o rdf:type ?t . \n" +
             "     FILTER (?t != api4kp:KnowledgeAsset). \n" +
+            "     FILTER (?t != api4kp-kao:OperationalDefinition).  \n" +
             "     FILTER (?t != api4kp-kao:InquirySpecification). } \n" +
             "    BIND(api4kp:isAssociatedWith AS ?p) . \n" +
             "} UNION { \n" +
@@ -1160,6 +1162,16 @@ public class SparqlIndex implements Index {
             "    OPTIONAL { ?o rdf:type ?t . \n" +
             "     FILTER (?t != api4kp:KnowledgeAsset). } \n" +
             "    BIND(api4kp:isAssociatedWith AS ?p) . " +
+            "} UNION { \n" +
+            "    ?s api4kp:defined-in-terms-of ?c . \n" +
+            "    ?o api4kp:defines ?c . \n" +
+            " FILTER (isURI(?o)). \n" +
+            "    OPTIONAL { ?o rdfs:label ?l . } \n" +
+            "    OPTIONAL { ?o rdf:type ?t . \n" +
+            "     FILTER (?t != api4kp:KnowledgeAsset). \n" +
+            "     FILTER (?t != api4kp-kao:OperationalDefinition).  \n" +
+            "     FILTER (?t != api4kp-kao:InquirySpecification). } \n" +
+            "    BIND(api4kp-rel:isComplementedBy AS ?p) . " +
             "} }";
 
     static final String DEPENDENCY_CLOSURE_SELECT =

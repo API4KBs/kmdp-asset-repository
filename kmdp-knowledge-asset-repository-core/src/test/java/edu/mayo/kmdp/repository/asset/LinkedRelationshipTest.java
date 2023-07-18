@@ -42,7 +42,9 @@ class LinkedRelationshipTest extends RepositoryTestBase {
         .orElseGet(Assertions::fail);
 
     // defined/in-terms-of is only instantiated backwards
-    assertTrue(s1.getLinks().isEmpty());
+    assertEquals(1, s1.getLinks().size());
+    assertTrue(s1.getLinks().stream()
+        .anyMatch(l -> Objects.equals(l.getHref().asKey(), a2.asKey())));
 
     assertEquals(2, s2.getLinks().size());
     assertTrue(s2.getLinks().stream()
