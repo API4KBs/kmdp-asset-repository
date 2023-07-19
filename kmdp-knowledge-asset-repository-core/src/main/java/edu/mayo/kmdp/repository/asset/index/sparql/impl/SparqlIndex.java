@@ -371,8 +371,18 @@ public class SparqlIndex implements Index {
       org.omg.spec.api4kp._20200801.surrogate.Component part) {
     var partType = ConceptDescriptor.toConceptDescriptor(part.getRel());
     URI tgt = part.getHref().getVersionId();
+    var rel = toRelatedStatements(subj, partType, tgt);
 
-    return toRelatedStatements(subj, partType, tgt);
+    var rol = Optional.ofNullable(part.getRol())
+        .flatMap(r -> KnowledgeAssetTypeSeries.resolveUUID(r.getUuid())
+            .or(() -> ClinicalKnowledgeAssetTypeSeries.resolveUUID(r.getUuid())))
+            .map(t -> this.toStatement(
+                tgt,
+                URI.create(RDF.type.getURI()),
+                t.getReferentId()))
+            .stream();
+
+    return Stream.concat(rel, rol);
   }
 
   private Stream<Statement> toRelatedStatements(URI subj, ConceptDescriptor rel, URI tgt) {
@@ -487,9 +497,9 @@ public class SparqlIndex implements Index {
 
     var ptr = newVersionId(URI.create(o)).toInnerPointer()
         .withName(l);
-    type.flatMap(t -> KnowledgeAssetTypeSeries.resolveRef(t)
-            .or(() -> ClinicalKnowledgeAssetTypeSeries.resolveRef(t)))
-        .ifPresent(x -> ptr.withType(x.getReferentId()));
+    var formalType = type.flatMap(t -> KnowledgeAssetTypeSeries.resolveRef(t)
+        .or(() -> ClinicalKnowledgeAssetTypeSeries.resolveRef(t)));
+    formalType.ifPresent(t -> ptr.withType(t.getReferentId()));
 
     var tryDeriv = DerivationTypeSeries.resolveRef(p);
     if (tryDeriv.isPresent()) {
@@ -501,7 +511,10 @@ public class SparqlIndex implements Index {
     }
     var tryPart = StructuralPartTypeSeries.resolveRef(p);
     if (tryPart.isPresent()) {
-      return tryPart.map(rel -> new Component().withRel(rel).withHref(ptr));
+      return tryPart.map(rel -> new Component()
+          .withRel(rel)
+          .withRol(formalType.map(ConceptTerm::asConceptIdentifier).orElse(null))
+          .withHref(ptr));
     }
     return Optional.of(new Dependency()
         .withHref(ptr)
