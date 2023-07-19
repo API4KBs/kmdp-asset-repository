@@ -30,7 +30,7 @@
     <dependency>
       <artifactId>kmdp-terminology-provider</artifactId>
       <groupId>edu.mayo.kmdp</groupId>
-      <version>${kmdp.servers.version}</version>
+      <version>${kmdp.impl.version}</version>
     </dependency>
 
     <dependency>

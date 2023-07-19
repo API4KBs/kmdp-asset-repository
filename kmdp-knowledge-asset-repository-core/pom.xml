@@ -31,22 +31,22 @@
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-knowledge-artifact-repository-jpa</artifactId>
-      <version>${kmdp.servers.version}</version>
+      <version>${kmdp.impl.version}</version>
     </dependency>
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-knowledge-transrepresentation-core</artifactId>
-      <version>${kmdp.servers.version}</version>
+      <version>${kmdp.impl.version}</version>
     </dependency>
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-knowledgebase-construction-service-core</artifactId>
-      <version>${kmdp.servers.version}</version>
+      <version>${kmdp.impl.version}</version>
     </dependency>
     <dependency>
       <groupId>edu.mayo.kmdp</groupId>
       <artifactId>kmdp-inference-broker-core</artifactId>
-      <version>${kmdp.servers.version}</version>
+      <version>${kmdp.impl.version}</version>
     </dependency>
 
     <dependency>
