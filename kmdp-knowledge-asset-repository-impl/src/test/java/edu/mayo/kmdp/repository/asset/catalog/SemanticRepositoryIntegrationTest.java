@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.omg.spec.api4kp._20200801.AbstractCarrier.rep;
 import static org.omg.spec.api4kp._20200801.id.SemanticIdentifier.newId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.assetId;
 import static org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder.defaultSurrogateId;
@@ -29,11 +30,15 @@ import static org.omg.spec.api4kp._20200801.taxonomy.clinicalknowledgeassettype.
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Decision_Model;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeassettype.KnowledgeAssetTypeSeries.Predictive_Model;
 import static org.omg.spec.api4kp._20200801.taxonomy.knowledgeprocessingtechnique.KnowledgeProcessingTechniqueSeries.Qualitative_Technique;
+import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.JSON;
+import static org.omg.spec.api4kp._20200801.taxonomy.krformat.SerializationFormatSeries.TXT;
+import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.HTML;
 import static org.omg.spec.api4kp._20200801.taxonomy.krlanguage.KnowledgeRepresentationLanguageSeries.Knowledge_Asset_Surrogate_2_0;
 
 import edu.mayo.kmdp.registry.Registry;
 import edu.mayo.kmdp.repository.asset.SemanticRepoAPITestBase;
 import edu.mayo.kmdp.util.ws.JsonRestWSUtils.WithFHIR;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -51,6 +56,7 @@ import org.omg.spec.api4kp._20200801.id.Pointer;
 import org.omg.spec.api4kp._20200801.id.ResourceIdentifier;
 import org.omg.spec.api4kp._20200801.id.Term;
 import org.omg.spec.api4kp._20200801.surrogate.Applicability;
+import org.omg.spec.api4kp._20200801.surrogate.KnowledgeArtifact;
 import org.omg.spec.api4kp._20200801.surrogate.KnowledgeAsset;
 import org.omg.spec.api4kp._20200801.surrogate.SurrogateBuilder;
 
@@ -305,5 +311,27 @@ class SemanticRepositoryIntegrationTest extends SemanticRepoAPITestBase {
     assertArrayEquals("Foo".getBytes(), binary1.get());
 
     assertEquals("Foo", new String(binary1.get()));
+  }
+
+  @Test
+  void testRewriteSelfUrl() {
+    var xid = randomAssetId();
+    var src = "http://foo.bar/cat/assets/" + xid.getUuid() + "/test";
+    var tgt = "http://localhost:" + port + "/cat/assets/" + xid.getUuid() + "/test";
+    var asset = new KnowledgeAsset()
+        .withAssetId(xid)
+        .withFormalType(Decision_Model)
+        .withName("Test")
+        .withSurrogate(new KnowledgeArtifact()
+            .withArtifactId(defaultSurrogateId(xid, HTML))
+            .withRepresentation(rep(HTML, TXT))
+            .withLocator(URI.create(src)));
+    this.ckac.setKnowledgeAssetVersion(xid.getUuid(), xid.getVersionTag(), asset);
+    var back = this.ckac.getKnowledgeAsset(xid.getUuid())
+        .orElseGet(Assertions::fail);
+    assertTrue(back.getSurrogate().stream()
+        .map(KnowledgeArtifact::getLocator)
+        .filter(Objects::nonNull)
+        .anyMatch(l -> Objects.equals(tgt, l.toString())));
   }
 }

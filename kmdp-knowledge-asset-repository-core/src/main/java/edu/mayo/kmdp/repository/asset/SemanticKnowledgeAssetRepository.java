@@ -99,7 +99,6 @@ import edu.mayo.kmdp.repository.asset.negotiation.ContentNegotiationHelper;
 import edu.mayo.kmdp.repository.asset.negotiation.SurrogateEnricher;
 import edu.mayo.kmdp.util.FileUtil;
 import edu.mayo.kmdp.util.StreamUtil;
-import edu.mayo.kmdp.util.URIUtil;
 import edu.mayo.kmdp.util.Util;
 import edu.mayo.ontology.taxonomies.kmdo.semanticannotationreltype.SemanticAnnotationRelTypeSeries;
 import edu.mayo.ontology.taxonomies.ws.responsecodes.ResponseCodeSeries;
@@ -2296,8 +2295,12 @@ public class SemanticKnowledgeAssetRepository
       KnowledgeArtifact artifact) {
     return Answer.of(artifact)
         .cast(KnowledgeArtifact.class)
-        .filter(cka -> URIUtil.isDereferencingURL(cka.getLocator()))
-        .flatOpt(cka -> FileUtil.readBytes(cka.getLocator()));
+        .map(KnowledgeArtifact::getLocator)
+        .filter(loc -> loc != null &&
+        // ignore 'self' locators
+            (hrefBuilder == null ||
+                ! loc.toString().startsWith(hrefBuilder.getBaseUrl() + "/cat/")))
+        .flatOpt(FileUtil::readBytes);
   }
 
   /**

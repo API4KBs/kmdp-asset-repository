@@ -1,8 +1,13 @@
 package edu.mayo.kmdp.repository.asset.negotiation;
 
+import static edu.mayo.kmdp.util.Util.isEmpty;
 import static edu.mayo.kmdp.util.Util.isNotEmpty;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.net.URI;
+import java.net.URLEncoder;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.omg.spec.api4kp._20200801.id.Link;
 import org.omg.spec.api4kp._20200801.id.Pointer;
@@ -70,7 +75,7 @@ public final class LocatorHelper {
       var sb = new StringBuilder(hrefBuilder.getHost())
           .append(locator.getPath());
       if (isNotEmpty(locator.getQuery())) {
-        sb.append("?").append(locator.getQuery());
+        sb.append("?").append(encodeQuery(locator.getQuery()));
       }
       if (isNotEmpty(locator.getFragment())) {
         sb.append("#").append(locator.getFragment());
@@ -78,6 +83,17 @@ public final class LocatorHelper {
       return URI.create(sb.toString());
     }
     return locator;
+  }
+
+  private static String encodeQuery(String query) {
+    if (isEmpty(query)) {
+      return query;
+    }
+    return Arrays.stream(query.split("&"))
+        .map(q -> {
+          var x = q.indexOf('=');
+          return q.substring(0, x + 1) + URLEncoder.encode(q.substring(x + 1), UTF_8);
+        }).collect(Collectors.joining("&"));
   }
 
   private static void rewriteRef(SemanticIdentifier href, KARSHrefBuilder hrefBuilder) {

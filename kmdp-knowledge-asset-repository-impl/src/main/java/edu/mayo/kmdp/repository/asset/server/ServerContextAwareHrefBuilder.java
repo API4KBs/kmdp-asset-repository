@@ -40,7 +40,7 @@ public class ServerContextAwareHrefBuilder extends KARSHrefBuilder {
    * @return
    */
   @Override
-  public String getHost() {
+  public String getBaseUrl() {
     if (hasEnvOverride) {
       return environmentHost;
     }
@@ -48,7 +48,7 @@ public class ServerContextAwareHrefBuilder extends KARSHrefBuilder {
       return ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
     } catch (Exception e) {
       logger.info(e.getMessage());
-      return super.getHost();
+      return super.getBaseUrl();
     }
   }
 

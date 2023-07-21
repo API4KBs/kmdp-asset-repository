@@ -307,9 +307,9 @@ public class ContentNegotiationHelper {
     try {
       if (hrefBuilder != null) {
         Properties props = new Properties();
-        setAssetRedirect(hrefBuilder.getHost(), asseNamespace, props);
-        setConceptRedirect(hrefBuilder.getHost(), ontologyNamespace, props);
-        setArtifactRedirect(hrefBuilder.getHost(), artifactNamespace, defaultArtfRepo, props);
+        setAssetRedirect(hrefBuilder.getBaseUrl(), asseNamespace, props);
+        setConceptRedirect(hrefBuilder.getBaseUrl(), ontologyNamespace, props);
+        setArtifactRedirect(hrefBuilder.getBaseUrl(), artifactNamespace, defaultArtfRepo, props);
         return serializeProps(props);
       }
     } catch (Exception e) {
