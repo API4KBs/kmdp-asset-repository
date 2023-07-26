@@ -110,7 +110,7 @@ steps:
       script: |
         Write-Host ------ Starting Checkout ------
         # maven clean install
-        mvn deploy "-DaltDeploymentRepository=$env:DEPLOY_REPO::default::$env:DEPLOY_REPO_PATH" -ntp
+        mvn clean deploy "-DaltDeploymentRepository=$env:DEPLOY_REPO::default::$env:DEPLOY_REPO_PATH" -ntp
         git push "https://kmd:$env:SYSTEM_ACCESSTOKEN@dev.azure.com/mclm/KMD/_git/kmdp-knowledge-asset-repository-service"
         git push "https://kmd:$env:SYSTEM_ACCESSTOKEN@dev.azure.com/mclm/KMD/_git/kmdp-knowldege-asset-repository-service" -d "release-$env:KARS_RELEASE_VERSION"
         Write-Host ------ Ending Checkout ------
