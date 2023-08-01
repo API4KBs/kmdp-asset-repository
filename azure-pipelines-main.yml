@@ -16,7 +16,6 @@ pool:
 # Gets Variables from Azure DevOps Library
 variables:
   - group: kmdp-platform-variables
-  - group: kmdp-platform-dev-variables
 
 steps:
   # ------------------ PIPELINE STEPS  ------------------
@@ -117,6 +116,8 @@ steps:
     env:
       KARS_RELEASE_VERSION: $(knowledgeAssetRepoServiceReleaseVersion)
       SYSTEM_ACCESSTOKEN: $(system.accesstoken)
+      DEPLOY_REPO: $(deploymentRepo)
+      DEPLOY_REPO_PATH: $(deploymentRepoPath)
 
   # Copy War File to Build: Artifact Staging Directory
   - task: CopyFiles@2
