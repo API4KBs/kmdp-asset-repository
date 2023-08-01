@@ -114,7 +114,7 @@ steps:
       KARS_RELEASE_VERSION: $(knowledgeAssetRepoServiceReleaseVersion)
       KARS_PREVIOUS_DEVELOP_VERSION: $(knowledgeAssetRepoServicePreviousDevelop)
       TIER1_RELEASE_VERSION: $(tier1ReleaseVersion)
-      TIER1_DEVELOP_VERSION: $(tier1DevelopVersion)
+      TIER1_DEVELOP_VERSION: $(tier1NewDevelopVersion)
 
   # Push to develop branches/release candidate branches
   - task: PowerShell@2
